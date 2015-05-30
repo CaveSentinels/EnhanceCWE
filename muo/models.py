@@ -1,7 +1,10 @@
 from django.db import models
-
 from cwe.models import CWE
 from cwe.models import BaseModel
+
+
+STATUS = [('draft', 'Draft'), ('in_review', 'In Review'), ('approved', 'Approved'), ('rejected', 'Rejected')]
+PUBLISHED_STATUS = [('published', 'Published'), ('unpublished', 'Unpublished')]
 
 
 class Tag(BaseModel):
@@ -52,3 +55,16 @@ class OSR(BaseModel):
 
     def __unicode__(self):
         return self.description[:100] + "..."
+
+
+class MUOContainer(BaseModel):
+    cwes = models.ManyToManyField(CWE)
+    misuse_cases = models.ManyToManyField(MisuseCase)
+    use_cases = models.ManyToManyField(UseCase)
+    osrs = models.ManyToManyField(OSR)
+    status = models.CharField(choices=STATUS, max_length=64, default='draft')
+    published_status = models.CharField(choices=PUBLISHED_STATUS, max_length=32, default='unpublished')
+
+    class Meta:
+        verbose_name = "MUO Container"
+        verbose_name_plural = "MUO Containers"
