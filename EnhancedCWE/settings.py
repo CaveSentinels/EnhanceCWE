@@ -57,7 +57,7 @@ ROOT_URLCONF = 'EnhancedCWE.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'DIRS': [os.path.join(BASE_DIR, 'muo/templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

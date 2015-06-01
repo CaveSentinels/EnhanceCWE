@@ -46,18 +46,6 @@ class MUOContainerAdmin(admin.ModelAdmin):
     search_fields = ['status']
 
 
-    def change_status(self, object, state, published_state):
-        '''
-        :param object: MUOContainer
-        :param state: String
-        :param published_state: String
-        :return: void
-        '''
-        object.status = state
-        object.published_status = published_state
-        object.save()
-
-
     # Override response_change method of admin/options.py to handle the click of
     # newly added buttons
     def response_change(self, request, obj, *args, **kwargs):
@@ -74,40 +62,39 @@ class MUOContainerAdmin(admin.ModelAdmin):
                                    args=(pk_value,))
         redirect_url = add_preserved_filters({'preserved_filters': preserved_filters, 'opts': opts}, redirect_url)
 
-        if "_approve" in request.POST:
-            self.change_status(obj, 'approved', 'published')
-            msg = "You have approved the submission and it is now published"
-            self.message_user(request, msg, messages.SUCCESS)
+        # Check which button is clicked, handle accordingly.
+        try:
+            if "_approve" in request.POST:
+                obj.action_approve()
+                msg = "You have approved the submission and it is now published"
+            elif "_reject" in request.POST:
+                obj.action_reject()
+                msg = "The submission has been sent back to the author for review"
+            elif "_submit_for_review" in request.POST:
+                obj.action_submit()
+                msg = "Your review request has been successfully submitted"
+            elif "_edit" in request.POST:
+                obj.action_save_in_draft()
+                msg = "You can now edit the MUO"
+            elif "_publish" in request.POST:
+                obj.action_publish()
+                msg = "MUO has been successfully published"
+            elif "_unpublish" in request.POST:
+                obj.action_unpublish()
+                msg = "You have unpublished this MUO"
+            else:
+                # Let super class 'ModelAdmin' handle rest of the button clicks i.e. 'save' 'save and continue' etc.
+                return super(MUOContainerAdmin, self).response_change(request, obj, *args, **kwargs)
+        except ValueError as e:
+            # In case the state of the object is not suitable for the corresponding action,
+            # model will raise the value exception with the appropriate message. Catch the
+            # exception and show the error message to the user
+            msg = e.message
+            self.message_user(request, msg, messages.ERROR)
             return HttpResponseRedirect(redirect_url)
-        elif "_reject" in request.POST:
-            self.change_status(obj, 'rejected', 'unpublished')
-            msg = "The submission has been sent back to the author for review"
-            self.message_user(request, msg, messages.SUCCESS)
-            return HttpResponseRedirect(redirect_url)
-        elif "_submit_for_review" in request.POST:
-            self.change_status(obj, 'in_review', 'unpublished')
-            msg = "Your review request has been successfully submitted"
-            self.message_user(request, msg, messages.SUCCESS)
-            return HttpResponseRedirect(redirect_url)
-        elif "_edit" in request.POST:
-            self.change_status(obj, 'draft', 'unpublished')
-            msg = "Now you can edit"
-            self.message_user(request, msg, messages.SUCCESS)
-            return HttpResponseRedirect(redirect_url)
-        elif "_publish" in request.POST:
-            self.change_status(obj, 'approved', 'published')
-            msg = "MUO has been successfully published"
-            self.message_user(request, msg, messages.SUCCESS)
-            return HttpResponseRedirect(redirect_url)
-        elif "_unpublish" in request.POST:
-            self.change_status(obj, 'approved', 'unpublished')
-            msg = "You have unpublished this MUO"
-            self.message_user(request, msg, messages.SUCCESS)
-            return HttpResponseRedirect(redirect_url)
-        else:
-            # Let super class 'ModelAdmin' handle rest of the button clicks
-            return super(MUOContainerAdmin, self).response_change(request, obj, *args, **kwargs)
 
+        self.message_user(request, msg, messages.SUCCESS)
+        return HttpResponseRedirect(redirect_url)
 
 
 admin.site.register(Tag, TagAdmin)

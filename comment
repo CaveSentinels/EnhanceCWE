@@ -1,0 +1,3 @@
+Added the MUOContainer Model
+Add the MUOContainerAdmin for the MUOContainer model
+Customized the change_form for the MUOContainer model to add fucntionality for approving, rejecting, publishing, unpublishing and editing the MUOs 
