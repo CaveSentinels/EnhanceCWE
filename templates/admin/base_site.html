@@ -1,0 +1,16 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+{#    <a id="site-name" href="{% url 'admin:index' %}" class="logo">{{ site_header|default:_('Django administration') }}</a>#}
+    <a id="site-name" href="{% url 'admin:index' %}" class="navbar-brand"><b>Enhanced</b>CWE</a>
+
+{% endblock %}
+
+{% block extrahead %}
+    {% include 'autocomplete_light/static.html' %}
+{% endblock %}
+
+{#{% block nav-global %}{% endblock %}#}
+

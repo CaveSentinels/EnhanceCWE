@@ -1,10 +1,14 @@
 from django.db import models
+from django.contrib.auth.models import User
 from django.utils import timezone
+import autocomplete_light
 
 class BaseModel(models.Model):
 
-    created = models.DateTimeField(default=timezone.now)
-    modified = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    modified_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, related_name='+')
+    modified_by = models.ForeignKey(User, related_name='+')
 
     class Meta:
         abstract = True
@@ -31,7 +35,6 @@ class Keyword(BaseModel):
     def __unicode__(self):
         return self.name
 
-
 class CWE(BaseModel):
     code = models.IntegerField(unique=True)
     name = models.CharField(max_length=128, db_index=True)
@@ -45,5 +48,3 @@ class CWE(BaseModel):
 
     def __unicode__(self):
         return "CWE-%s: %s" % (self.code, self.name)
-
-
