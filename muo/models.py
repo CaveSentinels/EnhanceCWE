@@ -82,7 +82,7 @@ class MUOContainer(BaseModel):
         # This change is allowed only if the current status is 'in_review' or 'approved'.
         # If the current status is not 'in-review' or 'approved', it raises the ValueError
         # with appropriate message.
-        if self.status == 'in_review' or 'approved':
+        if self.status == 'in_review' or self.status == 'approved':
             self.status = 'rejected'
             self.save()
         else:
@@ -128,7 +128,7 @@ class MUOContainer(BaseModel):
             self.published_status = 'unpublished'
             self.save()
         else:
-            raise ValueError("You can explicitly unpublish MUO only if it is and published")
+            raise ValueError("You can explicitly unpublish MUO only if it is published")
 
 
     class Meta:
