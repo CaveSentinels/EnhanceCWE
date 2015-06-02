@@ -1,16 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.utils import timezone
-
-class BaseModel(models.Model):
-
-    created_at = models.DateTimeField(default=timezone.now, editable=False)
-    modified_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, related_name='+')
-    modified_by = models.ForeignKey(User, related_name='+')
-
-    class Meta:
-        abstract = True
+from django.db import IntegrityError
+from base.models import BaseModel
+from django.utils.encoding import force_text
+from django.utils.translation import ugettext as _
 
 
 class Category(BaseModel):
@@ -23,6 +16,17 @@ class Category(BaseModel):
     def __unicode__(self):
         return self.name
 
+    def delete(self, using=None):
+        if self.cwes.exists():
+            raise IntegrityError(
+                _('The %(name)s "%(obj)s" cannot be deleted as there are CWEs referring to it!') % {
+                    'name': force_text(self._meta.verbose_name),
+                    'obj': force_text(self.__unicode__()),
+                })
+
+        else:
+            super(Category, self).delete(using)
+
 
 class Keyword(BaseModel):
     name = models.CharField(max_length=32, unique=True)
@@ -33,6 +37,7 @@ class Keyword(BaseModel):
 
     def __unicode__(self):
         return self.name
+
 
 class CWE(BaseModel):
     code = models.IntegerField(unique=True)

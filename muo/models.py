@@ -1,6 +1,6 @@
 from django.db import models
 from cwe.models import CWE
-from cwe.models import BaseModel
+from base.models import BaseModel
 
 
 STATUS = [('draft', 'Draft'), ('in_review', 'In Review'), ('approved', 'Approved'), ('rejected', 'Rejected')]

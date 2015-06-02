@@ -1,21 +1,22 @@
 from django.contrib import admin
+from base.admin import BaseAdmin
 from models import *
 import autocomplete_light
 
 @admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(BaseAdmin):
     fields = ['name']
     search_fields = ['name']
 
 
 @admin.register(Keyword)
-class KeywordAdmin(admin.ModelAdmin):
+class KeywordAdmin(BaseAdmin):
     fields = ['name']
     search_fields = ['name']
 
 
 @admin.register(CWE)
-class CWEAdmin(admin.ModelAdmin):
+class CWEAdmin(BaseAdmin):
     model = CWE
     form = autocomplete_light.modelform_factory(CWE, fields="__all__")
     fieldsets = [

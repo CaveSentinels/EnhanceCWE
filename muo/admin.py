@@ -5,16 +5,17 @@ from django.contrib.admin.templatetags.admin_urls import add_preserved_filters
 from models import *
 
 from django.http import HttpResponseRedirect
+from base.admin import BaseAdmin
 
 
 @admin.register(Tag)
-class TagAdmin(admin.ModelAdmin):
+class TagAdmin(BaseAdmin):
     fields = ['name']
     search_fields = ['name']
 
 
 @admin.register(OSR)
-class OSRAdmin(admin.ModelAdmin):
+class OSRAdmin(BaseAdmin):
     fields = ['description', 'use_case', 'tags']
     search_fields = ['description', 'tags__name']
 
@@ -26,7 +27,7 @@ class OSRAdminInline(admin.TabularInline):
 
 
 @admin.register(UseCase)
-class UseCaseAdmin(admin.ModelAdmin):
+class UseCaseAdmin(BaseAdmin):
     fields = ['misuse_case', 'description', 'tags']
     inlines = [OSRAdminInline]
 
@@ -39,13 +40,13 @@ class UseCaseAdminInLine(admin.StackedInline):
 
 
 @admin.register(MisuseCase)
-class MisuseCaseAdmin(admin.ModelAdmin):
+class MisuseCaseAdmin(BaseAdmin):
     fields = ['cwes', ('description', 'tags')]
     inlines = [UseCaseAdminInLine]
 
 
 @admin.register(MUOContainer)
-class MUOContainerAdmin(admin.ModelAdmin):
+class MUOContainerAdmin(BaseAdmin):
     list_display = ('id', 'status', 'published_status')
     readonly_fields = ['status', 'published_status']
     exclude = ['created_at', 'modified_at']
