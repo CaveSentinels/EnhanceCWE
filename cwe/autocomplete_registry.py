@@ -1,5 +1,5 @@
 from .models import *
-
+import autocomplete_light
 
 class CWEAutocomplete(autocomplete_light.AutocompleteModelBase):
     search_fields = ['^code', 'name']

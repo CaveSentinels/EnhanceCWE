@@ -1,6 +1,6 @@
 from django.contrib import admin
 from models import *
-
+import autocomplete_light
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
