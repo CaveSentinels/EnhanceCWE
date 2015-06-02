@@ -42,7 +42,7 @@ class MisuseCaseAdmin(admin.ModelAdmin):
 class MUOContainerAdmin(admin.ModelAdmin):
     list_display = ('id', 'status', 'published_status')
     readonly_fields = ['status', 'published_status']
-    exclude = ['created', 'modified']
+    exclude = ['created_at', 'modified_at']
     search_fields = ['status']
 
 

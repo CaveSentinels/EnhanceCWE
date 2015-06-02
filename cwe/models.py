@@ -3,8 +3,8 @@ from django.utils import timezone
 
 class BaseModel(models.Model):
 
-    created = models.DateTimeField(default=timezone.now)
-    modified = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    modified_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         abstract = True
