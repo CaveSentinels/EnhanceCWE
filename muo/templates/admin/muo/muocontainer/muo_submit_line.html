@@ -1,19 +1,20 @@
 {% load i18n admin_urls %}
-<div class="submit-row">
-{% if show_save %}<input type="submit" value="{% trans 'Save' %}" class="default" name="_save" />{% endif %}
-{% if show_delete_link %}
-    {% url opts|admin_urlname:'delete' original.pk|admin_urlquote as delete_url %}
-    <p class="deletelink-box"><a href="{% add_preserved_filters delete_url %}" class="deletelink">{% trans "Delete" %}</a></p>
-{% endif %}
-{% if show_save_as_new %}<input type="submit" value="{% trans 'Save as new' %}" name="_saveasnew" />{% endif %}
-{% if show_save_and_add_another %}<input type="submit" value="{% trans 'Save and add another' %}" name="_addanother" />{% endif %}
-{% if show_save_and_continue %}<input type="submit" value="{% trans 'Save and continue editing' %}" name="_continue" />{% endif %}
-{% if show_approve %}<input type="submit" value="{% trans 'Approve' %}" name="_approve" />{% endif %}
-{% if show_reject %}<input type="submit" value="{% trans 'Reject' %}" name="_reject" />{% endif %}
-{% if show_submit_for_review %}<input type="submit" value="{% trans 'Submit for Review' %}" name="_submit_for_review" />{% endif %}
-{% if show_edit %}<input type="submit" value="{% trans 'Edit' %}" name="_edit" />{% endif %}
-{% if show_publish %}<input type="submit" value="{% trans 'Publish' %}" name="_publish" />{% endif %}
-{% if show_unpublish %}<input type="submit" value="{% trans 'UnPublish' %}" name="_unpublish" />{% endif %}
+<div class="pull-left">
+    {% if show_delete_link %}
+        {% url opts|admin_urlname:'delete' original.pk|admin_urlquote as delete_url %}
+        <a class="btn btn-danger deletelink" href="{% add_preserved_filters delete_url %}">{% trans "Delete" %}</a>
+    {% endif %}
 </div>
-
-
+<div class="pull-right">
+{% if show_save_as_new %}<input type="submit" value="{% trans 'Save as new' %}" class="btn btn-default" name="_saveasnew" {{ onclick_attrib }}/>{% endif %}
+{% if show_save_and_add_another %}<input type="submit" value="{% trans 'Save and add another' %}" class="btn btn-default" name="_addanother" {{ onclick_attrib }} />{% endif %}
+{% if show_save_and_continue %}<input type="submit" value="{% trans 'Save and continue editing' %}" class="btn btn-default" name="_continue" {{ onclick_attrib }}/>{% endif %}
+{% if show_save %}<input type="submit" value="{% trans 'Save' %}" class="btn btn-primary default" name="_save" {{ onclick_attrib }}/>{% endif %}
+{% if show_approve %}<input type="submit" value="{% trans 'Approve' %}" class="btn btn-default" name="_approve" />{% endif %}
+{% if show_reject %}<input type="submit" value="{% trans 'Reject' %}" class="btn btn-default" name="_reject" />{% endif %}
+{% if show_submit_for_review %}<input type="submit" value="{% trans 'Submit for Review' %}" class="btn btn-default" name="_submit_for_review" />{% endif %}
+{% if show_edit %}<input type="submit" value="{% trans 'Edit' %}" class="btn btn-default" name="_edit" />{% endif %}
+{% if show_publish %}<input type="submit" value="{% trans 'Publish' %}" class="btn btn-default" name="_publish" />{% endif %}
+{% if show_unpublish %}<input type="submit" value="{% trans 'UnPublish' %}" class="btn btn-default" name="_unpublish" />{% endif %}
+</div>
+<div class="spacer"></div>
