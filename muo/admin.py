@@ -51,6 +51,7 @@ class MUOContainerAdmin(BaseAdmin):
     readonly_fields = ['status', 'published_status']
     exclude = ['created_at', 'modified_at']
     search_fields = ['status']
+    date_hierarchy = 'created_at'
 
     # Override response_change method of admin/options.py to handle the click of
     # newly added buttons
