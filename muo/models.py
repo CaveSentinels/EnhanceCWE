@@ -1,7 +1,12 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from cwe.models import CWE
 from base.models import BaseModel
-
+from django.db import IntegrityError
+from django.utils.encoding import force_text
+from django.utils.translation import ugettext as _
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 
 STATUS = [('draft', 'Draft'), ('in_review', 'In Review'), ('approved', 'Approved'), ('rejected', 'Rejected')]
 PUBLISHED_STATUS = [('published', 'Published'), ('unpublished', 'Unpublished')]
@@ -30,6 +35,18 @@ class MisuseCase(BaseModel):
     def __unicode__(self):
         return self.description[:100] + "..."
 
+@receiver(pre_delete, sender=MisuseCase, dispatch_uid='misusecase_delete_signal')
+def pre_delete_misusecase(sender, instance, using, **kwargs):
+    """
+    Prevent Misuse Case deletion if use cases are referring to it
+    """
+    if instance.use_cases.exists():
+        raise IntegrityError(
+            _('The %(name)s "%(obj)s" cannot be deleted as there are use cases referring to it!') % {
+                'name': force_text(instance._meta.verbose_name),
+                'obj': force_text(instance.__unicode__()),
+            })
+
 
 class UseCase(BaseModel):
     description = models.TextField()
@@ -42,6 +59,19 @@ class UseCase(BaseModel):
 
     def __unicode__(self):
         return self.description[:100] + "..."
+
+@receiver(pre_delete, sender=UseCase, dispatch_uid='usecase_delete_signal')
+def pre_delete_usecase(sender, instance, using, **kwargs):
+    """
+    Prevent Use Case deletion if OSRs are referring to it
+    """
+    if instance.use_cases.exists():
+        raise IntegrityError(
+            _('The %(name)s "%(obj)s" cannot be deleted as there are overlooked security requirements ' +
+              'referring to it!') % {
+                'name': force_text(instance._meta.verbose_name),
+                'obj': force_text(instance.__unicode__()),
+            })
 
 
 class OSR(BaseModel):
@@ -58,10 +88,10 @@ class OSR(BaseModel):
 
 
 class MUOContainer(BaseModel):
-    cwes = models.ManyToManyField(CWE)
-    misuse_cases = models.ManyToManyField(MisuseCase)
-    use_cases = models.ManyToManyField(UseCase)
-    osrs = models.ManyToManyField(OSR)
+    cwes = models.ManyToManyField(CWE, related_name='muo_container')
+    misuse_cases = models.ManyToManyField(MisuseCase, related_name='muo_container')
+    use_cases = models.ManyToManyField(UseCase, related_name='muo_container')
+    osrs = models.ManyToManyField(OSR, related_name='muo_container')
     status = models.CharField(choices=STATUS, max_length=64, default='draft')
     published_status = models.CharField(choices=PUBLISHED_STATUS, max_length=32, default='unpublished')
 
@@ -130,7 +160,27 @@ class MUOContainer(BaseModel):
         else:
             raise ValueError("You can explicitly unpublish MUO only if it is published")
 
-
     class Meta:
         verbose_name = "MUO Container"
         verbose_name_plural = "MUO Containers"
+
+@receiver(pre_delete, sender=MUOContainer, dispatch_uid='muo_container_delete_signal')
+def pre_delete_muo_container(sender, instance, using, **kwargs):
+    """
+    Pre-delete checks for MUO container
+    """
+    if instance.state not in ('draft', 'rejected'):
+        raise ValidationError(_('The %(name)s "%(obj)s" can only be deleted if in draft of rejected state') % {
+                                    'name': force_text(instance._meta.verbose_name),
+                                    'obj': force_text(instance.__unicode__()),
+                                })
+
+    # delete osrs, use cases and misuse cases if they are not pointed at by other containers
+    if instance.osrs.muo_container.count() == 1:
+        instance.osrs.delete()
+
+    if instance.use_cases.muo_container.count() == 1:
+        instance.use_cases.delete()
+
+    if instance.misuse_cases.muo_container.count() == 1:
+        instance.misuse_cases.delete()

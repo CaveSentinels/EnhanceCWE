@@ -13,6 +13,7 @@ class BaseModel(models.Model):
     modified_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, null=True, related_name='+')
     modified_by = models.ForeignKey(User, null=True, related_name='+')
+    active = models.BooleanField(default=True, db_index=True)
 
     class Meta:
         abstract = True
