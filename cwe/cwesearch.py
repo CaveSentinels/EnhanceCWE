@@ -13,15 +13,30 @@ class CWESearchBase:
 
     # Abstract method declaration
     @abstractmethod
-    def search_cwes(text):
+    def search_cwes(self, text):
+        """This is the main abstract method which receives a string and passes the CWE Objects with their match counts
+        It also invokes two other methods, i.e, remove_stopwords() and stem_text() to remove redundant words and stem
+        the remaining text
+        :param text: A string which corresponds to description
+        :return: A list of tuples wherein the first item will be a CWE Object and second item will be its match count
+        """
         pass
 
     @abstractmethod
-    def remove_stopwords(text):
+    def remove_stopwords(self, text):
+        """ This abstract method reads stop words from a text file and removes the redundant words like a, an, the from the
+        description
+        :param text: A string which corresponds to description
+        :return: A collection of words from the description from which all the stop words have been removed
+        """
         pass
 
     @abstractmethod
-    def stem_text(text):
+    def stem_text(self, text):
+        """ This abstract method receives a collection of words. It forms a collection of stemmed words and send it to the calling function
+        :param filtered_words: A collection of words from the description from which all the stop words have been removed
+        :return: A collection of stemmed words
+        """
         pass
 
 
@@ -42,19 +57,18 @@ class CWEKeywordSearch(CWESearchBase):
                     self.stop_words.append(word)
 
     def search_cwes(self, text):
-        """  This is the main method which receives a string and passes the CWE Objects with their match counts
-        It also invokes two other methods, i.e, remove_stopwords() and stem_text() to remove redundant words and stem the remaining
-        Input: A string which corresponds to description
-        Output: A list of tuples wherein the first item will be a CWE Object and second item will be its match count
+        """This is the main method which receives a string and passes the CWE Objects with their match counts
+        It also invokes two other methods, i.e, remove_stopwords() and stem_text() to remove redundant words and stem
+        the remaining text
+        :param text: A string which corresponds to description
+        :return: A list of tuples wherein the first item will be a CWE Object and second item will be its match count
         """
 
-        cwe_keyword_search_obj = CWEKeywordSearch()
-
         # Call Stop Word method here
-        filtered_words = cwe_keyword_search_obj.remove_stopwords(text)
+        filtered_words = self.remove_stopwords(text)
 
         # Call stemmer here
-        stemmed_list = cwe_keyword_search_obj.stem_text(filtered_words)
+        stemmed_list = self.stem_text(filtered_words)
 
         #  Form a dictionary with the count zero
         from cwe.models import CWE
@@ -72,26 +86,23 @@ class CWEKeywordSearch(CWESearchBase):
 
 
     def remove_stopwords(self, text):
-        """  This methods reads stop words from a text file and removes the redundant words like a, an, the from the description
-        Input: A string which corresponds to description
-        Output: A collection of words from the description from which all the stop words have been removed
+        """ This methods reads stop words from a text file and removes the redundant words like a, an, the from the
+        description
+        :param text: A string which corresponds to description
+        :return: A collection of words from the description from which all the stop words have been removed
         """
-
         words_in_text = text.split()  # Tokenize the words
 
         # Remove Stop words
         filtered_words = words_in_text[:]  # make a copy of the word_list
-        for word in words_in_text:  # iterate over word_list
-            if word in self.stop_words:
-                filtered_words.remove(word) # remove word from filtered_word_list if it is a stopword
-
+        filtered_words = [word for word in words_in_text if word not in self.stop_words]
         return filtered_words
 
 
     def stem_text(self, filtered_words):
-        """  This methods receives a collection of words. It forms a collection of stemmed words and send it to the calling function
-        Input: A collection of words from the description from which all the stop words have been removed
-        Output: A collection of stemmed words
+        """ This methods receives a collection of words. It forms a collection of stemmed words and send it to the calling function
+        :param filtered_words: A collection of words from the description from which all the stop words have been removed
+        :return: A collection of stemmed words
         """
 
         st = PorterStemmer()  # Initialize a stemmer
