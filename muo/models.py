@@ -65,7 +65,7 @@ def pre_delete_usecase(sender, instance, using, **kwargs):
     """
     Prevent Use Case deletion if OSRs are referring to it
     """
-    if instance.use_cases.exists():
+    if instance.osrs.exists():
         raise IntegrityError(
             _('The %(name)s "%(obj)s" cannot be deleted as there are overlooked security requirements ' +
               'referring to it!') % {
@@ -164,12 +164,15 @@ class MUOContainer(BaseModel):
         verbose_name = "MUO Container"
         verbose_name_plural = "MUO Containers"
 
+    def __unicode__(self):
+        return self.id
+
 @receiver(pre_delete, sender=MUOContainer, dispatch_uid='muo_container_delete_signal')
 def pre_delete_muo_container(sender, instance, using, **kwargs):
     """
     Pre-delete checks for MUO container
     """
-    if instance.state not in ('draft', 'rejected'):
+    if instance.status not in ('draft', 'rejected'):
         raise ValidationError(_('The %(name)s "%(obj)s" can only be deleted if in draft of rejected state') % {
                                     'name': force_text(instance._meta.verbose_name),
                                     'obj': force_text(instance.__unicode__()),
