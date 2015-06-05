@@ -7,6 +7,8 @@
     <title>{% block title %}{% endblock %}</title>
     <meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
 
+    {% block favicon %}<link href="{% static 'favicon.ico'%}" type="image/png" rel="shortcut icon"/>{% endblock %}
+
     {% block extrastyle %}{% endblock %}
 
     <!-- Bootstrap 3.3.4 -->
