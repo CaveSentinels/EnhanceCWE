@@ -1,92 +1,105 @@
 #!/usr/bin/env python
-__author__ = "Sankalp Anand"
 
 from abc import ABCMeta, abstractmethod
-from nltk.stem.lancaster import LancasterStemmer
-import nltk
+from nltk.stem.porter import *
 import operator
 
 
-# Abstract class definition
+
 class CWESearchBase:
+    """ It is an abstract class acting as an interface for Keyword search module
+    """
     __metaclass__ = ABCMeta
 
     # Abstract method declaration
     @abstractmethod
-    def searchcwes(text):
+    def search_cwes(text):
         pass
 
     @abstractmethod
-    def stemtext(text):
+    def remove_stopwords(text):
         pass
 
     @abstractmethod
-    def removestopwords(text):
+    def stem_text(text):
         pass
 
 
 #  Concrete Class definition
 class CWEKeywordSearch(CWESearchBase):
 
-    @staticmethod  # To avoid passing 'self'
-    def searchcwes(text):
+    def __init__(self):
+        """  This is a constructor of the class which reads stop words from a file and stores them.
+        The words don't need to be read from the disk again and again for every request.
+        """
 
-        cwekeywordsearchobj = CWEKeywordSearch()
-
-        # Call Stop Word method here
-        filtered_words = cwekeywordsearchobj.removestopwords(text)
-
-        # Call stemmer here
-        stemmed_list = cwekeywordsearchobj.stemtext(filtered_words)
-
-        #  Form a dictionary with the count zero
-        from cwe.models import CWE, Category, Keyword
-        matchcount = {}
-        cwelist = CWE.objects.all()
-
-        for cwe in cwelist:
-            name = cwe.name.encode('ascii')  # ASCII encoding to remove unwanted 'u' for unicode
-            matchcount[name] = 0
-
-        #  Count the exact number of occurrences
-        for cwe in cwelist: # iterate over CWEs
-            for CWETag in cwe.keywords.all():  # iterate over tags
-                if CWETag.name in stemmed_list:  # check if the tags exist or not
-                    matchcount[cwe.name] += 1
-
-        matchcount_sorted = sorted(matchcount.items(), key=operator.itemgetter(1), reverse=True)
-        return matchcount_sorted
-
-    @staticmethod  # To avoid passing 'self'
-    def stemtext(filtered_words):
-        st = LancasterStemmer()  # Initialize a stemmer
-
-        # Build stemmed list
-        stemmed = []
-        for word in filtered_words:
-            stemmed.append(st.stem(word))
-
-        return stemmed
-
-    @staticmethod  # To avoid passing 'self'
-    def removestopwords(text):
-        wordsintext = text.split()  # Tokenize the words
-
-        # Read stop words in a collection
+        # Read stop words in a collection from a file stored in the disk
         import os
-        stop_words = []
+        self.stop_words = []
         with open(os.getcwd() + '/cwe/stopwords.txt', 'r') as f:
             for line in f:
                 for word in line.split():
-                    stop_words.append(word)
+                    self.stop_words.append(word)
+
+    def search_cwes(self, text):
+        """  This is the main method which receives a string and passes the CWE Objects with their match counts
+        It also invokes two other methods, i.e, remove_stopwords() and stem_text() to remove redundant words and stem the remaining
+        Input: A string which corresponds to description
+        Output: A list of tuples wherein the first item will be a CWE Object and second item will be its match count
+        """
+
+        cwe_keyword_search_obj = CWEKeywordSearch()
+
+        # Call Stop Word method here
+        filtered_words = cwe_keyword_search_obj.remove_stopwords(text)
+
+        # Call stemmer here
+        stemmed_list = cwe_keyword_search_obj.stem_text(filtered_words)
+
+        #  Form a dictionary with the count zero
+        from cwe.models import CWE
+        match_count = []
+        cwe_list = CWE.objects.filter(keywords__name__in = stemmed_list).distinct()
+
+        #  Count the exact number of occurrences
+        for cwe in cwe_list: # iterate over CWEs
+            match_count.append((cwe, cwe.keywords.filter(name__in = stemmed_list).count()))
+
+        match_count.sort(key= lambda x: x[1], reverse=True)
+        return match_count
+
+
+
+
+    def remove_stopwords(self, text):
+        """  This methods reads stop words from a text file and removes the redundant words like a, an, the from the description
+        Input: A string which corresponds to description
+        Output: A collection of words from the description from which all the stop words have been removed
+        """
+
+        words_in_text = text.split()  # Tokenize the words
 
         # Remove Stop words
-        filtered_words = wordsintext[:]  # make a copy of the word_list
-        for word in wordsintext:  # iterate over word_list
-            if word in stop_words:
+        filtered_words = words_in_text[:]  # make a copy of the word_list
+        for word in words_in_text:  # iterate over word_list
+            if word in self.stop_words:
                 filtered_words.remove(word) # remove word from filtered_word_list if it is a stopword
 
         return filtered_words
+
+
+    def stem_text(self, filtered_words):
+        """  This methods receives a collection of words. It forms a collection of stemmed words and send it to the calling function
+        Input: A collection of words from the description from which all the stop words have been removed
+        Output: A collection of stemmed words
+        """
+
+        st = PorterStemmer()  # Initialize a stemmer
+
+        # Build stemmed list
+        stemmed = [st.stem(word) for word in filtered_words]
+
+        return stemmed
 
 
 
