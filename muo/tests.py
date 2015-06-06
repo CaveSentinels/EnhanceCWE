@@ -6,101 +6,264 @@ from cwe.models import CWE
 # Create your tests here.
 
 class TestMUOContainer(TestCase):
+    """
+    This class is the test suite for the MUOContainer model class. It contains
+    test cases for the custom methods in the MUOContainer model.
+    """
 
-    def test_positive_approve_muo(self):
-        muoc = MUOContainer()
-        muoc.status = "in_review"
-        muoc.published_status = "unpublished"
-        muoc.save()
+    def setUp(self):
+        """
+        This method does the general setup needed for the test methods.
+        For now it just creates a MUOContainer object, but can be used to
+        do any default settings
+        """
 
-        muoc.action_approve()
-        muoc = MUOContainer.objects.first()
-        self.assertEqual(muoc.status, "approved")
-        self.assertEqual(muoc.published_status, "published")
+        MUOContainer.objects.create()
 
-    def test_negative_approve_muo(self):
-        muoc = MUOContainer()
-        muoc.status = "draft"
-        muoc.published_status = "published"
-        muoc.save()
 
-        self.assertRaises(ValueError, muoc.action_approve)
+    def get_muo_container(self, status):
+        """
+        This method sets the status of the MUOContainer object with the one
+        received in arguments.
+        """
 
-    def test_positive_reject_muo(self):
-        muoc = MUOContainer()
-        muoc.status = "approved"
-        muoc.save()
+        muo_container = MUOContainer.objects.get(pk=1)
+        muo_container.status = status
+        muo_container.save()
+        return muo_container
 
-        muoc.action_reject()
-        muoc = MUOContainer.objects.first()
-        self.assertEqual(muoc.status, "rejected")
 
-    def test_negative_reject_muo(self):
-        muoc = MUOContainer()
-        muoc.status = "draft"
-        muoc.published_status = "published"
-        muoc.save()
+    # Test 'action_approve'
 
-        self.assertRaises(ValueError, muoc.action_reject)
+    def test_action_approve_with_status_in_review(self):
+        """
+        This is a positive test case
+        'action_approve' should set the status to 'approved' and  published_status to 'published'
+        when called on a MUOContainer object with status 'in_review'.
+        """
 
-    def test_positive_submit_muo(self):
-        muoc = MUOContainer()
-        muoc.status = "draft"
-        muoc.save()
+        muo_container = self.get_muo_container('in_review')
+        muo_container.action_approve()
+        self.assertEqual(muo_container.status, 'approved')
+        self.assertEqual(muo_container.published_status, 'published')
 
-        muoc.action_submit()
-        self.assertEqual(muoc.status, "in_review")
 
-    def test_negative_submit_muo(self):
-        muoc = MUOContainer()
-        muoc.status = "approved"
-        muoc.save()
+    def test_action_approve_with_status_draft(self):
+        """
+        This is a negative test case
+        'action_approve' should raise a 'ValueError' exception when called on a MUOContainer
+        object with status 'draft'.
+        """
 
-        self.assertRaises(ValueError, muoc.action_submit)
+        muo_container = self.get_muo_container('draft')
+        self.assertRaises(ValueError, muo_container.action_approve)
 
-    def test_positive_save_in_draft_muo(self):
-        muoc = MUOContainer()
-        muoc.status = "rejected"
-        muoc.save()
 
-        muoc.action_save_in_draft()
-        self.assertEqual(muoc.status, "draft")
+    def test_action_approve_with_status_rejected(self):
+        """
+        This is a negative test case
+        'action_approve' should raise a 'ValueError' exception when called on a MUOContainer
+        object with status 'rejected'.
+        """
 
-    def test_negative_save_in_draft_muo(self):
-        muoc = MUOContainer()
-        muoc.status = "draft"
-        muoc.save()
+        muo_container = self.get_muo_container('rejected')
+        self.assertRaises(ValueError, muo_container.action_approve)
 
-        self.assertRaises(ValueError, muoc.action_save_in_draft)
 
-    def test_positive_publish_muo(self):
-        muoc = MUOContainer()
-        muoc.status = "approved"
-        muoc.published_status = "unpublished"
-        muoc.save()
+    def test_action_approve_with_status_approved(self):
+        """
+        This is a negative test case
+        'action_approve' should raise a 'ValueError' exception when called on a MUOContainer
+        object with status 'approved'.
+        """
 
-        muoc.action_publish()
-        self.assertEqual(muoc.published_status, "published")
+        muo_container = self.get_muo_container('approved')
+        self.assertRaises(ValueError, muo_container.action_approve)
 
-    def test_negative_publish_muo(self):
-        muoc = MUOContainer()
-        muoc.status = "draft"
-        muoc.published_status = "published"
-        muoc.save()
 
-        self.assertRaises(ValueError, muoc.action_publish)
+    def test_action_approve_with_status_invalid(self):
+        """
+        This is a negative test case
+        'action_approve' should raise a 'ValueError' exception when called on a MUOContainer
+        object with an invalid status value.
+        """
 
-    def test_positive_unpublish_muo(self):
-        muoc = MUOContainer()
-        muoc.published_status = "published"
-        muoc.save()
+        muo_container = self.get_muo_container('XXX')
+        self.assertRaises(ValueError, muo_container.action_approve)
 
-        muoc.action_unpublish()
-        self.assertEqual(muoc.published_status, "unpublished")
 
-    def test_negative_unpublish_muo(self):
-        muoc = MUOContainer()
-        muoc.published_status = "unpublished"
-        muoc.save()
+    # Test 'action_reject'
 
-        self.assertRaises(ValueError, muoc.action_unpublish)
+    def test_action_reject_with_status_in_review(self):
+        """
+        This is a positive test case
+        'action_reject' should set the status to 'rejected' when called on a MUOContainer
+        object with status 'in_review'.
+        """
+
+        muo_container = self.get_muo_container('in_review')
+        muo_container.action_reject()
+        self.assertEqual(muo_container.status, 'rejected')
+
+
+    def test_action_reject_with_status_approved(self):
+        """
+        This is a positive test case
+        'action_reject' should set the status to 'rejected' when called on a MUOContainer
+        object with status 'in_review'.
+        """
+
+        muo_container = self.get_muo_container('approved')
+        muo_container.action_reject()
+        self.assertEqual(muo_container.status, 'rejected')
+
+
+    def test_action_reject_with_status_draft(self):
+        """
+        This is a negative test case
+        'action_reject' should raise a 'ValueError' exception when called on a MUOContainer
+        object with status 'draft'.
+        """
+
+        muo_container = self.get_muo_container('draft')
+        self.assertRaises(ValueError, muo_container.action_reject)
+
+
+    def test_action_reject_with_status_rejected(self):
+        """
+        This is a negative test case
+        'action_reject' should raise a 'ValueError' exception when called on a MUOContainer
+        object with status 'rejected'.
+        """
+
+        muo_container = self.get_muo_container('rejected')
+        self.assertRaises(ValueError, muo_container.action_reject)
+
+
+    def test_action_reject_with_status_invalid(self):
+        """
+        This is a negative test case
+        'action_reject' should raise a 'ValueError' exception when called on a MUOContainer
+        object with an invalid status value.
+        """
+
+        muo_container = self.get_muo_container('XXX')
+        self.assertRaises(ValueError, muo_container.action_reject)
+
+
+    # Test 'action_submit'
+
+    def test_action_submit_with_status_draft(self):
+        """
+        This is a positive test case
+        'action_submit' should set the status to 'in_review' when called on a MUOContainer
+        object with status 'draft'.
+        """
+
+        muo_container = self.get_muo_container('draft')
+        muo_container.action_submit()
+
+        self.assertEqual(muo_container.status, 'in_review')
+
+
+    def test_action_submit_with_status_approved(self):
+        """
+        This is a negative test case
+        'action_submit' should raise a 'ValueError' exception when called on a MUOContainer
+        object with status 'approved'.
+        """
+
+        muo_container = self.get_muo_container('approved')
+        self.assertRaises(ValueError, muo_container.action_submit)
+
+
+    def test_action_submit_with_status_rejected(self):
+        """
+        This is a negative test case
+        'action_submit' should raise a 'ValueError' exception when called on a MUOContainer
+        object with status 'rejected'.
+        """
+
+        muo_container = self.get_muo_container('rejected')
+        self.assertRaises(ValueError, muo_container.action_submit)
+
+
+    def test_action_submit_with_status_in_review(self):
+        """
+        This is a negative test case
+        'action_submit' should raise a 'ValueError' exception when called on a MUOContainer
+        object with status 'in_review'.
+        """
+
+        muo_container = self.get_muo_container('in_review')
+        self.assertRaises(ValueError, muo_container.action_submit)
+
+
+    def test_action_submit_with_status_invalid(self):
+        """
+        This is a negative test case
+        'action_submit' should raise a 'ValueError' exception when called on a MUOContainer
+        object with an invalid status value.
+        """
+
+        muo_container = self.get_muo_container('XXX')
+        self.assertRaises(ValueError, muo_container.action_submit)
+
+
+    # Test 'action_save_in_draft'
+
+    def test_action_save_in_draft_with_status_in_review(self):
+        """
+        This is a positive test case
+        'action_save_in_draft' should set the status to 'draft' when called on a MUOContainer
+        object with status 'in_review'.
+        """
+
+        muo_container = self.get_muo_container('in_review')
+        muo_container.action_save_in_draft()
+        self.assertEqual(muo_container.status, 'draft')
+
+
+    def test_action_save_in_draft_with_status_rejected(self):
+        """
+        This is a positive test case
+        'action_save_in_draft' should set the status to 'draft' when called on a MUOContainer
+        object with status 'rejected'.
+        """
+
+        muo_container = self.get_muo_container('rejected')
+        muo_container.action_save_in_draft()
+        self.assertEqual(muo_container.status, 'draft')
+
+
+    def test_action_save_in_draft_with_status_approved(self):
+        """
+        This is a negative test case
+        'action_save_in_draft' should raise a 'ValueError' exception when called on a MUOContainer
+        object with status 'approved'.
+        """
+
+        muo_container = self.get_muo_container('approved')
+        self.assertRaises(ValueError, muo_container.action_save_in_draft)
+
+
+    def test_action_save_in_draft_with_status_draft(self):
+        """
+        This is a negative test case
+        'action_save_in_draft' should raise a 'ValueError' exception when called on a MUOContainer
+        object with status 'draft'.
+        """
+
+        muo_container = self.get_muo_container('draft')
+        self.assertRaises(ValueError, muo_container.action_save_in_draft)
+
+
+    def test_action_save_in_draft_with_status_invalid(self):
+        """
+        This is a negative test case
+        'action_save_in_draft' should raise a 'ValueError' exception when called on a MUOContainer
+        object with an invalid status value.
+        """
+
+        muo_container = self.get_muo_container('XXX')
+        self.assertRaises(ValueError, muo_container.action_save_in_draft)
