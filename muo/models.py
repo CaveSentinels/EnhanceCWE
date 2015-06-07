@@ -65,7 +65,7 @@ def pre_delete_usecase(sender, instance, using, **kwargs):
     """
     Prevent Use Case deletion if OSRs are referring to it
     """
-    if instance.use_cases.exists():
+    if instance.osrs.exists():
         raise IntegrityError(
             _('The %(name)s "%(obj)s" cannot be deleted as there are overlooked security requirements ' +
               'referring to it!') % {
