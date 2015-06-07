@@ -64,6 +64,8 @@ class CWEKeywordSearch(CWESearchBase):
         :return: A list of tuples wherein the first item will be a CWE Object and second item will be its match count
         """
 
+        text = text.lower()
+
         # Call Stop Word method here
         filtered_words = self.remove_stopwords(text)
 
