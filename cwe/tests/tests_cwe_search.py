@@ -28,7 +28,7 @@ class CWESearchTest(TestCase):
         self.assertEqual(CWESearchLocator.register(cwe_keyword_search, 2), True)
 
         # 'get_cwe_search' should return the object registered with highest priority
-        self.assertEqual(CWESearchLocator.get_cwe_search(), cwe_keyword_search)
+        self.assertEqual(CWESearchLocator.get_instance(), cwe_keyword_search)
 
         # 'register' should successfully register an object of a concrete class of
         # the CWESearchBase with the priority higher than that of the already registered

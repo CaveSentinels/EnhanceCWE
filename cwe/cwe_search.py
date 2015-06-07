@@ -31,18 +31,22 @@ class CWESearchLocator:
             else:
                 return False
         else:
-            raise ValueError('Registration as service provider failed: objects, which inherits CWESearchBase can only'
-                             'register as the service provider')
+            raise ValueError('Registration as service provider failed: objects, which inherits CWESearchBase can only register as the service provider')
 
     @staticmethod
-    def get_cwe_search():
+    def get_instance():
         """
         This class method is called by the views who wants to get a reference of the highest
         priority service provider
         :return: a reference to the highest priority service provider
         """
-        return CWESearchLocator.service_provider
 
+        highest_priority_instance = CWESearchLocator.service_provider
+        if (highest_priority_instance == None):
+            # If no instance is registered, raise LookupError with appropriate error
+            raise LookupError('No registered CWESearchBase instance found')
+
+        return highest_priority_instance
 
 
 class CWESearchBase:
@@ -153,7 +157,7 @@ class CWEKeywordSearch(CWESearchBase):
 
 
 # Register a default CWESearchBase object with the service locator
-try:
-    CWESearchLocator.register(CWEKeywordSearch(), 1)
-except ValueError as e:
-    print e.message
+# Note: We are deliberately not handling the exception here, because it is very unlikely
+# that the exception will be raised if the correct algorithm is registered properly. If
+# not, unhandled exception will make it easier to find the problem.
+CWESearchLocator.register(CWEKeywordSearch(), 1)
