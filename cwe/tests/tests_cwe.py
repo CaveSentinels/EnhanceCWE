@@ -215,6 +215,43 @@ class TestAddCWE(TestCase):
             print(CWE.objects.create(code=6, name="-5"))
 
 
+class TestEditCWE(TestCase):
+
+    def setUp(self):
+        self._construct_test_database()
+
+    def tearDown(self):
+        self._destruct_test_database()
+
+    def _construct_test_database(self):
+        cwe101 = CWE(code=101, name="CWE #101")
+        cwe101.save()
+        cwe102 = CWE(code=102, name="CWE #102")
+        cwe102.save()
+
+    def _destruct_test_database(self):
+        cwe101 = CWE.objects.get(code=101)
+        cwe101.delete()
+        cwe102 = CWE.objects.get(code=102)
+        cwe102.delete()
+
+    def test_positive_edit_name(self):
+        # Retrieve the CWE object and change the name.
+        cwe = CWE.objects.get(code=101)
+        cwe.name = "CWE #101-changed"
+        cwe.save()
+
+        # Verify that the changed name has been written to database
+        cwe = CWE.objects.get(code=101)
+        self.assertEqual(cwe.name, "CWE #101-changed")
+
+    def test_negative_edit_code_duplicated(self):
+        cwe = CWE.objects.get(code=101)
+        cwe.code = 102  # But 102 already exists
+        with transaction.atomic():
+            self.assertRaises(IntegrityError, cwe.save)
+
+
 class KeywordMethodTests(TestCase):
 
     def setUp(self):
