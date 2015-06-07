@@ -112,6 +112,8 @@ class CWEKeywordSearch(CWESearchBase):
         This is the concrete implementation of the super class' abstract method
         """
 
+        text = text.lower()
+
         # Call Stop Word method here
         filtered_words = self.remove_stopwords(text)
 
