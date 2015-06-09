@@ -187,10 +187,7 @@ class CWESearchTest(TestCase):
         text="This module exploits a stacked SQL injection in order to add an administrator user to the " \
                     "SolarWinds Orion database."
         results = self.cwe_keyword_search_obj.search_cwes(text)
-        res = False
-        if [cwe.name for cwe, count in results][0] == 'SQL Injection' and [cwe.name for cwe, count in results][1] != 'SQL Injection':
-            res=True
-        self.assertEqual(res, True)
+        self.assertEqual(results[0][0].name, 'SQL Injection')
 
 
     def test_check_suggestion_file_upload_vulnerability(self):
@@ -202,11 +199,9 @@ class CWESearchTest(TestCase):
         text = "This module exploits a file upload vulnerability in all versions of the Holding Pattern theme found in " \
              "the upload_file.php script which contains no session or file validation. It allows unauthenticated users " \
              "to upload files of any type and subsequently execute PHP scripts in the context of the web server."
+
         results = self.cwe_keyword_search_obj.search_cwes(text)
-        res = False
-        if [cwe.name for cwe, count in results][0] == 'File Upload Vulnerability' and [cwe.name for cwe, count in results][1] != 'File Upload Vulnerability':
-            res=True
-        self.assertEqual(res, True)
+        self.assertEqual(results[0][0].name, 'File Upload Vulnerability')
 
     def test_check_suggestion_cross_site_scripting(self):
         """ This test case tests the algorithm for Cross site scripting
@@ -219,10 +214,7 @@ class CWESearchTest(TestCase):
                "it will fail). You can also have your own custom JavaScript by setting the CUSTOMJS option. Lastly, " \
                "you might need to configure the URIHOST option if you are behind NAT."
         results = self.cwe_keyword_search_obj.search_cwes(text)
-        res = False
-        if [cwe.name for cwe, count in results][0] == 'Cross site scripting' and [cwe.name for cwe, count in results][1] != 'Cross site scripting':
-            res=True
-        self.assertEqual(res, True)
+        self.assertEqual(results[0][0].name, 'Cross site scripting')
 
     def test_check_suggestion_blank_text(self):
         """ This test case tests the algorithm for Blank text
@@ -232,11 +224,7 @@ class CWESearchTest(TestCase):
         # Test # 4: Blank text
         text=""
         results = self.cwe_keyword_search_obj.search_cwes(text)
-        res = False
-        if len([cwe for cwe, count in results]) == 0:
-            res=True
-
-        self.assertEqual(res, True)
+        self.assertEqual(len(results), 0)
 
     def test_check_suggestion_sql_injection_not_exists(self):
         """ This test case tests the algorithm for 'SQL Injection' does not exist in the description
@@ -262,10 +250,8 @@ class CWESearchTest(TestCase):
         # Test # 6: All Integers
         text="111111111111111122222222222222223333333333333444444444"
         results = self.cwe_keyword_search_obj.search_cwes(text)
-        res = False
-        if len([cwe for cwe, count in results if 'SQL Injection' in cwe.name]) > 0:
-            res=True
-        self.assertEqual(res, False)
+
+        self.assertEqual(len(results), 0)
 
     def test_check_suggestion_text_none(self):
         """ This test case tests the algorithm for File upload vulnerability
