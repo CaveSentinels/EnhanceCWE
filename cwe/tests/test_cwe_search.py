@@ -96,7 +96,7 @@ class CWESearchTest(TestCase):
         kw = Keyword(name='upload') # 6
         kw.save()
 
-        kw = Keyword(name='fil') # 7
+        kw = Keyword(name='file') # 7
         kw.save()
 
         kw = Keyword(name='cod') # 8
@@ -128,22 +128,6 @@ class CWESearchTest(TestCase):
 
         kw = Keyword(name='sql') # 17
         kw.save()
-
-        cat = Category(name='Category5')
-        cat.save()
-
-        cat = Category(name='Category4')
-        cat.save()
-
-        cat = Category(name='Category3')
-        cat.save()
-
-        cat = Category(name='Category2')
-        cat.save()
-
-        cat = Category(name='Category1')
-        cat.save()
-
 
         cwe = CWE(code=106, name='XML Injection')
         cwe.save()
@@ -204,7 +188,7 @@ class CWESearchTest(TestCase):
                     "SolarWinds Orion database."
         results = self.cwe_keyword_search_obj.search_cwes(text)
         res = False
-        if [cwe for cwe, count in results if 'SQL Injection' in cwe.name and count > 0].__len__() > 0:
+        if [cwe.name for cwe, count in results][0] == 'SQL Injection' and [cwe.name for cwe, count in results][1] != 'SQL Injection':
             res=True
         self.assertEqual(res, True)
 
@@ -220,7 +204,7 @@ class CWESearchTest(TestCase):
              "to upload files of any type and subsequently execute PHP scripts in the context of the web server."
         results = self.cwe_keyword_search_obj.search_cwes(text)
         res = False
-        if [cwe for cwe, count in results if 'File Upload Vulnerability' in cwe.name and count > 0].__len__() > 0:
+        if [cwe.name for cwe, count in results][0] == 'File Upload Vulnerability' and [cwe.name for cwe, count in results][1] != 'File Upload Vulnerability':
             res=True
         self.assertEqual(res, True)
 
@@ -236,7 +220,7 @@ class CWESearchTest(TestCase):
                "you might need to configure the URIHOST option if you are behind NAT."
         results = self.cwe_keyword_search_obj.search_cwes(text)
         res = False
-        if [cwe for cwe, count in results if 'Cross site scripting' in cwe.name and count > 0].__len__() > 0:
+        if [cwe.name for cwe, count in results][0] == 'Cross site scripting' and [cwe.name for cwe, count in results][1] != 'Cross site scripting':
             res=True
         self.assertEqual(res, True)
 
@@ -246,13 +230,13 @@ class CWESearchTest(TestCase):
         :return: None
         """
         # Test # 4: Blank text
-        text="".lower()
+        text=""
         results = self.cwe_keyword_search_obj.search_cwes(text)
         res = False
-        if [cwe for cwe, count in results if 'SQL Injection' in cwe.name and count > 0].__len__() > 0:
+        if len([cwe for cwe, count in results]) == 0:
             res=True
 
-        self.assertEqual(res, False)
+        self.assertEqual(res, True)
 
     def test_check_suggestion_sql_injection_not_exists(self):
         """ This test case tests the algorithm for 'SQL Injection' does not exist in the description
@@ -266,11 +250,11 @@ class CWESearchTest(TestCase):
              "admin user to escalate to root."
         results = self.cwe_keyword_search_obj.search_cwes(text)
         res = False
-        if [cwe for cwe, count in results if 'SQL Injection' in cwe.name and count > 0].__len__() > 0:
+        if len([cwe for cwe, count in results if 'SQL Injection' in cwe.name]) > 0:
             res=True
         self.assertEqual(res, False)
 
-    def test_check_suggestion_all_integers(self):
+    def test_check_suggestion_integers_as_string(self):
         """ This test case tests the algorithm for All Integers
         :param text: None
         :return: None
@@ -279,63 +263,60 @@ class CWESearchTest(TestCase):
         text="111111111111111122222222222222223333333333333444444444"
         results = self.cwe_keyword_search_obj.search_cwes(text)
         res = False
-        if [cwe for cwe, count in results if 'SQL Injection' in cwe.name and count > 0].__len__() > 0:
+        if len([cwe for cwe, count in results if 'SQL Injection' in cwe.name]) > 0:
             res=True
         self.assertEqual(res, False)
 
-    def test_check_suggestion_blank_text(self):
+    def test_check_suggestion_text_none(self):
         """ This test case tests the algorithm for File upload vulnerability
         :param text: None
         :return: None
         """
         # Test # 7: None
-        text = ""
+        text = None
         results = self.cwe_keyword_search_obj.search_cwes(text)
-        res = False
-        if [cwe for cwe, count in results if 'SQL Injection' in cwe.name and count > 0].__len__() > 0:
-            res=True
-        self.assertEqual(res, False)
+        self.assertEqual(not results, True)
 
-    def test_check_suggestion_reverse_test_case(self):
+    def test_check_suggestion_text_false(self):
         """ This test case tests the algorithm for File upload vulnerability
         :param text: None
         :return: None
         """
-        # Test # 8: Reverse test cases
-        # Authentication Bypass - It gives three suggestions
-        text = "This module exploits an authentication bypass vulnerability in Solarwinds Storage Manager. " \
-             "The vulnerability exists in the AuthenticationFilter, which allows to bypass authentication with specially crafted URLs. " \
-             "After bypassing authentication, is possible to use a file upload function to achieve remote code execution. " \
-             "This module has been tested successfully in Solarwinds Store Manager Server 5.1.0 and 5.7.1 on Windows 32 bits, Windows 64 bits and " \
-             "Linux 64 bits operating systems."
-
+        # Test # 7: False
+        text = False
         results = self.cwe_keyword_search_obj.search_cwes(text)
+        self.assertEqual(not results, True)
+
+    def test_check_suggestion_integers(self):
+        """ This test case tests the algorithm for All Integers
+        :param text: None
+        :return: None
+        """
+        # Test # 6: All Integers
+        text=111111111111111111
         res = False
-        if [cwe for cwe, count in results if 'Authentication bypass' in cwe.name and count > 0].__len__() > 0:
-            res = True
+        try:
+            results = self.cwe_keyword_search_obj.search_cwes(text)
+        except ValueError:
+            res = True # It means value error exception really occurred
+
         self.assertEqual(res, True)
 
-        cwe_matches = [cwe for cwe, count in results if 'Authentication bypass' in cwe.name and count > 0]
+
+    def test_check_suggestion_sqlinjection_uppercase(self):
+        """ This test case tests the algorithm for SQL Injection
+        :param text: None
+        :return: None
+        """
+        # Test # 1: SQL Injection
+        text="This module exploits a stacked SQL injection in order to add an administrator user to the " \
+                    "SolarWinds Orion database."
+        results_lowercase = self.cwe_keyword_search_obj.search_cwes(text)
+        results_uppercase = self.cwe_keyword_search_obj.search_cwes(text.upper())
+        self.assertEqual(len(results_lowercase), len(results_uppercase))
+        self.assertEqual(results_lowercase[0][0].name, results_uppercase[0][0].name)
+        self.assertEqual(results_lowercase[1][0].name, results_uppercase[1][0].name)
+        self.assertEqual(results_lowercase[2][0].name, results_uppercase[2][0].name)
 
 
-        # Test # 9: Reverse test cases
-        # The above test gives 3 suggestions -
-        # 101 - Authentication Bypass
-        # 103 - File Upload Vulnerability
-        # 105 - Remote Code Execution
-        # Now we will check whether they really exist in the description
-        from cwe.models import CWE
-        for matched_cwe in cwe_matches:
-            # Check for 101
-            cwe_list = CWE.objects.filter(name=matched_cwe).distinct()
-            res1 = False
-            for cwe in cwe_list: # iterate over CWEs
-                for keyword in cwe.keywords.all():
-                    if not str(keyword) in text:
-                        res1 = False
-                    else:
-                        res1 = True
 
-            # If res1 remains False, it means that there was no keyword which was there in the text
-            # It it becomes True at some point, it means atleast one keyword matched
-            self.assertEqual(res, True)

@@ -111,6 +111,14 @@ class CWEKeywordSearch(CWESearchBase):
         """
         This is the concrete implementation of the super class' abstract method
         """
+        match_count = []
+
+        # Validate text for None or empty string
+        if not text: # is None or text is False:
+            return match_count
+
+        if not isinstance(text, basestring):
+            raise ValueError('Please pass a string in the text description.')
 
         text = text.lower()
 
@@ -122,7 +130,6 @@ class CWEKeywordSearch(CWESearchBase):
 
         #  Form a dictionary with the count zero
         from cwe.models import CWE
-        match_count = []
         cwe_list = CWE.objects.filter(keywords__name__in = stemmed_list).distinct()
 
         #  Count the exact number of occurrences
