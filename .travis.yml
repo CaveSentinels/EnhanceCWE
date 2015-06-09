@@ -23,4 +23,3 @@ branches:
   only:
     - master
     - develop
-    - feature_rw_travis_build   # Will remove later
