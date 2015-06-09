@@ -3,7 +3,9 @@
 echo "This script tests the project."
 
 # Run the "cwe" tests
-python manage.py test cwe --settings=EnhancedCWE.test_settings
+ret = $(python manage.py test cwe --settings=EnhancedCWE.test_settings)
+echo $ret
 
 # Run the "muo" tests
-python manage.py test muo --settings=EnhancedCWE.test_settings
+ret = $(python manage.py test muo --settings=EnhancedCWE.test_settings)
+echo $ret
