@@ -288,6 +288,12 @@ class KeywordMethodTests(TestCase):
         keyword = Keyword.objects.get(name="authent")
         self.assertEqual(isinstance(keyword.__unicode__(), basestring), True)
 
+    # This test checks that integer names can be saved successfully
+    def test_keyword_integer_name(self):
+        Keyword(name=404).save()
+        kw = Keyword.objects.get(name="404")
+        self.assertEqual(kw.name, "404")
+
 
 class CategoryMethodTests(TestCase):
 
