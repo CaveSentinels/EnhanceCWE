@@ -16,19 +16,25 @@ class TagAdmin(BaseAdmin):
 
 @admin.register(OSR)
 class OSRAdmin(BaseAdmin):
-    fields = ['description', 'use_case', 'tags']
-    search_fields = ['description', 'tags__name']
+    fields = ['name', 'description', 'use_case', 'tags']
+    readonly_fields = ['name']
+    list_display = ['name']
+    search_fields = ['name', 'description', 'tags__name']
 
 
 class OSRAdminInline(admin.TabularInline):
     model = OSR
     extra = 1
-    fields = ['description', 'tags']
+    fields = ['name', 'description', 'tags']
+    readonly_fields = ['name']
 
 
 @admin.register(UseCase)
 class UseCaseAdmin(BaseAdmin):
-    fields = ['misuse_case', 'description', 'tags']
+    fields = ['name', 'misuse_case', 'description', 'tags']
+    readonly_fields = ['name']
+    list_display = ['name']
+    search_fields = ['name', 'description', 'tags__name']
     inlines = [OSRAdminInline]
 
 
@@ -36,21 +42,25 @@ class UseCaseAdmin(BaseAdmin):
 class UseCaseAdminInLine(admin.StackedInline):
     model = UseCase
     extra = 1
-    fields = ['description', 'tags']
+    fields = ['name', 'description', 'tags']
+    readonly_fields = ['name']
 
 
 @admin.register(MisuseCase)
 class MisuseCaseAdmin(BaseAdmin):
-    fields = ['cwes', ('description', 'tags')]
+    fields = ['name', 'cwes', ('description', 'tags')]
+    readonly_fields = ['name']
+    list_display = ['name']
+    search_fields = ['name', 'description', 'tags__name']
     inlines = [UseCaseAdminInLine]
 
 
 @admin.register(MUOContainer)
 class MUOContainerAdmin(BaseAdmin):
-    list_display = ('id', 'status', 'published_status')
-    readonly_fields = ['status', 'published_status']
-    exclude = ['created_at', 'modified_at']
-    search_fields = ['status']
+    list_display = ['name', 'status', 'published_status']
+    readonly_fields = ['name', 'status', 'published_status']
+    exclude = ['created_at', 'modified_at', 'created_by', 'modified_by']
+    search_fields = ['name', 'status']
     date_hierarchy = 'created_at'
 
     # Override response_change method of admin/options.py to handle the click of

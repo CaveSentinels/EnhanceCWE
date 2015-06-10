@@ -5,7 +5,7 @@ from base.models import BaseModel
 from django.db import IntegrityError
 from django.utils.encoding import force_text
 from django.utils.translation import ugettext as _
-from django.db.models.signals import pre_delete
+from django.db.models.signals import pre_delete, post_save
 from django.dispatch import receiver
 
 STATUS = [('draft', 'Draft'), ('in_review', 'In Review'), ('approved', 'Approved'), ('rejected', 'Rejected')]
@@ -24,6 +24,7 @@ class Tag(BaseModel):
 
 
 class MisuseCase(BaseModel):
+    name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
     description = models.TextField()
     cwes = models.ManyToManyField(CWE, related_name='misuse_cases')
     tags = models.ManyToManyField(Tag, blank=True)
@@ -33,7 +34,16 @@ class MisuseCase(BaseModel):
         verbose_name_plural = "Misuse Cases"
 
     def __unicode__(self):
-        return self.description[:100] + "..."
+        return "%s - %s..." % (self.name, self.description[:70])
+
+
+@receiver(post_save, sender=MisuseCase, dispatch_uid='misusecase_post_save_signal')
+def post_save_misusecase(sender, instance, created, using, **kwargs):
+    """ Set the value of the field 'name' after creating the object """
+    if created:
+        instance.name = "MU/{0:05d}".format(instance.id)
+        instance.save()
+
 
 @receiver(pre_delete, sender=MisuseCase, dispatch_uid='misusecase_delete_signal')
 def pre_delete_misusecase(sender, instance, using, **kwargs):
@@ -49,6 +59,7 @@ def pre_delete_misusecase(sender, instance, using, **kwargs):
 
 
 class UseCase(BaseModel):
+    name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
     description = models.TextField()
     misuse_case = models.ForeignKey(MisuseCase, on_delete='Cascade', related_name='use_cases')
     tags = models.ManyToManyField(Tag, blank=True)
@@ -58,7 +69,15 @@ class UseCase(BaseModel):
         verbose_name_plural = "Use Cases"
 
     def __unicode__(self):
-        return self.description[:100] + "..."
+        return "%s - %s..." % (self.name, self.description[:70])
+
+
+@receiver(post_save, sender=UseCase, dispatch_uid='usecase_post_save_signal')
+def post_save_usecase(sender, instance, created, using, **kwargs):
+    """ Set the value of the field 'name' after creating the object """
+    if created:
+        instance.name = "UC/{0:05d}".format(instance.id)
+        instance.save()
 
 @receiver(pre_delete, sender=UseCase, dispatch_uid='usecase_delete_signal')
 def pre_delete_usecase(sender, instance, using, **kwargs):
@@ -75,6 +94,7 @@ def pre_delete_usecase(sender, instance, using, **kwargs):
 
 
 class OSR(BaseModel):
+    name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
     description = models.TextField()
     use_case = models.ForeignKey(UseCase, on_delete='Cascade', related_name='osrs')
     tags = models.ManyToManyField(Tag, blank=True)
@@ -84,16 +104,32 @@ class OSR(BaseModel):
         verbose_name_plural = "Overlooked Security Requirements"
 
     def __unicode__(self):
-        return self.description[:100] + "..."
+        return "%s - %s..." % (self.name, self.description[:70])
+
+
+@receiver(post_save, sender=OSR, dispatch_uid='osr_post_save_signal')
+def post_save_osr(sender, instance, created, using, **kwargs):
+    """ Set the value of the field 'name' after creating the object """
+    if created:
+        instance.name = "OSR/{0:05d}".format(instance.id)
+        instance.save()
 
 
 class MUOContainer(BaseModel):
+    name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
     cwes = models.ManyToManyField(CWE, related_name='muo_container')
     misuse_cases = models.ManyToManyField(MisuseCase, related_name='muo_container')
     use_cases = models.ManyToManyField(UseCase, related_name='muo_container')
     osrs = models.ManyToManyField(OSR, related_name='muo_container')
     status = models.CharField(choices=STATUS, max_length=64, default='draft')
     published_status = models.CharField(choices=PUBLISHED_STATUS, max_length=32, default='unpublished')
+
+    class Meta:
+        verbose_name = "MUO Container"
+        verbose_name_plural = "MUO Containers"
+
+    def __unicode__(self):
+        return self.name
 
     def action_approve(self):
         # This method change the status of the MUOContainer object to 'approved' and
@@ -160,16 +196,21 @@ class MUOContainer(BaseModel):
         else:
             raise ValueError("You can explicitly unpublish MUO only if it is published")
 
-    class Meta:
-        verbose_name = "MUO Container"
-        verbose_name_plural = "MUO Containers"
+
+@receiver(post_save, sender=MUOContainer, dispatch_uid='muo_container_post_save_signal')
+def post_save_muo_container(sender, instance, created, using, **kwargs):
+    """ Set the value of the field 'name' after creating the object """
+    if created:
+        instance.name = "MUO/{0:05d}".format(instance.id)
+        instance.save()
+
 
 @receiver(pre_delete, sender=MUOContainer, dispatch_uid='muo_container_delete_signal')
 def pre_delete_muo_container(sender, instance, using, **kwargs):
     """
     Pre-delete checks for MUO container
     """
-    if instance.state not in ('draft', 'rejected'):
+    if instance.status not in ('draft', 'rejected'):
         raise ValidationError(_('The %(name)s "%(obj)s" can only be deleted if in draft of rejected state') % {
                                     'name': force_text(instance._meta.verbose_name),
                                     'obj': force_text(instance.__unicode__()),
