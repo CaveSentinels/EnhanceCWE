@@ -7,15 +7,8 @@ ret_sum=0
 # Set the return value of the last command to 0.
 last_ret=0
 
-# Run the "cwe" tests.
-python manage.py test cwe --settings=EnhancedCWE.settings_travis
-# Get the return value of last command.
-last_ret=$?
-# Calculate the sum of all the return values so far.
-ret_sum=$(($ret_sum+$last_ret))
-
-# Run the "muo" tests
-python manage.py test muo --settings=EnhancedCWE.settings_travis
+# Run all the tests in the project.
+python manage.py test --settings=EnhancedCWE.settings_travis
 # Get the return value of last command.
 last_ret=$?
 # Calculate the sum of all the return values so far.
