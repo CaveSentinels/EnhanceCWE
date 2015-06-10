@@ -13,6 +13,8 @@ class Category(BaseModel):
     class Meta:
         verbose_name = "Category"
         verbose_name_plural = "Categories"
+        # override default permissions to add 'view' permission that give readonly access rights
+        default_permissions = ('add', 'change', 'delete', 'view')
 
     def __unicode__(self):
         return self.name
@@ -52,6 +54,8 @@ class CWE(BaseModel):
     class Meta:
         verbose_name = "CWE"
         verbose_name_plural = "CWEs"
+        # override default permissions to add 'view' permission that give readonly access rights
+        default_permissions = ('add', 'change', 'delete', 'view')
 
     def __unicode__(self):
         return "CWE-%s: %s" % (self.code, self.name)

@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.contrib import admin
 from django.contrib import messages
 from django.core.urlresolvers import reverse
@@ -5,30 +6,36 @@ from django.contrib.admin.templatetags.admin_urls import add_preserved_filters
 from models import *
 
 from django.http import HttpResponseRedirect
-from base.admin import BaseAdmin
+from base.admin import BaseAdmin, admin_site
 
 
-@admin.register(Tag)
+@admin.register(Tag, site=admin_site)
 class TagAdmin(BaseAdmin):
     fields = ['name']
     search_fields = ['name']
 
 
-@admin.register(OSR)
+@admin.register(OSR, site=admin_site)
 class OSRAdmin(BaseAdmin):
-    fields = ['description', 'use_case', 'tags']
-    search_fields = ['description', 'tags__name']
+    fields = ['name', 'description', 'use_case', 'tags']
+    readonly_fields = ['name']
+    list_display = ['name']
+    search_fields = ['name', 'description', 'tags__name']
 
 
 class OSRAdminInline(admin.TabularInline):
     model = OSR
     extra = 1
-    fields = ['description', 'tags']
+    fields = ['name', 'description', 'tags']
+    readonly_fields = ['name']
 
 
-@admin.register(UseCase)
+@admin.register(UseCase, site=admin_site)
 class UseCaseAdmin(BaseAdmin):
-    fields = ['misuse_case', 'description', 'tags']
+    fields = ['name', 'misuse_case', 'description', 'tags']
+    readonly_fields = ['name']
+    list_display = ['name']
+    search_fields = ['name', 'description', 'tags__name']
     inlines = [OSRAdminInline]
 
 
@@ -36,22 +43,36 @@ class UseCaseAdmin(BaseAdmin):
 class UseCaseAdminInLine(admin.StackedInline):
     model = UseCase
     extra = 1
-    fields = ['description', 'tags']
+    fields = ['name', 'description', 'tags']
+    readonly_fields = ['name']
 
 
-@admin.register(MisuseCase)
+@admin.register(MisuseCase, site=admin_site)
 class MisuseCaseAdmin(BaseAdmin):
-    fields = ['cwes', ('description', 'tags')]
+    fields = ['name', 'cwes', ('description', 'tags')]
+    readonly_fields = ['name']
+    list_display = ['name']
+    search_fields = ['name', 'description', 'tags__name']
     inlines = [UseCaseAdminInLine]
 
 
-@admin.register(MUOContainer)
+@admin.register(MUOContainer, site=admin_site)
 class MUOContainerAdmin(BaseAdmin):
-    list_display = ('id', 'status', 'published_status')
-    readonly_fields = ['status', 'published_status']
-    exclude = ['created_at', 'modified_at']
-    search_fields = ['status']
+    list_display = ['name', 'status', 'published_status']
+    readonly_fields = ['name', 'status', 'published_status']
+    exclude = ['created_at', 'modified_at', 'created_by', 'modified_by']
+    search_fields = ['name', 'status']
     date_hierarchy = 'created_at'
+
+    def get_queryset(self, request):
+        """
+            If user doesn't have access to view all MUO Containers (review), then limit to his own MUOs
+            or to approved MUOs written by other contributors
+        """
+        qs = super(MUOContainerAdmin, self).get_queryset(request)
+        if request.user.has_perm('muo.can_view_all'):
+            return qs
+        return qs.filter(Q(created_by=request.user) | Q(status='approved'))
 
     # Override response_change method of admin/options.py to handle the click of
     # newly added buttons
