@@ -2,7 +2,7 @@
    Almost entirely taken from https://github.com/Atomidata/django-audit-log/blob/master/audit_log/middleware.py"""
 from django.db.models import signals
 from django.utils.functional import curry
- 
+
 class WhodidMiddleware(object):
     def process_request(self, request):
         if not request.method in ('GET', 'HEAD', 'OPTIONS', 'TRACE'):

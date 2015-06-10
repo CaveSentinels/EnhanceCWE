@@ -18,6 +18,7 @@ class Tag(BaseModel):
     class Meta:
         verbose_name = "Tag"
         verbose_name_plural = "Tags"
+        default_permissions = ('add', 'change', 'delete', 'view')
 
     def __unicode__(self):
         return self.name
@@ -127,6 +128,12 @@ class MUOContainer(BaseModel):
     class Meta:
         verbose_name = "MUO Container"
         verbose_name_plural = "MUO Containers"
+        # additional permissions
+        permissions = (
+            ('can_approve', 'Can approve MUO container'),
+            ('can_reject', 'Can reject MUO container'),
+            ('can_view_all', 'Can view all MUO container'),
+        )
 
     def __unicode__(self):
         return self.name
