@@ -1,7 +1,6 @@
 from django.test import TestCase
 
-from muo.models import MUOContainer, MisuseCase, UseCase, OSR
-from cwe.models import CWE
+from muo.models import MUOContainer, MisuseCase, UseCase
 
 # Create your tests here.
 
@@ -17,8 +16,9 @@ class TestMUOContainer(TestCase):
         For now it just creates a MUOContainer object, but can be used to
         do any default settings
         """
-
-        MUOContainer.objects.create()
+        misuse_case = MisuseCase()
+        misuse_case.save()
+        MUOContainer.objects.create(misuse_case = misuse_case)
 
 
     def get_muo_container(self, status):
@@ -38,14 +38,12 @@ class TestMUOContainer(TestCase):
     def test_action_approve_with_status_in_review(self):
         """
         This is a positive test case
-        'action_approve' should set the status to 'approved' and  published_status to 'published'
-        when called on a MUOContainer object with status 'in_review'.
+        'action_approve' should set the status to 'approved' when called on a MUOContainer object with status 'in_review'.
         """
 
         muo_container = self.get_muo_container('in_review')
         muo_container.action_approve()
         self.assertEqual(muo_container.status, 'approved')
-        self.assertEqual(muo_container.published_status, 'published')
 
 
     def test_action_approve_with_status_draft(self):
@@ -267,3 +265,30 @@ class TestMUOContainer(TestCase):
 
         muo_container = self.get_muo_container('XXX')
         self.assertRaises(ValueError, muo_container.action_save_in_draft)
+
+
+    # Test relationship creation/deletion on approve and reject
+
+    def test_relationship_creation_on_action_approve(self):
+        '''
+        on 'action_approve', the relationship between the misuse case of the muo container and
+        all the use cases of the container should get created
+        '''
+
+        muo_container = self.get_muo_container('in_review')
+        use_case = UseCase(muo_container=muo_container)  # Usecase cannot be created without MUOContainer
+        use_case.save()  # save in the database
+        muo_container.action_approve()
+        self.assertEqual(muo_container.status, 'approved')
+        self.assertEqual(muo_container.misuse_case.usecase_set.count(), 1)
+
+
+    def test_relationship_deletion_on_action_reject(self):
+        muo_container = self.get_muo_container('approved')
+        use_case = UseCase(muo_container=muo_container)  # Usecase cannot be created without MUOContainer
+        muo_container.misuse_case.usecase_set.add(use_case)  # Relate misuse case and use case
+        use_case.save()  # save in the database
+        muo_container.action_reject()
+        self.assertEqual(muo_container.status, 'rejected')
+        self.assertEqual(muo_container.misuse_case.usecase_set.count(), 0)
+        self.assertEqual(muo_container.usecase_set.count(), 1)
