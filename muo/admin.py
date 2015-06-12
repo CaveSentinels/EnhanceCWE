@@ -1,6 +1,7 @@
 from django.db.models import Q
 from django.contrib import admin
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.contrib.admin.templatetags.admin_urls import add_preserved_filters
 from models import *
@@ -15,35 +16,18 @@ class TagAdmin(BaseAdmin):
     search_fields = ['name']
 
 
-@admin.register(OSR, site=admin_site)
-class OSRAdmin(BaseAdmin):
-    fields = ['name', 'description', 'use_case', 'tags']
-    readonly_fields = ['name']
-    list_display = ['name']
-    search_fields = ['name', 'description', 'tags__name']
-
-
-class OSRAdminInline(admin.TabularInline):
-    model = OSR
-    extra = 1
-    fields = ['name', 'description', 'tags']
-    readonly_fields = ['name']
-
-
 @admin.register(UseCase, site=admin_site)
 class UseCaseAdmin(BaseAdmin):
-    fields = ['name', 'misuse_case', 'description', 'tags']
+    fields = ['name', 'misuse_case', 'description', 'osr', 'tags']
     readonly_fields = ['name']
     list_display = ['name']
     search_fields = ['name', 'description', 'tags__name']
-    inlines = [OSRAdminInline]
-
 
 
 class UseCaseAdminInLine(admin.StackedInline):
     model = UseCase
     extra = 1
-    fields = ['name', 'description', 'tags']
+    fields = ['name', 'description', 'osr']
     readonly_fields = ['name']
 
 
@@ -58,11 +42,12 @@ class MisuseCaseAdmin(BaseAdmin):
 
 @admin.register(MUOContainer, site=admin_site)
 class MUOContainerAdmin(BaseAdmin):
-    list_display = ['name', 'status', 'published_status']
-    readonly_fields = ['name', 'status', 'published_status']
-    exclude = ['created_at', 'modified_at', 'created_by', 'modified_by']
+    fields = ['name', 'cwes', 'misuse_case', 'new_misuse_case', 'status']
+    list_display = ['name', 'status']
+    readonly_fields = ['name', 'status']
     search_fields = ['name', 'status']
     date_hierarchy = 'created_at'
+    inlines = [UseCaseAdminInLine]
 
     def get_queryset(self, request):
         """
@@ -94,7 +79,7 @@ class MUOContainerAdmin(BaseAdmin):
         try:
             if "_approve" in request.POST:
                 obj.action_approve()
-                msg = "You have approved the submission and it is now published"
+                msg = "You have approved the submission"
             elif "_reject" in request.POST:
                 obj.action_reject()
                 msg = "The submission has been sent back to the author for review"
@@ -104,12 +89,6 @@ class MUOContainerAdmin(BaseAdmin):
             elif "_edit" in request.POST:
                 obj.action_save_in_draft()
                 msg = "You can now edit the MUO"
-            elif "_publish" in request.POST:
-                obj.action_publish()
-                msg = "MUO has been successfully published"
-            elif "_unpublish" in request.POST:
-                obj.action_unpublish()
-                msg = "You have unpublished this MUO"
             else:
                 # Let super class 'ModelAdmin' handle rest of the button clicks i.e. 'save' 'save and continue' etc.
                 return super(MUOContainerAdmin, self).response_change(request, obj, *args, **kwargs)
@@ -120,6 +99,13 @@ class MUOContainerAdmin(BaseAdmin):
             msg = e.message
             self.message_user(request, msg, messages.ERROR)
             return HttpResponseRedirect(redirect_url)
+        except ValidationError as e:
+            # If incomplete MUO Container is attempted to be approved or submitted for review, a validation error will
+            # be raised with an appropriate message
+            msg = e.message
+            self.message_user(request, msg, messages.ERROR)
+            return HttpResponseRedirect(redirect_url)
 
         self.message_user(request, msg, messages.SUCCESS)
         return HttpResponseRedirect(redirect_url)
+

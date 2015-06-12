@@ -2,14 +2,14 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from cwe.models import CWE
 from base.models import BaseModel
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.utils.encoding import force_text
 from django.utils.translation import ugettext as _
-from django.db.models.signals import pre_delete, post_save
+from django.db.models.signals import pre_delete, pre_save, post_save
 from django.dispatch import receiver
 
 STATUS = [('draft', 'Draft'), ('in_review', 'In Review'), ('approved', 'Approved'), ('rejected', 'Rejected')]
-PUBLISHED_STATUS = [('published', 'Published'), ('unpublished', 'Unpublished')]
 
 
 class Tag(BaseModel):
@@ -46,84 +46,12 @@ def post_save_misusecase(sender, instance, created, using, **kwargs):
         instance.save()
 
 
-@receiver(pre_delete, sender=MisuseCase, dispatch_uid='misusecase_delete_signal')
-def pre_delete_misusecase(sender, instance, using, **kwargs):
-    """
-    Prevent Misuse Case deletion if use cases are referring to it
-    """
-    if instance.use_cases.exists():
-        raise IntegrityError(
-            _('The %(name)s "%(obj)s" cannot be deleted as there are use cases referring to it!') % {
-                'name': force_text(instance._meta.verbose_name),
-                'obj': force_text(instance.__unicode__()),
-            })
-
-
-class UseCase(BaseModel):
-    name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
-    description = models.TextField()
-    misuse_case = models.ForeignKey(MisuseCase, on_delete='Cascade', related_name='use_cases')
-    tags = models.ManyToManyField(Tag, blank=True)
-
-    class Meta:
-        verbose_name = "Use Case"
-        verbose_name_plural = "Use Cases"
-
-    def __unicode__(self):
-        return "%s - %s..." % (self.name, self.description[:70])
-
-
-@receiver(post_save, sender=UseCase, dispatch_uid='usecase_post_save_signal')
-def post_save_usecase(sender, instance, created, using, **kwargs):
-    """ Set the value of the field 'name' after creating the object """
-    if created:
-        instance.name = "UC/{0:05d}".format(instance.id)
-        instance.save()
-
-@receiver(pre_delete, sender=UseCase, dispatch_uid='usecase_delete_signal')
-def pre_delete_usecase(sender, instance, using, **kwargs):
-    """
-    Prevent Use Case deletion if OSRs are referring to it
-    """
-    if instance.osrs.exists():
-        raise IntegrityError(
-            _('The %(name)s "%(obj)s" cannot be deleted as there are overlooked security requirements ' +
-              'referring to it!') % {
-                'name': force_text(instance._meta.verbose_name),
-                'obj': force_text(instance.__unicode__()),
-            })
-
-
-class OSR(BaseModel):
-    name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
-    description = models.TextField()
-    use_case = models.ForeignKey(UseCase, on_delete='Cascade', related_name='osrs')
-    tags = models.ManyToManyField(Tag, blank=True)
-
-    class Meta:
-        verbose_name = "Overlooked Security Requirement"
-        verbose_name_plural = "Overlooked Security Requirements"
-
-    def __unicode__(self):
-        return "%s - %s..." % (self.name, self.description[:70])
-
-
-@receiver(post_save, sender=OSR, dispatch_uid='osr_post_save_signal')
-def post_save_osr(sender, instance, created, using, **kwargs):
-    """ Set the value of the field 'name' after creating the object """
-    if created:
-        instance.name = "OSR/{0:05d}".format(instance.id)
-        instance.save()
-
-
 class MUOContainer(BaseModel):
     name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
     cwes = models.ManyToManyField(CWE, related_name='muo_container')
-    misuse_cases = models.ManyToManyField(MisuseCase, related_name='muo_container')
-    use_cases = models.ManyToManyField(UseCase, related_name='muo_container')
-    osrs = models.ManyToManyField(OSR, related_name='muo_container')
+    misuse_case = models.ForeignKey(MisuseCase, on_delete=models.PROTECT)
+    new_misuse_case = models.TextField(null=True, blank=True)
     status = models.CharField(choices=STATUS, max_length=64, default='draft')
-    published_status = models.CharField(choices=PUBLISHED_STATUS, max_length=32, default='unpublished')
 
     class Meta:
         verbose_name = "MUO Container"
@@ -139,23 +67,35 @@ class MUOContainer(BaseModel):
         return self.name
 
     def action_approve(self):
-        # This method change the status of the MUOContainer object to 'approved' and
-        # published_status to 'published'. This change is allowed only if the current
-        # status is 'in_review'. If the current status is not 'in-review', it raises
-        # the ValueError with appropriate message.
+        # This method change the status of the MUOContainer object to 'approved' and it creates the
+        # relationship between the misuse case and all the use cases of the muo container.This change
+        # is allowed only if the current status is 'in_review'. If the current status is not
+        # 'in_review', it raises the ValueError with appropriate message.
         if self.status == 'in_review':
+            # Create the relationship between the misuse case of the muo container with all the
+            # use cases of the container
+            for usecase in self.usecase_set.all():
+                usecase.misuse_case = self.misuse_case
+                usecase.save()
+
             self.status = 'approved'
-            self.published_status = 'published'
             self.save()
         else:
             raise ValueError("In order to approve an MUO, it should be in 'in-review' state")
 
     def action_reject(self):
-        # This method change the status of the MUOContainer object to 'rejected'.
+        # This method change the status of the MUOContainer object to 'rejected' and the removes
+        # the relationship between all the use cases of the muo container and the misuse case.
         # This change is allowed only if the current status is 'in_review' or 'approved'.
         # If the current status is not 'in-review' or 'approved', it raises the ValueError
         # with appropriate message.
         if self.status == 'in_review' or self.status == 'approved':
+            # Remove the relationship between the misuse case of the muo container with all the
+            # use cases of the container
+            for usecase in self.usecase_set.all():
+                usecase.misuse_case = None
+                usecase.save()
+
             self.status = 'rejected'
             self.save()
         else:
@@ -166,6 +106,9 @@ class MUOContainer(BaseModel):
         # is allowed only if the current status is 'draft'. If the current status is not
         # 'draft', it raises the ValueError with appropriate message.
         if self.status == 'draft':
+            if (self.usecase_set.count() == 0):
+                raise ValidationError('A MUO Container must have at least one use case')
+
             self.status = 'in_review'
             self.save()
         else:
@@ -182,27 +125,6 @@ class MUOContainer(BaseModel):
         else:
             raise ValueError("MUO can only be moved back to draft state if it is either rejected or 'in-review' state")
 
-    def action_publish(self):
-        # This method change the published_status of the MUOContainer object to 'published'.
-        # This change is allowed only if the current published_status is 'unpublished' and
-        # status is 'approved'. If these two conditions are not met, it raises the ValueError
-        # with appropriate message.
-        if self.published_status == 'unpublished' and self.status == 'approved':
-            self.published_status = 'published'
-            self.save()
-        else:
-            raise ValueError("You can explicitly publish MUO only if it is approved and unpublished")
-
-    def action_unpublish(self):
-        # This method change the published_status of the MUOContainer object to 'unpublished'.
-        # This change is allowed only if the current published_status is 'published'.
-        # If these two conditions are not met, it raises the ValueError with appropriate message.
-        if self.published_status == 'published':
-            self.published_status = 'unpublished'
-            self.save()
-        else:
-            raise ValueError("You can explicitly unpublish MUO only if it is published")
-
 
 @receiver(post_save, sender=MUOContainer, dispatch_uid='muo_container_post_save_signal')
 def post_save_muo_container(sender, instance, created, using, **kwargs):
@@ -212,23 +134,47 @@ def post_save_muo_container(sender, instance, created, using, **kwargs):
         instance.save()
 
 
-@receiver(pre_delete, sender=MUOContainer, dispatch_uid='muo_container_delete_signal')
-def pre_delete_muo_container(sender, instance, using, **kwargs):
-    """
-    Pre-delete checks for MUO container
-    """
-    if instance.status not in ('draft', 'rejected'):
-        raise ValidationError(_('The %(name)s "%(obj)s" can only be deleted if in draft of rejected state') % {
-                                    'name': force_text(instance._meta.verbose_name),
-                                    'obj': force_text(instance.__unicode__()),
-                                })
 
-    # delete osrs, use cases and misuse cases if they are not pointed at by other containers
-    if instance.osrs.muo_container.count() == 1:
-        instance.osrs.delete()
+# TODO: This method is commented now because we need to take care of multiple deletion cases once the muo container is implemented
+# @receiver(pre_delete, sender=MUOContainer, dispatch_uid='muo_container_delete_signal')
+# def pre_delete_muo_container(sender, instance, using, **kwargs):
+#     """
+#     Pre-delete checks for MUO container
+#     """
+#     if instance.status not in ('draft', 'rejected'):
+#         raise ValidationError(_('The %(name)s "%(obj)s" can only be deleted if in draft of rejected state') % {
+#                                     'name': force_text(instance._meta.verbose_name),
+#                                     'obj': force_text(instance.name),
+#                                 })
+#     elif instance.usecase_set.count() == 1:
+#         # what if this muo container contains more than 1 use case?
+#         instance.usecase_set.delete()
+#     else:
+#         raise ValidationError(_('The %(name)s "%(obj)s" can only be deleted because there are other use cases referring to it!') % {
+#                                     'name': force_text(instance._meta.verbose_name),
+#                                     'obj': force_text(instance.name),
+#                                 })
 
-    if instance.use_cases.muo_container.count() == 1:
-        instance.use_cases.delete()
 
-    if instance.misuse_cases.muo_container.count() == 1:
-        instance.misuse_cases.delete()
+class UseCase(BaseModel):
+    name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
+    description = models.TextField()
+    osr = models.TextField()
+    misuse_case = models.ForeignKey(MisuseCase, null=True, blank=True)
+    muo_container = models.ForeignKey(MUOContainer)
+    tags = models.ManyToManyField(Tag, blank=True)
+
+    class Meta:
+        verbose_name = "Use Case"
+        verbose_name_plural = "Use Cases"
+
+    def __unicode__(self):
+        return "%s - %s..." % (self.name, self.description[:70])
+
+
+@receiver(post_save, sender=UseCase, dispatch_uid='usecase_post_save_signal')
+def post_save_usecase(sender, instance, created, using, **kwargs):
+    """ Set the value of the field 'name' after creating the object """
+    if created:
+        instance.name = "UC/{0:05d}".format(instance.id)
+        instance.save()

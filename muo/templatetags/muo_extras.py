@@ -27,10 +27,6 @@ def muo_submit_row(context):
                        model_object and model_object.status in ('in_review', 'approved'),
         'show_submit_for_review': model_object and model_object.status == 'draft',
         'show_edit': model_object and (model_object.status == 'in_review' or model_object.status == 'rejected'),
-        'show_publish': model_object and
-                        (model_object.status == 'approved' and model_object.published_status == 'unpublished'),
-        'show_unpublish': model_object and
-                          (model_object.status == 'approved' and model_object.published_status == 'published')
     })
 
     return ctx
