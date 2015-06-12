@@ -1,6 +1,7 @@
 from django.db.models import Q
 from django.contrib import admin
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.contrib.admin.templatetags.admin_urls import add_preserved_filters
 from models import *
@@ -26,7 +27,7 @@ class UseCaseAdmin(BaseAdmin):
 class UseCaseAdminInLine(admin.StackedInline):
     model = UseCase
     extra = 1
-    fields = ['description', 'osr']
+    fields = ['name', 'description', 'osr']
     readonly_fields = ['name']
 
 
@@ -41,9 +42,9 @@ class MisuseCaseAdmin(BaseAdmin):
 
 @admin.register(MUOContainer, site=admin_site)
 class MUOContainerAdmin(BaseAdmin):
+    fields = ['name', 'cwes', 'misuse_case', 'new_misuse_case', 'status']
     list_display = ['name', 'status']
     readonly_fields = ['name', 'status']
-    exclude = ['created_at', 'modified_at', 'created_by', 'modified_by']
     search_fields = ['name', 'status']
     date_hierarchy = 'created_at'
     inlines = [UseCaseAdminInLine]
@@ -95,6 +96,12 @@ class MUOContainerAdmin(BaseAdmin):
             # In case the state of the object is not suitable for the corresponding action,
             # model will raise the value exception with the appropriate message. Catch the
             # exception and show the error message to the user
+            msg = e.message
+            self.message_user(request, msg, messages.ERROR)
+            return HttpResponseRedirect(redirect_url)
+        except ValidationError as e:
+            # If incomplete MUO Container is attempted to be approved or submitted for review, a validation error will
+            # be raised with an appropriate message
             msg = e.message
             self.message_user(request, msg, messages.ERROR)
             return HttpResponseRedirect(redirect_url)

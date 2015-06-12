@@ -25,7 +25,7 @@ def muo_submit_row(context):
                         model_object and model_object.status == 'in_review',
         'show_reject': user_object.has_perm('muo.can_reject') and
                        model_object and model_object.status in ('in_review', 'approved'),
-        'show_submit_for_review': model_object and model_object.status == 'draft' and model_object.usecase_set.count() > 0,
+        'show_submit_for_review': model_object and model_object.status == 'draft',
         'show_edit': model_object and (model_object.status == 'in_review' or model_object.status == 'rejected'),
     })
 

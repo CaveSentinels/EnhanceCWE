@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from cwe.models import CWE
 from base.models import BaseModel
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.utils.encoding import force_text
 from django.utils.translation import ugettext as _
@@ -45,23 +46,10 @@ def post_save_misusecase(sender, instance, created, using, **kwargs):
         instance.save()
 
 
-@receiver(pre_delete, sender=MisuseCase, dispatch_uid='misusecase_delete_signal')
-def pre_delete_misusecase(sender, instance, using, **kwargs):
-    """
-    Prevent Misuse Case deletion if use cases or muo containers are referring to it
-    """
-    if instance.usecase_set.exists() or instance.muocontainer_set.exists():
-        raise IntegrityError(
-            _('The %(name)s "%(obj)s" cannot be deleted as there are use cases or muo containers referring to it!') % {
-                'name': force_text(instance._meta.verbose_name),
-                'obj': force_text(instance.name),
-            })
-
-
 class MUOContainer(BaseModel):
     name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
     cwes = models.ManyToManyField(CWE, related_name='muo_container')
-    misuse_case = models.ForeignKey(MisuseCase)
+    misuse_case = models.ForeignKey(MisuseCase, on_delete=models.PROTECT)
     new_misuse_case = models.TextField(null=True, blank=True)
     status = models.CharField(choices=STATUS, max_length=64, default='draft')
 
@@ -86,9 +74,12 @@ class MUOContainer(BaseModel):
         if self.status == 'in_review':
             # Create the relationship between the misuse case of the muo container with all the
             # use cases of the container
-            for usecase in self.usecase_set.all():
-                usecase.misuse_case = self.misuse_case
-                usecase.save()
+            if (self.usecase_set.count() > 0):
+                for usecase in self.usecase_set.all():
+                    usecase.misuse_case = self.misuse_case
+                    usecase.save()
+            else:
+                raise ValidationError('A MUO Container must have at least one use case')
 
             self.status = 'approved'
             self.save()
@@ -104,7 +95,6 @@ class MUOContainer(BaseModel):
         if self.status == 'in_review' or self.status == 'approved':
             # Remove the relationship between the misuse case of the muo container with all the
             # use cases of the container
-            # usecases = self.usecase_set.filter(misuse_case=self.misuse_case)
             for usecase in self.usecase_set.all():
                 usecase.misuse_case = None
                 usecase.save()
@@ -119,6 +109,9 @@ class MUOContainer(BaseModel):
         # is allowed only if the current status is 'draft'. If the current status is not
         # 'draft', it raises the ValueError with appropriate message.
         if self.status == 'draft':
+            if (self.usecase_set.count() == 0):
+                raise ValidationError('A MUO Container must have at least one use case')
+
             self.status = 'in_review'
             self.save()
         else:
