@@ -1,5 +1,5 @@
 from django.test import TestCase
-
+from django.core.exceptions import ValidationError
 from muo.models import MUOContainer, MisuseCase, UseCase
 
 # Create your tests here.
@@ -18,7 +18,9 @@ class TestMUOContainer(TestCase):
         """
         misuse_case = MisuseCase()
         misuse_case.save()
-        MUOContainer.objects.create(misuse_case = misuse_case)
+        muo_container = MUOContainer.objects.create(misuse_case = misuse_case)  # MUOContainer cannot be created without misuse case
+        use_case = UseCase(muo_container=muo_container)  # Usecase cannot be created without MUOContainer
+        use_case.save()  # save in the database
 
 
     def get_muo_container(self, status):
@@ -34,6 +36,20 @@ class TestMUOContainer(TestCase):
 
 
     # Test 'action_approve'
+
+    def test_action_approve_with_status_in_review_and_without_usecase_in_muocontainer(self):
+        """
+        'action_approve' should raise the Validation Error when an attempt is made to approve the muo container
+        without the use case i.e. when container is not complete
+        """
+
+        misuse_case = MisuseCase()
+        misuse_case.save()
+        muo_container = MUOContainer.objects.create(misuse_case = misuse_case)  # MUOContainer cannot be created without misuse case
+        muo_container.status = 'in_review'
+        muo_container.save()
+        self.assertRaises(ValidationError, muo_container.action_approve)
+
 
     def test_action_approve_with_status_in_review(self):
         """
@@ -150,6 +166,21 @@ class TestMUOContainer(TestCase):
 
 
     # Test 'action_submit'
+
+
+    def test_action_submit_with_status_draft_and_without_usecase_in_muocontainer(self):
+        """
+        'action_aubmit' should raise the Validation Error when an attempt is made to submit the muo container
+        without the use case i.e. when container is not complete
+        """
+
+        misuse_case = MisuseCase()
+        misuse_case.save()
+        muo_container = MUOContainer.objects.create(misuse_case = misuse_case)  # MUOContainer cannot be created without misuse case
+        muo_container.status = 'draft'
+        muo_container.save()
+        self.assertRaises(ValidationError, muo_container.action_submit)
+
 
     def test_action_submit_with_status_draft(self):
         """
@@ -275,20 +306,25 @@ class TestMUOContainer(TestCase):
         all the use cases of the container should get created
         '''
 
-        muo_container = self.get_muo_container('in_review')
+        muo_container = self.get_muo_container('in_review')  # This method return muo container in which misuse case already has a relationship created with the use case
         use_case = UseCase(muo_container=muo_container)  # Usecase cannot be created without MUOContainer
         use_case.save()  # save in the database
-        muo_container.action_approve()
+        muo_container.action_approve()  # a relationship should get created between the misuse case of the muocontainer and this new use case
         self.assertEqual(muo_container.status, 'approved')
-        self.assertEqual(muo_container.misuse_case.usecase_set.count(), 1)
+        self.assertEqual(muo_container.misuse_case.usecase_set.count(), 2)
 
 
     def test_relationship_deletion_on_action_reject(self):
-        muo_container = self.get_muo_container('approved')
+        '''
+        on action_reject, the relationship between the misuse case of then muo container and all the use cases
+        of the container should get removed
+        '''
+
+        muo_container = self.get_muo_container('approved')  # This method return muo container in which misuse case already has a relationship created with the use case
         use_case = UseCase(muo_container=muo_container)  # Usecase cannot be created without MUOContainer
         muo_container.misuse_case.usecase_set.add(use_case)  # Relate misuse case and use case
         use_case.save()  # save in the database
-        muo_container.action_reject()
+        muo_container.action_reject()  # the relationship between the misuse case and all the use cases should get removed.
         self.assertEqual(muo_container.status, 'rejected')
         self.assertEqual(muo_container.misuse_case.usecase_set.count(), 0)
-        self.assertEqual(muo_container.usecase_set.count(), 1)
+        self.assertEqual(muo_container.usecase_set.count(), 2)
