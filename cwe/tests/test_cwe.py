@@ -200,30 +200,6 @@ class TestAddCWE(TestCase):
     #     with self.assertRaises(IntegrityError):
     #         CWE.objects.create(code=100)
 
-    # TODO: The test case below is commented out temporarily because it does not pass. We need to fix it later.
-    #
-    # # A CWE cannot be created with code as -ve
-    # # This test case tries to create a cwe with a negative code
-    # # Currently this is not handled in our code, hence we don't know what error it will throw
-    # # To be replaced with the type of Error Thrown in future
-    # # Defect "x" is raised for this
-    # def test_cwe__code_incorrect__check(self):
-    #     with self.assertRaises(IntegrityError):
-    #         print(CWE.objects.create(code=-5))
-
-    # TODO: The test case below is commented out temporarily because it does not pass. We need to fix it later.
-    #
-    # # A CWE cannot be created with name as -ve integer
-    # # This test case tries to create a cwe with name as an integer
-    # # Currently this is not handled in our code, hence we don't know what error it will throw
-    # # To be replaced with the type of Error Thrown in future
-    # # Defect "x" is raised for this
-    # # To be replaced with the type of Error Thrown in future
-    # def test_cwe_name_incorrect__check(self):
-    #     # either return false or throw an error based on code
-    #     with self.assertRaises(IntegrityError):
-    #         print(CWE.objects.create(code=6, name="-5"))
-
 
 class TestEditCWE(TestCase):
 
@@ -305,6 +281,7 @@ class KeywordMethodTests(TestCase):
         self.assertEqual(kw.name, "404")
 
 
+
 class CategoryMethodTests(TestCase):
 
     def setUp(self):
@@ -338,25 +315,3 @@ class CategoryMethodTests(TestCase):
         category5 = Category.objects.create(name="Category5")
         self.assertEqual(category5.__unicode__(), category5.name)
         self.assertEqual(isinstance(category5.__unicode__(), basestring), True)
-
-    # TODO: The test case below is commented out temporarily because it does not pass. We need to fix it later.
-    #
-    # # A Category cannot have name as some special characters, name should be string only
-    # # This Test case tries to create a name which has special characters
-    # # This case is not yet handled in the code, so we don't know what error will be raised
-    # # To be replaced with the type of Error Thrown in future
-    # # Defect no "x" is raised for this
-    # def test_category_name_validation(self):
-    #     with self.assertRaises(IntegrityError):
-    #         Category.objects.create(name="!@$5")
-
-    # TODO: The test case below is commented out temporarily because it does not pass. We need to fix it later.
-    #
-    # # A Category cannot have name as an integer, name should be strings only
-    # # This test case tries to create a Category with name as a number
-    # # This case is not yet handled in code, so we don't know what error will be raised
-    # # To be replaced with the type of Error Thrown in future
-    # # Defect no "x" raised for this
-    # def test_category_name_number_validation(self):
-    #     with self.assertRaises(IntegrityError):
-    #         Category.objects.create(name="5678")
