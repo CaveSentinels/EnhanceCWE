@@ -37,20 +37,6 @@ class TestMUOContainer(TestCase):
 
     # Test 'action_approve'
 
-    def test_action_approve_with_status_in_review_and_without_usecase_in_muocontainer(self):
-        """
-        'action_approve' should raise the Validation Error when an attempt is made to approve the muo container
-        without the use case i.e. when container is not complete
-        """
-
-        misuse_case = MisuseCase()
-        misuse_case.save()
-        muo_container = MUOContainer.objects.create(misuse_case = misuse_case)  # MUOContainer cannot be created without misuse case
-        muo_container.status = 'in_review'
-        muo_container.save()
-        self.assertRaises(ValidationError, muo_container.action_approve)
-
-
     def test_action_approve_with_status_in_review(self):
         """
         This is a positive test case

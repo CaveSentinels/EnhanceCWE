@@ -74,12 +74,9 @@ class MUOContainer(BaseModel):
         if self.status == 'in_review':
             # Create the relationship between the misuse case of the muo container with all the
             # use cases of the container
-            if (self.usecase_set.count() > 0):
-                for usecase in self.usecase_set.all():
-                    usecase.misuse_case = self.misuse_case
-                    usecase.save()
-            else:
-                raise ValidationError('A MUO Container must have at least one use case')
+            for usecase in self.usecase_set.all():
+                usecase.misuse_case = self.misuse_case
+                usecase.save()
 
             self.status = 'approved'
             self.save()
