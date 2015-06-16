@@ -171,7 +171,7 @@ class UseCaseRelated(APIView):
         return re.match(param_pattern_regex, misuse_cases_str) is not None
 
     def _get_distinct_misuse_case_ids(self, misuse_cases_str):
-        return list(set(misuse_cases_str.split(',')))
+        return set(misuse_cases_str.split(','))
 
     def _form_err_msg_malformed_misuse_cases(self, misuse_cases_str):
         return ("Misuse case ID list is malformed: \"" + misuse_cases_str + "\". " +
@@ -193,20 +193,15 @@ class UseCaseRelated(APIView):
             return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
 
         # Get the misuse case IDs from the parameter string.
-        misuse_case_id_list = self._get_distinct_misuse_case_ids(misuse_cases_str=misuse_cases_str)
+        misuse_case_id_set = self._get_distinct_misuse_case_ids(misuse_cases_str=misuse_cases_str)
 
         # Create the list of returned use case.
         use_case_list = list()
 
-        # Iterate the misuse case ID list, and find the use cases and OSRs that are
-        # related to them.
-        for misuse_case_id in misuse_case_id_list:
-            # TODO: Do we need to check if an given misuse case ID exists or not?
-            use_cases = UseCase.objects.filter(misuse_case__id=misuse_case_id)
-            use_case_list += use_cases.all()
+        # Get all the use cases that are associated with the misuse cases.
+        use_cases = UseCase.objects.filter(misuse_case__id__in=misuse_case_id_set)
 
         # Remove the duplicated use cases, if there are any.
-        use_case_list = list(set(use_case_list))
-        serializer = UseCaseSerializer(use_case_list, many=True)
+        serializer = UseCaseSerializer(set(use_cases.all()), many=True)
 
         return Response(data=serializer.data, exception=Exception())

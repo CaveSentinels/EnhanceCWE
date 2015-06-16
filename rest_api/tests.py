@@ -354,10 +354,7 @@ class TestUseCaseSuggestion(TestCase):
         MisuseCase.objects.all().delete()
 
     def _form_url(self, misuse_case_id_list):
-        url = (self.URL_BASE + "".join(str(id)+"," for id in misuse_case_id_list))
-        if url[len(url)-1] == ',':
-            url = url[:len(url)-1]
-        return url
+        return (self.URL_BASE + "".join(str(id)+"," for id in misuse_case_id_list)).rstrip(',')
 
     def _use_case_info_found(self, json_content, uc_index):
         uc_name = "UC/{0:05d}".format(uc_index)
