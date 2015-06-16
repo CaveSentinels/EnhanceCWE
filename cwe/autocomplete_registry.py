@@ -8,8 +8,6 @@ class CWEAutocomplete(autocomplete_light.AutocompleteModelBase):
     widget_attrs = {
         'class': 'modern-style',
     }
-
-
 autocomplete_light.register(CWEAutocomplete)
 
 
@@ -20,8 +18,6 @@ class CategoryAutocomplete(autocomplete_light.AutocompleteModelBase):
     widget_attrs = {
         'class': 'modern-style',
     }
-
-
 autocomplete_light.register(CategoryAutocomplete)
 
 
@@ -32,6 +28,17 @@ class KeywordAutocomplete(autocomplete_light.AutocompleteModelBase):
     widget_attrs = {
         'class': 'modern-style',
     }
-
-
 autocomplete_light.register(KeywordAutocomplete)
+
+
+class UserAutocomplete(autocomplete_light.AutocompleteModelBase):
+    search_fields = ['username', 'first_name', 'last_name']
+    attrs = {'placeholder': 'users...'}
+    model = User
+    widget_attrs = {
+        'class': 'modern-style',
+    }
+autocomplete_light.register(UserAutocomplete)
+
+
+

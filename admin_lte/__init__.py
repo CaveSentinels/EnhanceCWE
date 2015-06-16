@@ -1,1 +1,1 @@
-__author__ = 'walid'
+import widgets
