@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.conf import settings
 from cwe.models import CWE
 from base.models import BaseModel
 from django.core.exceptions import ValidationError
@@ -51,6 +52,8 @@ class MUOContainer(BaseModel):
     cwes = models.ManyToManyField(CWE, related_name='muo_container')
     misuse_case = models.ForeignKey(MisuseCase, on_delete=models.PROTECT)
     new_misuse_case = models.TextField(null=True, blank=True)
+    reject_reason = models.TextField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
     status = models.CharField(choices=STATUS, max_length=64, default='draft')
 
     class Meta:
@@ -83,7 +86,7 @@ class MUOContainer(BaseModel):
         else:
             raise ValueError("In order to approve an MUO, it should be in 'in-review' state")
 
-    def action_reject(self):
+    def action_reject(self, reject_reason):
         # This method change the status of the MUOContainer object to 'rejected' and the removes
         # the relationship between all the use cases of the muo container and the misuse case.
         # This change is allowed only if the current status is 'in_review' or 'approved'.
@@ -97,6 +100,7 @@ class MUOContainer(BaseModel):
                 usecase.save()
 
             self.status = 'rejected'
+            self.reject_reason = reject_reason
             self.save()
         else:
             raise ValueError("In order to approve an MUO, it should be in 'in-review' state")

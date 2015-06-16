@@ -16,6 +16,7 @@ class TestMUOContainer(TestCase):
         For now it just creates a MUOContainer object, but can be used to
         do any default settings
         """
+        reject_msg = "This MUO is rejected!"
         misuse_case = MisuseCase()
         misuse_case.save()
         muo_container = MUOContainer.objects.create(misuse_case = misuse_case)  # MUOContainer cannot be created without misuse case
@@ -102,7 +103,7 @@ class TestMUOContainer(TestCase):
         """
 
         muo_container = self.get_muo_container('in_review')
-        muo_container.action_reject()
+        muo_container.action_reject(self.reject_msg)
         self.assertEqual(muo_container.status, 'rejected')
 
 
@@ -114,7 +115,7 @@ class TestMUOContainer(TestCase):
         """
 
         muo_container = self.get_muo_container('approved')
-        muo_container.action_reject()
+        muo_container.action_reject(self.reject_msg)
         self.assertEqual(muo_container.status, 'rejected')
 
 
@@ -126,7 +127,7 @@ class TestMUOContainer(TestCase):
         """
 
         muo_container = self.get_muo_container('draft')
-        self.assertRaises(ValueError, muo_container.action_reject)
+        self.assertRaises(ValueError, muo_container.action_reject, self.reject_msg)
 
 
     def test_action_reject_with_status_rejected(self):
@@ -137,7 +138,7 @@ class TestMUOContainer(TestCase):
         """
 
         muo_container = self.get_muo_container('rejected')
-        self.assertRaises(ValueError, muo_container.action_reject)
+        self.assertRaises(ValueError, muo_container.action_reject, self.reject_msg)
 
 
     def test_action_reject_with_status_invalid(self):
@@ -148,7 +149,7 @@ class TestMUOContainer(TestCase):
         """
 
         muo_container = self.get_muo_container('XXX')
-        self.assertRaises(ValueError, muo_container.action_reject)
+        self.assertRaises(ValueError, muo_container.action_reject, self.reject_msg)
 
 
     # Test 'action_submit'
@@ -310,7 +311,7 @@ class TestMUOContainer(TestCase):
         use_case = UseCase(muo_container=muo_container)  # Usecase cannot be created without MUOContainer
         muo_container.misuse_case.usecase_set.add(use_case)  # Relate misuse case and use case
         use_case.save()  # save in the database
-        muo_container.action_reject()  # the relationship between the misuse case and all the use cases should get removed.
+        muo_container.action_reject(self.reject_msg)  # the relationship between the misuse case and all the use cases should get removed.
         self.assertEqual(muo_container.status, 'rejected')
         self.assertEqual(muo_container.misuse_case.usecase_set.count(), 0)
         self.assertEqual(muo_container.usecase_set.count(), 2)
