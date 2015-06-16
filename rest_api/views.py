@@ -1,9 +1,14 @@
+import re
 from cwe.models import CWE
 from cwe.cwe_search import CWESearchLocator
+from muo.models import MisuseCase
+from muo.models import UseCase
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_api.serializers import CWESerializer
+from rest_api.serializers import MisuseCaseSerializer
+from rest_api.serializers import UseCaseSerializer
 
 
 class CWEAllList(APIView):
@@ -85,3 +90,123 @@ class CWERelatedList(APIView):
         serializer = CWESerializer(cwe_list, many=True)
 
         return Response(data=serializer.data)
+
+
+class MisuseCaseRelated(APIView):
+    """
+    @brief: List the misuse cases that are related to the specified CWEs.
+    """
+
+    def _validate_parameter(self, cwes_str):
+        # This regular expression matches strings like "101" or "101,102,103".
+        # See [here](http://regexr.com/) for test.
+        param_pattern_regex = r"^([0-9]+,)*([0-9]+)$"
+        return re.match(param_pattern_regex, cwes_str) is not None
+
+    def _get_distinct_cwe_codes(self, cwes_str):
+        return set(cwes_str.split(','))
+
+    def _form_err_msg_malformed_cwes(self, cwes_str):
+        return ("CWE code list is malformed: \"" + cwes_str + "\". " +
+                "It should be in the form of either \"101\" or \"101,102,103\""
+                )
+
+    def _form_err_msg_cwes_not_found(self, cwe_codes_not_found):
+        err_msg = ("The CWE of the following codes are not found: " +
+                  ''.join(str(code)+"," for code in cwe_codes_not_found)
+                   )
+        return err_msg
+
+    def get(self, request):
+        """
+        :param request: The HTTP request.
+        :return: rest_framework.response.Response
+        """
+
+        # Get the "cwes" parameter value.
+        cwes_str = request.GET.get("cwes")
+
+        # Validate the parameter or throw exception.
+        if self._validate_parameter(cwes_str=cwes_str) is False:
+            err_msg = self._form_err_msg_malformed_cwes(cwes_str)
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get the CWE codes from the parameter string.
+        cwe_code_set = self._get_distinct_cwe_codes(cwes_str=cwes_str)
+
+        # Create the list of returned misuse case.
+        misuse_case_list = list()
+
+        # Try to get all the CWE objects.
+        cwes = CWE.objects.filter(code__in=cwe_code_set)
+
+        # If there is any CWE not found, then we return an error.
+        cwe_codes_fetched = set([str(cwe.code) for cwe in cwes])
+        cwe_codes_not_found = cwe_code_set - cwe_codes_fetched
+
+        if len(cwe_codes_not_found) > 0:
+            err_msg = self._form_err_msg_cwes_not_found(cwe_codes_not_found)
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+
+        # Find the misuse cases that are related to the CWEs.
+        for cwe in cwes:
+            misuse_case_list += cwe.misuse_cases.all()
+
+        # Remove the duplicated misuse cases, if there are any.
+        misuse_case_list = list(set(misuse_case_list))
+        serializer = MisuseCaseSerializer(misuse_case_list, many=True)
+
+        return Response(data=serializer.data, exception=Exception())
+
+
+class UseCaseRelated(APIView):
+    """
+    @brief: List the misuse cases that are related to the specified CWEs.
+    """
+
+    def _validate_parameter(self, misuse_cases_str):
+        # This regular expression matches strings like "1" or "1,2,3".
+        # See [here](http://regexr.com/) for test.
+        param_pattern_regex = r"^([0-9]+,)*([0-9]+)$"
+        return re.match(param_pattern_regex, misuse_cases_str) is not None
+
+    def _get_distinct_misuse_case_ids(self, misuse_cases_str):
+        return list(set(misuse_cases_str.split(',')))
+
+    def _form_err_msg_malformed_misuse_cases(self, misuse_cases_str):
+        return ("Misuse case ID list is malformed: \"" + misuse_cases_str + "\". " +
+                "It should be in the form of either \"1\" or \"1,2,3\""
+                )
+
+    def get(self, request):
+        """
+        :param request: The HTTP request.
+        :return: rest_framework.response.Response
+        """
+
+        # Get the "misuse_cases" parameter value.
+        misuse_cases_str = request.GET.get("misuse_cases")
+
+        # Validate the parameter or throw exception.
+        if self._validate_parameter(misuse_cases_str=misuse_cases_str) is False:
+            err_msg = self._form_err_msg_malformed_misuse_cases(misuse_cases_str)
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get the misuse case IDs from the parameter string.
+        misuse_case_id_list = self._get_distinct_misuse_case_ids(misuse_cases_str=misuse_cases_str)
+
+        # Create the list of returned use case.
+        use_case_list = list()
+
+        # Iterate the misuse case ID list, and find the use cases and OSRs that are
+        # related to them.
+        for misuse_case_id in misuse_case_id_list:
+            # TODO: Do we need to check if an given misuse case ID exists or not?
+            use_cases = UseCase.objects.filter(misuse_case__id=misuse_case_id)
+            use_case_list += use_cases.all()
+
+        # Remove the duplicated use cases, if there are any.
+        use_case_list = list(set(use_case_list))
+        serializer = UseCaseSerializer(use_case_list, many=True)
+
+        return Response(data=serializer.data, exception=Exception())
