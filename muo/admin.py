@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.contrib.admin.templatetags.admin_urls import add_preserved_filters
+from django.shortcuts import render
 from models import *
 
 from django.http import HttpResponseRedirect
@@ -38,6 +39,14 @@ class MisuseCaseAdmin(BaseAdmin):
     list_display = ['name']
     search_fields = ['name', 'description', 'tags__name']
     inlines = [UseCaseAdminInLine]
+
+
+    def changelist_view(self, request, extra_context=None):
+        misuse_cases = MisuseCase.objects.all()
+        use_cases = UseCase.objects.all()
+        context = {'misuse_cases': misuse_cases,
+                   'use_cases': use_cases}
+        return render(request, 'admin/muo/misusecase/misusecase_search.html', context)
 
 
 @admin.register(MUOContainer, site=admin_site)
