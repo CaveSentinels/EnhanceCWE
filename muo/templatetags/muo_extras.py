@@ -20,7 +20,7 @@ def muo_submit_row(context):
 
     ctx.update({
         'show_save_and_add_another': False,
-        'show_save_and_continue': False,
+        # 'show_save_and_continue': False,
         "show_approve": user_object.has_perm('muo.can_approve') and
                         model_object and model_object.status == 'in_review',
         'show_reject': user_object.has_perm('muo.can_reject') and

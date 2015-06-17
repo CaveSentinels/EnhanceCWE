@@ -1,6 +1,25 @@
 {% extends "admin/change_form.html" %}
 {% load muo_extras %}
 
+{# Priting the rejection reason at the top of the form#}
+{% block form_top %}
+{% if original.status == 'rejected' %}
+    {# if in rejected status, print in error alert#}
+    <div class="alert alert-error"><strong>
+        This MUO has been rejected
+        {% if original.reject_reason %}
+            : {{ original.reject_reason }}
+        {% endif %}
+    </strong></div>
+
+{% elif original.reject_reason and original.status != 'rejected' and original.status != 'approved' %}
+    {# if in approved state, don't print reject message. Else, print in warning alert#}
+    <div class="alert alert-warning">
+        This MUO used to be rejected: {{ original.reject_reason }}
+    </div>
+{% endif %}
+{% endblock %}
+
 {% block submit_buttons_bottom %}
     {% muo_submit_row %}
 {% endblock %}

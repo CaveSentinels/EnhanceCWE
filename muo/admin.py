@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.contrib.admin.templatetags.admin_urls import add_preserved_filters
+import autocomplete_light
 from models import *
 
 from django.http import HttpResponseRedirect
@@ -26,7 +27,7 @@ class UseCaseAdmin(BaseAdmin):
 
 class UseCaseAdminInLine(admin.StackedInline):
     model = UseCase
-    extra = 1
+    extra = 0
     fields = ['name', 'description', 'osr']
     readonly_fields = ['name']
 
@@ -42,6 +43,7 @@ class MisuseCaseAdmin(BaseAdmin):
 
 @admin.register(MUOContainer, site=admin_site)
 class MUOContainerAdmin(BaseAdmin):
+    form = autocomplete_light.modelform_factory(CWE, fields="__all__")
     fields = ['name', 'cwes', 'misuse_case', 'new_misuse_case', 'status']
     list_display = ['name', 'status']
     readonly_fields = ['name', 'status']
@@ -78,14 +80,20 @@ class MUOContainerAdmin(BaseAdmin):
         # Check which button is clicked, handle accordingly.
         try:
             if "_approve" in request.POST:
-                obj.action_approve()
+                obj.action_approve(request.user)
+                obj.save()
                 msg = "You have approved the submission"
+
             elif "_reject" in request.POST:
-                obj.action_reject()
+                reject_reason = request.POST.get('reject_reason_text', '')
+                obj.action_reject(reject_reason, request.user)
+                obj.save()
                 msg = "The submission has been sent back to the author for review"
+
             elif "_submit_for_review" in request.POST:
                 obj.action_submit()
                 msg = "Your review request has been successfully submitted"
+
             elif "_edit" in request.POST:
                 obj.action_save_in_draft()
                 msg = "You can now edit the MUO"
