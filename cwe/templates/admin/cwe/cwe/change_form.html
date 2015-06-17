@@ -1,6 +1,8 @@
 {% extends "admin/change_form.html" %}
 
 {% block after_field_sets %}
+{# Display the suggestion block only while changing an existing record and not while adding a new record#}
+{% if change %}
     <div class="fieldset-box col-md-12">
         <div class="box box-primary">
             <div class="box-header">
@@ -95,5 +97,5 @@
 
     });
 </script>
-
+{% endif %}
 {% endblock %}
