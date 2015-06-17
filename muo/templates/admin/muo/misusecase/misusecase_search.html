@@ -4,34 +4,27 @@
 
 {% block extrastyle %}
     {{ block.super }}
-    <link rel="stylesheet" type="text/css" href="{% static 'muo/style.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'muo/misusecase_search_style.css' %}" />
 {% endblock %}
 
 
-
-{% block extrahead %}{{ block.super }}
-{% url 'admin:jsi18n' as jsi18nurl %}
-<script type="text/javascript" src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>
-{{ media }}
+{% block extrahead %}
+    {{ block.super }}
+    {% url 'admin:jsi18n' as jsi18nurl %}
+    <script type="text/javascript" src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>
+    <script src="{% static 'muo/misusecase_search_ajax.js' %}"></script>
+    {{ media }}
 {% endblock %}
-
-
 
 
 {% block content %}
 <section class="content" id="content">
     <form class="form-horizontal" enctype="multipart/form-data" action method="post" id="misusecase_search" novalidate>
         <input type="hidden" name="csrfmiddlewaretoken" value="wkKcFmkT7yfJ0ZzfdW6R8QZYrtiW4w96">
-{#        <div class="alert alert-warning">#}
-{#            Fields in <strong>bold</strong> are required.#}
-{#        </div>#}
         <div id="content-main">
             <div>
                 <div class="fieldset-box col-md-12">
                     <div class="box box-primary" style="min-height: 0px; margin-bottom: 0px;">
-{#                        <div class="box-header">#}
-{#                            <h1 class="box-title">CWE</h1>#}
-{#                        </div>#}
                         <div class="box-body">
                             <fieldset class="_module _aligned" id="fieldset-1" style="background:transparent">
                                 <div class="fields box-col-md-12">
@@ -77,7 +70,7 @@
                             <hr style="margin: 0px;"></hr>
                             <div class="slimScrollDiv">
                                 {% for misusecase in misuse_cases %}
-                                    <div class="misusecaseContainer">
+                                    <div class="misusecaseContainer" id="{{ misusecase.pk }}">
                                         <div class="misusecaseHeader">
                                             <label style="float: left;">{{ misusecase.name }}</label>
                                             <label style="float: right; color: #888888; font-size: 85%">{{ misusecase.created_at }}</label>
@@ -88,27 +81,8 @@
                                     </div>
                                 {% endfor %}
                             </div>
-                            <div class="fatScrollDiv">
-                                {% for usecase in use_cases %}
-                                    <div class="usecaseContainer">
-                                        <div class="usecaseHeader">
-                                            <label style="float: left;">{{ usecase.name }}</label>
-                                            <label style="float: right; color: #888888; font-size: 85%">{{ usecase.created_at }}</label>
-                                         </div>
-                                        <div class="usecaseDiv">
-                                            {{ usecase.description }}
-                                        </div>
-                                        <div class="osrDiv">
-                                            {{ usecase.osr }}
-                                        </div>
-                                        <div class="usecaseFooter">
-                                            <input type="image" id="like-1" style="height:32px; width:32px; position: relative; left:40%;" src="{% static "muo/like.png" %}"/>
-                                            <input type="image" id="dislike-1" style="height:32px; width:32px; position: relative; left:40%;" src="{% static "muo/dislike.png" %}"/>
-                                            <input type="image" id="comments-1" style="height:32px; width:32px; position: relative; left:40%;" src="{% static "muo/comments.png" %}"/>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
+                            <div class="fatScrollDiv"></div>
+                            {# fatScrollDiv is to loaded from usecase.html after the ajax response#}
                         </div>
                     </div>
                 </div>
@@ -117,106 +91,3 @@
     </form>
 </section>
 {% endblock %}
-
-
-{#{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}" />{% endblock %}#}
-
-{#{% block coltype %}{% if ordered_objects %}colMS{% else %}colM{% endif %}{% endblock %}#}
-
-{#{% block bodyclass %}{{ block.super }} {{ opts.app_label }}-{{ opts.object_model }} change-form{% endblock %}#}
-
-{#{% if not is_popup %}#}
-{#{% block breadcrumbs %}#}
-{#<ul class="breadcrumb">#}
-{#<li><a href="{% url 'admin:index' %}">{% trans 'Home' %}</a></li>#}
-{#<li><a href="{% url 'admin:app_list' app_label=opts.app_label %}">{% with app_label=opts.app_config.verbose_name|default:opts.app_label %}{{ app_label|title }}{% endwith %}</a></li>#}
-{#</ul>#}
-{#{% endblock %}#}
-{#{% endif %}#}
-
-{#{% block object-tools %}#}
-{#{% if change %}{% if not is_popup %}#}
-{#<div id="content-navbar-collapse" class="navbar-collapse collapse">#}
-{#  <ul class="nav navbar-nav navbar-right">#}
-{#    {% block object-tools-items %}#}
-{#    <li>#}
-{#        {% url opts|admin_urlname:'history' original.pk|admin_urlquote as history_url %}#}
-{#        <a role="button" href="{% add_preserved_filters history_url %}" class="historylink">{% trans "History" %}</a>#}
-{#    </li>#}
-{#    {% if has_absolute_url %}<li><a href="{% url 'admin:view_on_site' content_type_id original.pk %}" class="viewsitelink">{% trans "View on site" %}</a></li>{% endif %}#}
-{#    {% endblock %}#}
-{#  </ul>#}
-{#</div>#}
-{#{% endif %}{% endif %}#}
-{#{% endblock %}#}
-{##}
-{#{% block content %}#}
-{##}
-{#{% with module_name=opts.model_name|lower|slugify %}#}
-{#    {% render_with_template_if_exist opts.app_label|lower|add:"/admin_model_"|add:module_name|add:"_change_form.html" "" %}#}
-{#{% endwith %}#}
-{##}
-{##}
-{#<form class="form-horizontal" {% if has_file_field %}enctype="multipart/form-data" {% endif %}action="{{ form_url }}" method="post" id="{{ opts.model_name }}_form" novalidate>{% csrf_token %}{% block form_top %}{% endblock %}#}
-{#    <div class="alert alert-warning">{% blocktrans %}Fields in <strong>bold</strong> are required.{% endblocktrans %}</div>#}
-{#    {% if errors %}#}
-{#    <div class="alert alert-danger">#}
-{#        {% if errors|length == 1 %}{% trans "Please correct the error below." %}{% else %}{% trans "Please correct the errors below." %}{% endif %}#}
-{#        {{ adminform.form.non_field_errors }}#}
-{#    </div>#}
-{#    {% endif %}#}
-{##}
-{#    {% if save_on_top %}{% block submit_buttons_top %}{% submit_row %}{% endblock %}{% endif %}#}
-{##}
-{#    <div id="content-main">#}
-{#        <div>#}
-{#        {% if is_popup %}<input type="hidden" name="_popup" value="1" />{% endif %}#}
-{##}
-{#        {% block field_sets %}#}
-{#        {% for fieldset in adminform %}#}
-{#          {% include "admin/includes/fieldset.html" with group_column_width=adminform|form_fieldset_column_width %}#}
-{#        {% endfor %}#}
-{#        {% endblock %}#}
-{##}
-{#        {% block after_field_sets %}{% endblock %}#}
-{##}
-{#        {% block inline_field_sets %}#}
-{#        {% for inline_admin_formset in inline_admin_formsets %}#}
-{#            {% include inline_admin_formset.opts.template %}#}
-{#        {% endfor %}#}
-{#        {% endblock %}#}
-{##}
-{#        {% block after_related_objects %}{% endblock %}#}
-{##}
-{#        {% block admin_change_form_document_ready %}#}
-{##}
-{#        <script type="text/javascript">#}
-{#            (function($) {#}
-{#                $(document).ready(function() {#}
-{#                    $('.add-another').click(function(e) {#}
-{#                        e.preventDefault();#}
-{#                        showAddAnotherPopup(this);#}
-{#                    });#}
-{#                    $('.related-lookup').click(function(e) {#}
-{#                        e.preventDefault();#}
-{#                        showRelatedObjectLookupPopup(this);#}
-{#                    });#}
-{#                {% if adminform and add %}#}
-{#                    $('form#{{ opts.model_name }}_form :input:visible:enabled:first').focus()#}
-{#                {% endif %}#}
-{#                });#}
-{#            })(django.jQuery);#}
-{#        </script>#}
-{#        {% endblock %}#}
-{##}
-        {# JavaScript for prepopulated fields #}
-{#        {% prepopulated_fields_js %}#}
-{##}
-{#        </div>#}
-{#    </div>#}
-{##}
-{#    <div class="form-actions">#}
-{#        {% block submit_buttons_bottom %}{% submit_row %}{% endblock %}#}
-{#    </div>#}
-{#</form>#}
-{#{% endblock %}#}

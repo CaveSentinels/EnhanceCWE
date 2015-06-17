@@ -1,0 +1,24 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'muo/misusecase_search_style.css' %}">
+
+<div class="fatScrollDiv">
+    {% for usecase in use_cases %}
+        <div class="usecaseContainer">
+            <div class="usecaseHeader">
+                <label style="float: left;">{{ usecase.name }}</label>
+                <label style="float: right; color: #888888; font-size: 85%">{{ usecase.created_at }}</label>
+            </div>
+            <div class="usecaseDiv">
+                {{ usecase.description }}
+            </div>
+            <div class="osrDiv">
+                {{ usecase.osr }}
+            </div>
+            <div class="usecaseFooter">
+                <input type="image" id="like-1" style="height:32px; width:32px; position: relative; left:40%;" src="{% static "muo/like.png" %}"/>
+                <input type="image" id="dislike-1" style="height:32px; width:32px; position: relative; left:40%;" src="{% static "muo/dislike.png" %}"/>
+                <input type="image" id="comments-1" style="height:32px; width:32px; position: relative; left:40%;" src="{% static "muo/comments.png" %}"/>
+            </div>
+        </div>
+    {% endfor %}
+</div>
