@@ -18,6 +18,7 @@
 </div>
 <div class="spacer"></div>
 
+{% if show_reject %}
 <!-- Reject Modal -->
 <div class="modal fade" id="reject-model" tabindex="-1" role="dialog" aria-labelledby="Reject" aria-hidden="true">
   <div class="modal-dialog">
@@ -35,11 +36,12 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-default pull-left" data-dismiss="modal">Close</button>
         <input type="submit" id="reject_button" class="btn btn-primary" value="{% trans 'Reject' %}"
-               class="btn btn-default" name="_reject" />
+               name="_reject" />
       </div>
     </div>
   </div>
 </div>
+{% endif %}
 
 {# Disable reject button if not enough characters in rejection message#}
 <script type="text/javascript">

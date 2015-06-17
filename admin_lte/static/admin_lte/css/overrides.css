@@ -154,14 +154,14 @@ hr.breadcrumbs-separator{
 
 }
 
-.content .form-horizontal #content-main input,
+.content .form-horizontal #content-main input[type=text],
 .content .form-horizontal #content-main textarea,
 .content .form-horizontal #content-main .autocomplete-light-widget{
   border-radius: 0px !important;
   box-shadow: none;
   border-color: #d2d6de;
 }
-.content .form-horizontal #content-main input:focus,
+.content .form-horizontal #content-main input[type=text]:focus,
 .content .form-horizontal #content-main textarea:focus,
 .content .form-horizontal #content-main .autocomplete-light-widget:hover{
   border-color: #3c8dbc !important;
@@ -170,27 +170,27 @@ hr.breadcrumbs-separator{
   -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102, 175, 233, .6);
           box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102, 175, 233, .6);
 }
-.content .form-horizontal #content-main input::-moz-placeholder,
+.content .form-horizontal #content-main input[type=text]::-moz-placeholder,
 .content .form-horizontal #content-main textarea::-moz-placeholder{
   color: #bbb;
   opacity: 1;
 }
-.content .form-horizontal #content-main input:-ms-input-placeholder,
+.content .form-horizontal #content-main input[type=text]:-ms-input-placeholder,
 .content .form-horizontal #content-main textarea:-ms-input-placeholder {
   color: #bbb;
 }
-.content .form-horizontal #content-main input::-webkit-input-placeholder,
+.content .form-horizontal #content-main input[type=text]::-webkit-input-placeholder,
 .content .form-horizontal #content-main textarea::-webkit-input-placeholder{
   color: #bbb;
 }
-.content .form-horizontal #content-main input[type="text"]:not(select),
+.content .form-horizontal #content-main input[type=text]:not(select),
 .content .form-horizontal #content-main textarea:not(select){
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
 }
 
-.content .form-horizontal #content-main input[type="text"],
+.content .form-horizontal #content-main input[type=text],
 .content .form-horizontal #content-main textarea,
 .content .form-horizontal #content-main .autocomplete-light-widget {
   display: block;
@@ -222,30 +222,30 @@ hr.breadcrumbs-separator{
     border: none;
 }
 
-.content .form-horizontal #content-main input::-moz-placeholder,
+.content .form-horizontal #content-main input[type=text]::-moz-placeholder,
 .content .form-horizontal #content-main textarea::-moz-placeholder{
   color: #999;
   opacity: 1;
 }
-.content .form-horizontal #content-main input:-ms-input-placeholder,
+.content .form-horizontal #content-main input[type=text]:-ms-input-placeholder,
 .content .form-horizontal #content-main textarea:-ms-input-placeholder{
   color: #999;
 }
-.content .form-horizontal #content-main input::-webkit-input-placeholder,
+.content .form-horizontal #content-main input[type=text]::-webkit-input-placeholder,
 .content .form-horizontal #content-main textarea::-webkit-input-placeholder{
   color: #999;
 }
-.content .form-horizontal #content-main input[disabled],
-.content .form-horizontal #content-main input[readonly],
+.content .form-horizontal #content-main input[type=text][disabled],
+.content .form-horizontal #content-main input[type=text][readonly],
 .content .form-horizontal #content-main textarea[disabled],
 .content .form-horizontal #content-main textarea[readonly],
-.content .form-horizontal #content-main fieldset[disabled] input  {
+.content .form-horizontal #content-main fieldset[disabled] input[type=text]  {
   background-color: #eee;
   opacity: 1;
 }
-.content .form-horizontal #content-main input[disabled],
+.content .form-horizontal #content-main input[type=text][disabled],
 .content .form-horizontal #content-main textarea[disabled],
-.content .form-horizontal #content-main fieldset[disabled] input {
+.content .form-horizontal #content-main fieldset[disabled] input[type=text] {
   cursor: not-allowed;
 }
 .content .form-horizontal #content-main textarea {
@@ -260,7 +260,7 @@ hr.breadcrumbs-separator{
     display: block;
 }
 
-.content .form-horizontal #content-main .delete input{
+.content .form-horizontal #content-main .delete input[type=text]{
     margin-top: 2px;
 }
 
