@@ -49,7 +49,7 @@ class MUOContainerAdmin(BaseAdmin):
     readonly_fields = ['name', 'status']
     search_fields = ['name', 'status']
     date_hierarchy = 'created_at'
-    inlines = [UseCaseAdminInLine]\
+    inlines = [UseCaseAdminInLine]
 
     def get_queryset(self, request):
         """
@@ -80,15 +80,13 @@ class MUOContainerAdmin(BaseAdmin):
         # Check which button is clicked, handle accordingly.
         try:
             if "_approve" in request.POST:
-                obj.action_approve()
-                obj.reviewed_by = request.user
+                obj.action_approve(request.user)
                 obj.save()
                 msg = "You have approved the submission"
 
             elif "_reject" in request.POST:
                 reject_reason = request.POST.get('reject_reason_text', '')
-                obj.action_reject(reject_reason)
-                obj.reviewed_by = request.user
+                obj.action_reject(reject_reason, request.user)
                 obj.save()
                 msg = "The submission has been sent back to the author for review"
 

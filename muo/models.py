@@ -1,13 +1,9 @@
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.conf import settings
 from cwe.models import CWE
 from base.models import BaseModel
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
-from django.utils.encoding import force_text
-from django.utils.translation import ugettext as _
-from django.db.models.signals import pre_delete, pre_save, post_save
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 STATUS = [('draft', 'Draft'), ('in_review', 'In Review'), ('approved', 'Approved'), ('rejected', 'Rejected')]
@@ -69,11 +65,15 @@ class MUOContainer(BaseModel):
     def __unicode__(self):
         return self.name
 
-    def action_approve(self):
-        # This method change the status of the MUOContainer object to 'approved' and it creates the
-        # relationship between the misuse case and all the use cases of the muo container.This change
-        # is allowed only if the current status is 'in_review'. If the current status is not
-        # 'in_review', it raises the ValueError with appropriate message.
+    def action_approve(self, reviewer=None):
+        """
+        This method change the status of the MUOContainer object to 'approved' and it creates the
+        relationship between the misuse case and all the use cases of the muo container.This change
+        is allowed only if the current status is 'in_review'. If the current status is not
+        'in_review', it raises the ValueError with appropriate message.
+        :param reviewer: User object that approved the MUO
+        :raise ValueError: if status not in 'in-review'
+        """
         if self.status == 'in_review':
             # Create the relationship between the misuse case of the muo container with all the
             # use cases of the container
@@ -82,16 +82,22 @@ class MUOContainer(BaseModel):
                 usecase.save()
 
             self.status = 'approved'
+            self.reviewed_by = reviewer
             self.save()
         else:
             raise ValueError("In order to approve an MUO, it should be in 'in-review' state")
 
-    def action_reject(self, reject_reason):
-        # This method change the status of the MUOContainer object to 'rejected' and the removes
-        # the relationship between all the use cases of the muo container and the misuse case.
-        # This change is allowed only if the current status is 'in_review' or 'approved'.
-        # If the current status is not 'in-review' or 'approved', it raises the ValueError
-        # with appropriate message.
+    def action_reject(self, reject_reason, reviewer=None):
+        """
+        This method change the status of the MUOContainer object to 'rejected' and the removes
+        the relationship between all the use cases of the muo container and the misuse case.
+        This change is allowed only if the current status is 'in_review' or 'approved'.
+        If the current status is not 'in-review' or 'approved', it raises the ValueError
+        with appropriate message.
+        :param reject_reason: Message that contain the rejection reason provided by the reviewer
+        :param reviewer: User object that approved the MUO
+        :raise ValueError: if status not in 'in-review'
+        """
         if self.status == 'in_review' or self.status == 'approved':
             # Remove the relationship between the misuse case of the muo container with all the
             # use cases of the container
@@ -101,6 +107,7 @@ class MUOContainer(BaseModel):
 
             self.status = 'rejected'
             self.reject_reason = reject_reason
+            self.reviewed_by = reviewer
             self.save()
         else:
             raise ValueError("In order to approve an MUO, it should be in 'in-review' state")

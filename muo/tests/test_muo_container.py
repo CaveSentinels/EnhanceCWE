@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from muo.models import MUOContainer, MisuseCase, UseCase
+from django.contrib.auth.models import User
 
 # Create your tests here.
 
@@ -16,10 +17,18 @@ class TestMUOContainer(TestCase):
         For now it just creates a MUOContainer object, but can be used to
         do any default settings
         """
-        reject_msg = "This MUO is rejected!"
+        self.reject_msg = "This MUO is rejected!"
+        self.reviewer = User(username='reviewer')
+        self.reviewer.save()
+
         misuse_case = MisuseCase()
         misuse_case.save()
+
         muo_container = MUOContainer.objects.create(misuse_case = misuse_case)  # MUOContainer cannot be created without misuse case
+        muo_container.save()
+        # The id field is auto incremental and we need to know the id of the currently created object
+        self.current_id = muo_container.id
+
         use_case = UseCase(muo_container=muo_container)  # Usecase cannot be created without MUOContainer
         use_case.save()  # save in the database
 
@@ -30,7 +39,7 @@ class TestMUOContainer(TestCase):
         received in arguments.
         """
 
-        muo_container = MUOContainer.objects.get(pk=1)
+        muo_container = MUOContainer.objects.get(pk=self.current_id)
         muo_container.status = status
         muo_container.save()
         return muo_container
@@ -93,6 +102,33 @@ class TestMUOContainer(TestCase):
         self.assertRaises(ValueError, muo_container.action_approve)
 
 
+    def test_action_approve_with_valid_reviewer(self):
+        """
+        This is a positive test case
+        'action_approve' should update the reviewed_by field if reviewer parameter is passed
+        """
+
+        muo_container = self.get_muo_container('in_review')
+        muo_container.action_approve(reviewer=self.reviewer)
+        self.assertEqual(muo_container.reviewed_by, self.reviewer)
+
+
+    def test_action_approve_with_no_reviewer(self):
+        """
+        This is a positive test case
+        'action_approve' should set the reviewer to None if no reviewer is passed, even if the container had a reviewer
+        """
+
+        muo_container = self.get_muo_container('in_review')
+        muo_container.action_approve(reviewer=self.reviewer)
+
+        # re-fetch muo container
+        muo_container = self.get_muo_container('in_review')
+        muo_container.action_approve()
+
+        self.assertIsNone(muo_container.reviewed_by)
+
+
     # Test 'action_reject'
 
     def test_action_reject_with_status_in_review(self):
@@ -150,6 +186,32 @@ class TestMUOContainer(TestCase):
 
         muo_container = self.get_muo_container('XXX')
         self.assertRaises(ValueError, muo_container.action_reject, self.reject_msg)
+
+    def test_action_reject_with_valid_reviewer(self):
+        """
+        This is a positive test case
+        'action_reject' should update the reviewed_by field if reviewer parameter is passed
+        """
+
+        muo_container = self.get_muo_container('in_review')
+        muo_container.action_reject(self.reject_msg, reviewer=self.reviewer)
+        self.assertEqual(muo_container.reviewed_by, self.reviewer)
+
+
+    def test_action_reject_with_no_reviewer(self):
+        """
+        This is a positive test case
+        'action_reject' should set the reviewer to None if no reviewer is passed, even if the container had a reviewer
+        """
+
+        muo_container = self.get_muo_container('in_review')
+        muo_container.action_reject(self.reject_msg, reviewer=self.reviewer)
+
+        # re-fetch muo container
+        muo_container = self.get_muo_container('in_review')
+        muo_container.action_reject(self.reject_msg)
+
+        self.assertIsNone(muo_container.reviewed_by)
 
 
     # Test 'action_submit'
