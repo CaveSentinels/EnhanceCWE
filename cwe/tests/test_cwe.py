@@ -10,6 +10,7 @@ from cwe.admin import CWEAdmin
 class TestSearchCWE(TestCase):
 
     KEYWORD_NAMES = ["authentication", "file"]
+    STEMMED_NAMES = ["authent", "file"]
     CATEGORY_NAMES = ["Web Problems", "Error Handling"]
 
     def construct_test_database(self):
@@ -54,17 +55,12 @@ class TestSearchCWE(TestCase):
 
     def destruct_test_database(self):
 
-        for n in self.KEYWORD_NAMES:
-            kw = Keyword.objects.get(name=n)
-            kw.delete()
+        # First we need to delete all the CWEs in order to delete other stuff.
+        CWE.objects.all().delete()
 
-        for n in self.CATEGORY_NAMES:
-            cat = Category.objects.get(name=n)
-            cat.delete()
-
-        for c in self.CWE_CODES:
-            cwe = CWE.objects.get(code=c)
-            cwe.delete()
+        # Then we can delete keywords and categories.
+        Keyword.objects.all().delete()
+        Category.objects.all().delete()
 
     def test_positive_cwe_model_admin(self):
         # Verify that the model's admin class has specified the name, keyword and category as
@@ -78,6 +74,7 @@ class TestSearchCWE(TestCase):
 class TestAddCWE(TestCase):
 
     KEYWORD_NAMES = ["authentication", "file"]
+    STEMMED_NAMES = ["authent", "file"]
     CATEGORY_NAMES = ["Web Problems", "Error Handling"]
 
     def setUp(self):
@@ -107,13 +104,9 @@ class TestAddCWE(TestCase):
         # Otherwise we cannot delete the keywords and categories.
         CWE.objects.all().delete()
 
-        for n in self.KEYWORD_NAMES:
-            kw = Keyword.objects.get(name=n)
-            kw.delete()
-
-        for n in self.CATEGORY_NAMES:
-            cat = Category.objects.get(name=n)
-            cat.delete()
+        # Then we can delete keywords and categories.
+        Keyword.objects.all().delete()
+        Category.objects.all().delete()
 
     def test_positive_single_category_single_keyword(self):
 
@@ -122,7 +115,7 @@ class TestAddCWE(TestCase):
 
         # Second, try to add the CWE to the database.
         cat1 = Category.objects.get(name=self.CATEGORY_NAMES[0])
-        kw1 = Keyword.objects.get(name=self.KEYWORD_NAMES[0])
+        kw1 = Keyword.objects.get(name=self.STEMMED_NAMES[0])
         cwe = CWE(code=101, name="cwe-101", description="cwe description")
         cwe.save()
         cwe.categories.add(cat1)
@@ -145,9 +138,9 @@ class TestAddCWE(TestCase):
 
         # Second, try to add the CWE to the database
         cat1 = Category.objects.get(name=self.CATEGORY_NAMES[0])
-        kw1 = Keyword.objects.get(name=self.KEYWORD_NAMES[0])
+        kw1 = Keyword.objects.get(name=self.STEMMED_NAMES[0])
         cat2 = Category.objects.get(name=self.CATEGORY_NAMES[1])
-        kw2 = Keyword.objects.get(name=self.KEYWORD_NAMES[1])
+        kw2 = Keyword.objects.get(name=self.STEMMED_NAMES[1])
         cwe = CWE(code=101, name="cwe-101", description="cwe description")
         cwe.save()
         cwe.categories.add(cat1, cat2)
@@ -162,8 +155,8 @@ class TestAddCWE(TestCase):
         self.assertEqual(cwe.keywords.count(), 2)
         self.assertEqual(cwe.categories.get(name=self.CATEGORY_NAMES[0]), cat1)
         self.assertEqual(cwe.categories.get(name=self.CATEGORY_NAMES[1]), cat2)
-        self.assertEqual(cwe.keywords.get(name=self.KEYWORD_NAMES[0]), kw1)
-        self.assertEqual(cwe.keywords.get(name=self.KEYWORD_NAMES[1]), kw2)
+        self.assertEqual(cwe.keywords.get(name=self.STEMMED_NAMES[0]), kw1)
+        self.assertEqual(cwe.keywords.get(name=self.STEMMED_NAMES[1]), kw2)
 
     def test_negative_add_duplicated(self):
 
