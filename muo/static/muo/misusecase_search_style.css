@@ -1,4 +1,4 @@
-.content .fieldset-box .box {
+.muo-search-container .fieldset-box .box {
     min-height: 0px;
 }
 
@@ -38,7 +38,7 @@
     text-align: center;
 }
 
-.misuse-case-container {
+.muo-search-container .misuse-case-container {
 
 }
 
@@ -65,29 +65,29 @@
     margin-top: 0px;
 }
 
-.use-case-container {
+.muo-search-container .use-case-container {
     width: 97%;
     margin: 10px;
     padding: 15px;
     background-color: white;
 
     -webkit-box-shadow: 0px 0px 2px 0px rgba(173,173,173,1);
--moz-box-shadow: 0px 0px 2px 0px rgba(173,173,173,1);
-box-shadow: 0px 0px 2px 0px rgba(173,173,173,1);
+    -moz-box-shadow: 0px 0px 2px 0px rgba(173,173,173,1);
+    box-shadow: 0px 0px 2px 0px rgba(173,173,173,1);
 }
 
-.use-case-container .use-case-div {
+.muo-search-container .use-case-container .use-case-div {
     width: 100%;
     padding: 15px;
     border-bottom: thin double;
     border-color: #e7eaec;
 }
 
-.use-case-container .use-case-header {
+.muo-search-container .use-case-container .use-case-header {
 
 }
 
-.use-case-container .osr-div {
+.muo-search-container .use-case-container .osr-div {
     width: 100%;
     padding: 15px;
 }
