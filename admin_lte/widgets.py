@@ -7,7 +7,7 @@ import copy
 
 from django import forms
 from django.contrib.admin.templatetags.admin_static import static
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse, NoReverseMatch
 from django.db.models.deletion import CASCADE
 from django.forms.utils import flatatt
 from django.forms.widgets import Media, RadioFieldRenderer
@@ -21,6 +21,8 @@ from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
 from django.utils.translation import ugettext as _
 import django.contrib.admin.widgets
+from django.contrib.admin.widgets import FilteredSelectMultiple
+
 
 
 class MyRelatedFieldWidgetWrapper(django.contrib.admin.widgets.RelatedFieldWidgetWrapper):
@@ -45,11 +47,18 @@ class MyRelatedFieldWidgetWrapper(django.contrib.admin.widgets.RelatedFieldWidge
             'model': rel_opts.verbose_name,
         }
         # Customized by AdminLTE
-        search_related_url = self.get_related_url(info, 'changelist')
-        context.update(
-            can_search_related=True,
-            search_related_url=search_related_url,
-        )
+        if not isinstance(self.widget, FilteredSelectMultiple):
+            # Don't show the search related if the widget is of type FilteredSelectMultiple
+            # similar to groups and permissions in user management view
+            try:
+                search_related_url = self.get_related_url(info, 'changelist')
+                context.update(
+                    can_search_related=True,
+                    search_related_url=search_related_url,
+                )
+            except NoReverseMatch:
+                # If object doesn't have a changelist view, then just pass
+                pass
 
         if self.can_change_related:
             change_related_template_url = self.get_related_url(info, 'change', '__fk__')
