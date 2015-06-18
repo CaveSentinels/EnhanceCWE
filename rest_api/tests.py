@@ -1,7 +1,9 @@
 import json
 from django.test import TestCase
 from django.test import Client
+from django.contrib.auth.models import User
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 from cwe.models import CWE
 from cwe.models import Keyword
 from muo.models import MisuseCase
@@ -12,14 +14,60 @@ from rest_api.views import MisuseCaseRelated
 from rest_api.views import UseCaseRelated
 
 
-class TestCWETextRelated(TestCase):
+class RestAPITestBase(TestCase):
+
+    _cli = Client()     # The testing client
+
+    AUTH_TOKEN_TYPE_ACTIVE_USER = 0
+    AUTH_TOKEN_TYPE_INACTIVE_USER = 1
+    AUTH_TOKEN_TYPE_NONE = 2
+
+    def setUp(self):
+        self.set_up_users_and_tokens()
+        self.set_up_test_data()
+
+    def tearDown(self):
+        self.tear_down_users_and_tokens()
+        self.tear_down_test_data()
+
+    def set_up_users_and_tokens(self):
+        test_user_active = User(username='test_user_active', is_active=True)
+        test_user_active.save()
+        test_user_active_id = test_user_active.id
+        self._test_user_active_token = str(Token.objects.get(user__id=test_user_active_id))
+
+        test_user_inactive = User(username='test_user_inactive', is_active=False)
+        test_user_inactive.save()
+        test_user_inactive_id = test_user_inactive.id
+        self._test_user_inactive_token = Token.objects.get(user__id=test_user_inactive_id)
+
+    def set_up_test_data(self):
+        # To be overridden by the subclass.
+        pass
+
+    def tear_down_users_and_tokens(self):
+        Token.objects.all().delete()
+        User.objects.all().delete()
+
+    def tear_down_test_data(self):
+        # To be overridden by the subclass.
+        pass
+
+    def http_get(self, url, auth_token_type=AUTH_TOKEN_TYPE_ACTIVE_USER):
+        auth_token = self._test_user_active_token
+        if auth_token_type == RestAPITestBase.AUTH_TOKEN_TYPE_INACTIVE_USER:
+            auth_token = self._test_user_inactive_token
+        elif auth_token_type == RestAPITestBase.AUTH_TOKEN_TYPE_NONE:
+            auth_token = None
+        return self._cli.get(url, HTTP_AUTHORIZATION='Token '+str(auth_token))
+
+
+class TestCWETextRelated(RestAPITestBase):
 
     CWE_CODES = [101, 102, 103]     # The CWE codes used in the tests
     KEYWORD_NAMES = ["authent", "overflow", "bypass"]      # The names of keywords
 
-    cli = Client()  # The Client utility
-
-    def setUp(self):
+    def set_up_test_data(self):
         # Create the keywords
         kw_auth = Keyword(name=self.KEYWORD_NAMES[0])
         kw_auth.save()
@@ -41,7 +89,7 @@ class TestCWETextRelated(TestCase):
         cwe103.save()
         cwe103.keywords.add(kw_overflow, kw_bypass)    # Multiple keywords
 
-    def tearDown(self):
+    def tear_down_test_data(self):
         # Delete all CWEs.
         CWE.objects.all().delete()
         # Delete all keywords.
@@ -67,14 +115,15 @@ class TestCWETextRelated(TestCase):
 
     def test_positive_search_text_1_keyword(self):
         text = "authentication fails because ..."
-        response = self.cli.get(self._form_url(text))
+        response = self.http_get(self._form_url(text))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), False)
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), False)
 
     def test_positive_search_text_multiple_keywords(self):
         text = "the user can bypass the file access check due to a stack overflow caused by ..."
-        response = self.cli.get(self._form_url(text))
+        response = self.http_get(self._form_url(text))
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), False)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), True)
@@ -83,24 +132,33 @@ class TestCWETextRelated(TestCase):
 
     def test_negative_search_text_no_match(self):
         text = "the password is leaked because the security level is incorrectly set..."
-        response = self.cli.get(self._form_url(text))
+        response = self.http_get(self._form_url(text))
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), False)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), False)
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), False)
 
+    def test_negative_no_authentication_token(self):
+        text = "the password is leaked because the security level is incorrectly set..."
+        response = self.http_get(self._form_url(text), auth_token_type=RestAPITestBase.AUTH_TOKEN_TYPE_NONE)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-class TestCWEAllList(TestCase):
+    def test_negative_inactive_authentication_token(self):
+        text = "the password is leaked because the security level is incorrectly set..."
+        response = self.http_get(self._form_url(text), auth_token_type=RestAPITestBase.AUTH_TOKEN_TYPE_INACTIVE_USER)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestCWEAllList(RestAPITestBase):
 
     CWE_CODES = [101, 102, 103]     # The CWE codes used in the tests
-    cli = Client()  # The Client testing utility
 
-    def setUp(self):
+    def set_up_test_data(self):
         # Construct the test database
         for code in self.CWE_CODES:
             cwe = CWE(code=code, name="CWE #"+str(code))
             cwe.save()
 
-    def tearDown(self):
+    def tear_down_test_data(self):
         # Destruct the test database
         for code in self.CWE_CODES:
             cwe = CWE.objects.get(code=code)
@@ -125,80 +183,88 @@ class TestCWEAllList(TestCase):
 
     def test_positive_get_default_default(self):
         CWEAllList.DEFAULT_MAX = 2  # For test purpose we only return at most two CWEs.
-        response = self.cli.get(self._form_url(offset=None, max_return=None))
+        response = self.http_get(self._form_url(offset=None, max_return=None))
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
 
     def test_positive_get_2_default(self):
         CWEAllList.DEFAULT_MAX = 2  # For test purpose we only return at most two CWEs.
-        response = self.cli.get(self._form_url(offset=2, max_return=None))
+        response = self.http_get(self._form_url(offset=2, max_return=None))
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), True)
 
     def test_positive_get_0_0(self):
-        response = self.cli.get(self._form_url(offset=0, max_return=0))
+        response = self.http_get(self._form_url(offset=0, max_return=0))
         self.assertTrue(self._cwe_info_empty(content=response.content))
 
     def test_positive_get_0_1(self):
-        response = self.cli.get(self._form_url(offset=0, max_return=1))
+        response = self.http_get(self._form_url(offset=0, max_return=1))
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
 
     def test_positive_get_0_2(self):
-        response = self.cli.get(self._form_url(offset=0, max_return=2))
+        response = self.http_get(self._form_url(offset=0, max_return=2))
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
 
     def test_positive_get_0_10(self):
-        response = self.cli.get(self._form_url(offset=0, max_return=10))
+        response = self.http_get(self._form_url(offset=0, max_return=10))
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), True)
 
     def test_positive_get_2_0(self):
-        response = self.cli.get(self._form_url(offset=2, max_return=0))
+        response = self.http_get(self._form_url(offset=2, max_return=0))
         self.assertTrue(self._cwe_info_empty(content=response.content))
 
     def test_positive_get_2_1(self):
-        response = self.cli.get(self._form_url(offset=2, max_return=1))
+        response = self.http_get(self._form_url(offset=2, max_return=1))
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), True)
 
     def test_positive_get_2_10(self):
-        response = self.cli.get(self._form_url(offset=2, max_return=10))
+        response = self.http_get(self._form_url(offset=2, max_return=10))
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), True)
 
     # Negative test cases
 
     def test_negative_get_3_default(self):
-        response = self.cli.get(self._form_url(offset=3, max_return=None))
+        response = self.http_get(self._form_url(offset=3, max_return=None))
         self.assertTrue(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_negative_get_3_0(self):
-        response = self.cli.get(self._form_url(offset=3, max_return=0))
+        response = self.http_get(self._form_url(offset=3, max_return=0))
         self.assertTrue(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_negative_get_3_1(self):
-        response = self.cli.get(self._form_url(offset=3, max_return=1))
+        response = self.http_get(self._form_url(offset=3, max_return=1))
         self.assertTrue(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_negative_get_3_10(self):
-        response = self.cli.get(self._form_url(offset=3, max_return=10))
+        response = self.http_get(self._form_url(offset=3, max_return=10))
         self.assertTrue(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_negative_get_n1_1(self):
-        response = self.cli.get(self._form_url(offset=-1, max_return=1))
+        response = self.http_get(self._form_url(offset=-1, max_return=1))
         self.assertTrue(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_negative_get_1_n1(self):
-        response = self.cli.get(self._form_url(offset=1, max_return=-1))
+        response = self.http_get(self._form_url(offset=1, max_return=-1))
         self.assertTrue(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_negative_no_authentication_token(self):
+        response = self.http_get(self._form_url(offset=2, max_return=1),
+                                 auth_token_type=RestAPITestBase.AUTH_TOKEN_TYPE_NONE)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-class TestMisuseCaseSuggestion(TestCase):
+    def test_negative_inactive_authentication_token(self):
+        response = self.http_get(self._form_url(offset=2, max_return=1),
+                                 auth_token_type=RestAPITestBase.AUTH_TOKEN_TYPE_INACTIVE_USER)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestMisuseCaseSuggestion(RestAPITestBase):
 
     CWE_CODES = [101, 102, 103]     # The CWE codes used in the tests
 
-    cli = Client()  # The Client utility
-
-    def setUp(self):
+    def set_up_test_data(self):
         # Create CWEs.
         cwe101 = CWE(code=self.CWE_CODES[0])
         cwe101.save()
@@ -218,7 +284,7 @@ class TestMisuseCaseSuggestion(TestCase):
         mu3.save()
         mu3.cwes.add(cwe102, cwe103)
 
-    def tearDown(self):
+    def tear_down_test_data(self):
         # Delete all the misuse cases first.
         MisuseCase.objects.all().delete()
         # Then delete all the CWEs.
@@ -246,7 +312,7 @@ class TestMisuseCaseSuggestion(TestCase):
     # Positive test cases
 
     def test_positive_single_cwe(self):
-        response = self.cli.get(self._form_url([self.CWE_CODES[0]]))
+        response = self.http_get(self._form_url([self.CWE_CODES[0]]))
         json_content = json.loads(response.content)
 
         # Make sure exactly one misuse case is returned.
@@ -255,7 +321,7 @@ class TestMisuseCaseSuggestion(TestCase):
         self.assertEqual(self._misuse_case_info_found(json_content, 1), True)
 
     def test_positive_multiple_cwes(self):
-        response = self.cli.get(self._form_url([self.CWE_CODES[0], self.CWE_CODES[2]]))
+        response = self.http_get(self._form_url([self.CWE_CODES[0], self.CWE_CODES[2]]))
         json_content = json.loads(response.content)
         # Make sure exactly two misuse cases are returned.
         self.assertEqual(len(json_content), 2)
@@ -264,7 +330,7 @@ class TestMisuseCaseSuggestion(TestCase):
         self.assertEqual(self._misuse_case_info_found(json_content, 3), True)
 
     def test_positive_distinct_misuse_cases(self):
-        response = self.cli.get(self._form_url([self.CWE_CODES[1], self.CWE_CODES[2]]))
+        response = self.http_get(self._form_url([self.CWE_CODES[1], self.CWE_CODES[2]]))
         json_content = json.loads(response.content)
         # Both keyword #102 and #103 are associated with both misuse case #3.
         # We want to make sure that the same misuse case is returned only once.
@@ -284,7 +350,7 @@ class TestMisuseCaseSuggestion(TestCase):
             "10a,20b"   # Not using numeric values
         ]
         for cwes_str in cwes_str_list:
-            response = self.cli.get('http://localhost:8080/restapi/misuse_case/cwe_related?cwes='+cwes_str)
+            response = self.http_get('http://localhost:8080/restapi/misuse_case/cwe_related?cwes='+cwes_str)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
             # Make sure the error message is generated using this method.
             self.assertEqual(response.content,
@@ -294,7 +360,7 @@ class TestMisuseCaseSuggestion(TestCase):
                              )
 
     def test_negative_not_found_cwes(self):
-        response = self.cli.get(self._form_url([101, 102, 103, 104, 105]))
+        response = self.http_get(self._form_url([101, 102, 103, 104, 105]))
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         # Make sure the error message is generated using this method.
         self.assertEqual(response.content,
@@ -303,8 +369,18 @@ class TestMisuseCaseSuggestion(TestCase):
                          str(json.dumps(MisuseCaseRelated()._form_err_msg_cwes_not_found([104, 105])))
                          )
 
+    def test_negative_no_authentication_token(self):
+        response = self.http_get(self._form_url([self.CWE_CODES[0]]),
+                                 auth_token_type=RestAPITestBase.AUTH_TOKEN_TYPE_NONE)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-class TestUseCaseSuggestion(TestCase):
+    def test_negative_inactive_authentication_token(self):
+        response = self.http_get(self._form_url([self.CWE_CODES[0]]),
+                                 auth_token_type=RestAPITestBase.AUTH_TOKEN_TYPE_INACTIVE_USER)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestUseCaseSuggestion(RestAPITestBase):
 
     cli = Client()  # The Client utility
 
@@ -314,7 +390,7 @@ class TestUseCaseSuggestion(TestCase):
     DESCRIPTION_BASE_OSR = "Overlooked Security Requirement "   # Don't forget the trailing blank space.
     NAME_BASE_USE_CASE = "UC/"  # No trailing blank space. Must be changed according to UseCase's model.
 
-    def setUp(self):
+    def set_up_test_data(self):
         # Create some misuse cases
         mu1 = MisuseCase(description=self.DESCRIPTION_BASE_MISUSE_CASE+"1")
         mu1.save()
@@ -345,7 +421,7 @@ class TestUseCaseSuggestion(TestCase):
         mu1.usecase_set.add(uc1)
         mu2.usecase_set.add(uc2, uc3)
 
-    def tearDown(self):
+    def tear_down_test_data(self):
         # Delete all the MUO containers first.
         MUOContainer.objects.all().delete()
         # Delete all the use cases
@@ -373,7 +449,7 @@ class TestUseCaseSuggestion(TestCase):
     # Positive test cases
 
     def test_positive_single_misuse_case(self):
-        response = self.cli.get(self._form_url([1]))
+        response = self.http_get(self._form_url([1]))
         json_content = json.loads(response.content)
 
         # Make sure exactly one use case is returned.
@@ -382,7 +458,7 @@ class TestUseCaseSuggestion(TestCase):
         self.assertEqual(self._use_case_info_found(json_content, 1), True)
 
     def test_positive_multiple_misuse_cases(self):
-        response = self.cli.get(self._form_url([1, 2]))
+        response = self.http_get(self._form_url([1, 2]))
         json_content = json.loads(response.content)
 
         # Make sure all the use cases are returned.
@@ -392,7 +468,7 @@ class TestUseCaseSuggestion(TestCase):
         self.assertEqual(self._use_case_info_found(json_content, 2), True)
         self.assertEqual(self._use_case_info_found(json_content, 3), True)
 
-        # Negative test cases
+    # Negative test cases
 
     def test_negative_malformed_misuse_cases(self):
         misuse_cases_str_list = [
@@ -404,7 +480,7 @@ class TestUseCaseSuggestion(TestCase):
             "1a,2b"   # Not using numeric values
         ]
         for misuse_cases_str in misuse_cases_str_list:
-            response = self.cli.get(self.URL_BASE+misuse_cases_str)
+            response = self.http_get(self.URL_BASE+misuse_cases_str)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
             # Make sure the error message is generated using this method.
             self.assertEqual(response.content,
@@ -412,3 +488,11 @@ class TestUseCaseSuggestion(TestCase):
                              # error message in order to compare for equality.
                              str(json.dumps(UseCaseRelated()._form_err_msg_malformed_misuse_cases(misuse_cases_str)))
                              )
+
+    def test_negative_no_authentication_token(self):
+        response = self.http_get(self._form_url([1]), auth_token_type=RestAPITestBase.AUTH_TOKEN_TYPE_NONE)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_negative_inactive_authentication_token(self):
+        response = self.http_get(self._form_url([1]), auth_token_type=RestAPITestBase.AUTH_TOKEN_TYPE_INACTIVE_USER)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
