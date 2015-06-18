@@ -1,7 +1,7 @@
-$(document).ready(function() {
-    $(".misusecaseContainer").click(function(){
+jQuery(function() {
+    $(".misuse-case-container").click(function(){
         // get the misuse_case_id of the clicked misuse case
-        var misuse_case_id = $(this).attr("id");
+        var misuse_case_id = $(this).attr("data-value");
 
         // Load the usecase corresponding to the selected misuse
         $.ajax({
@@ -11,7 +11,7 @@ $(document).ready(function() {
 
             success: function(result) {
                 // If ajax call is successful, reload the fatScrollDiv which containes the use cases
-                $('.fatScrollDiv').replaceWith(result);
+                $('.fat-scroll-div').replaceWith(result);
             },
 
             error: function(xhr,errmsg,err) {

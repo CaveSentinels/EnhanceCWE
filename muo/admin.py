@@ -49,19 +49,19 @@ class MisuseCaseAdmin(BaseAdmin):
         urls = super(MisuseCaseAdmin, self).get_urls()
 
         additional_urls = [
-            url(r'^usecases/$', self.get_usecases_view),
+            url(r'^usecases/$', self.admin_site.admin_view(self.usecases_view)),
         ]
 
         return additional_urls + urls
 
 
-    def get_usecases_view(self, request):
+    def usecases_view(self, request):
         misuse_case_id = None
 
-        if request.method == 'GET':
-            misuse_case_id = request.GET['misuse_case_id']
-        else:
+        if request.method != 'GET':
             raise Http404("Invalid access not using GET request!")
+
+        misuse_case_id = request.GET['misuse_case_id']
 
         try:
             # Fetch the misuse case object for the misuse_case_id
@@ -76,8 +76,12 @@ class MisuseCaseAdmin(BaseAdmin):
 
 
     def changelist_view(self, request, extra_context=None):
-        # Render the custom template for the changelist_view
+        if request.GET.get('_popup', False):
+            #  If its a popup request let super handle it
+            return super(MisuseCaseAdmin, self).changelist_view(request, extra_context)
 
+        # Render the custom template for the changelist_view
+        # TODO: Don't pass misuse cases and use cases here. Decide what will be shown the first time page is rendered
         misuse_cases = MisuseCase.objects.all()
         use_cases = UseCase.objects.all()
 

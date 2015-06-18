@@ -1,12 +1,8 @@
-.newclass {
-    color: cadetblue;
-}
-
 .content .fieldset-box .box {
     min-height: 0px;
 }
 
-.slimScrollDiv {
+.muo-search-container .slim-scroll-div {
     float: left;
     position: relative;
     height: 400px;
@@ -16,7 +12,7 @@
     margin-top: 0px;
 }
 
-.fatScrollDiv {
+.muo-search-container .fat-scroll-div {
     float: right;
     position: relative;
     height: 400px;
@@ -27,14 +23,14 @@
     margin-bottom: 0px;
 }
 
-#misusecaseTitleLabel {
+.muo-search-container #misuse-case-title-label {
     width: 35%;
     position: relative;
     margin-top: 0px;
     text-align: center;
 }
 
-#usecaseTitleLabel {
+.muo-search-container #use-case-title-label {
     width: 65%;
     float: right;
     position: relative;
@@ -42,29 +38,24 @@
     text-align: center;
 }
 
-.misusecaseContainer {
+.misuse-case-container {
 
 }
 
-.misusecaseContainer:hover {
+.muo-search-container .misuse-case-container:hover {
     background-color: #ecf0f5;
 }
 
-.misusecaseHeader {
+.muo-search-container .misuse-case-header {
     border-right: thin double;
     border-color: #e7eaec;
     padding: 15px;
 }
 
-.usecaseHeader {
-    margin-top: 0px;
-    padding: 15px;
+.muo-search-container .use-case-footer {
 }
 
-.usecaseFooter {
-}
-
-.misusecaseDiv {
+.muo-search-container .misuse-case-div {
     width: 100%;
     padding: 15px;
     border-right: thin double;
@@ -74,7 +65,7 @@
     margin-top: 0px;
 }
 
-.usecaseContainer{
+.use-case-container {
     width: 97%;
     margin: 10px;
     padding: 15px;
@@ -85,18 +76,24 @@
 box-shadow: 0px 0px 2px 0px rgba(173,173,173,1);
 }
 
-.usecaseDiv {
+.use-case-container .use-case-div {
     width: 100%;
     padding: 15px;
     border-bottom: thin double;
     border-color: #e7eaec;
 }
 
-.usecaseHeader {
+.use-case-container .use-case-header {
 
 }
 
-.osrDiv {
+.use-case-container .osr-div {
     width: 100%;
     padding: 15px;
+}
+
+.muo-search-container #muo-date-header {
+    float: right;
+    color: #888888;
+    font-size: 85%
 }

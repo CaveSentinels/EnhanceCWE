@@ -20,8 +20,8 @@
 {% block content %}
 <section class="content" id="content">
     <form class="form-horizontal" enctype="multipart/form-data" action method="post" id="misusecase_search" novalidate>
-        <input type="hidden" name="csrfmiddlewaretoken" value="wkKcFmkT7yfJ0ZzfdW6R8QZYrtiW4w96">
-        <div id="content-main">
+        {% csrf_token %}
+        <div id="content-main" class="muo-search-container">
             <div>
                 <div class="fieldset-box col-md-12">
                     <div class="box box-primary" style="min-height: 0px; margin-bottom: 0px;">
@@ -47,8 +47,8 @@
                                                                 <span class="choice prepend-remove append-option-html"></span>
                                                             </span>
                                                         </span>
-                                                        <a class="related-widget-wrapper-link add-related" id="add_id_cwes" href="/admin/cwe/cwe/add/?_to_field=id&amp;_popup=1" title="" data-original-title="Add another CWE">
-                                                            <img src="/static/admin/img/icon_addlink.gif" width="10" height="10" alt="Add">
+                                                        <a class="related-widget-wrapper-link btn btn-xs search-related" id="search_id_cwes" href="/admin/cwe/cwe/?_to_field=id&amp;_popup=1" title="" data-original-title="Search CWE">
+                                                            <span class="glyphicon glyphicon-search"></span>
                                                         </a>
                                                         <div style="clear: both"></div></div>
                                                     </div>
@@ -61,27 +61,27 @@
                         </div>
                     </div>
                 <div class="fieldset-box col-md-12">
-                    <div class="box box-primary" style="min-height: 0px; border-top-color: white; border-radius:0px">
+                    <div class="box" style="min-height: 0px; border-top-color: white; border-radius:0px">
                         <div class="box-body">
                             <div>
-                                <label id="misusecaseTitleLabel">Misuse Cases</label>
-                                <label id="usecaseTitleLabel">Use Cases & Overlooked Security Requirements</label>
+                                <label id="misuse-case-title-label">Misuse Cases</label>
+                                <label id="use-case-title-label">Use Cases & Overlooked Security Requirements</label>
                             </div>
                             <hr style="margin: 0px;"></hr>
-                            <div class="slimScrollDiv">
+                            <div class="slim-scroll-div">
                                 {% for misusecase in misuse_cases %}
-                                    <div class="misusecaseContainer" id="{{ misusecase.pk }}">
-                                        <div class="misusecaseHeader">
-                                            <label style="float: left;">{{ misusecase.name }}</label>
-                                            <label style="float: right; color: #888888; font-size: 85%">{{ misusecase.created_at }}</label>
+                                    <div class="misuse-case-container" data-value="{{ misusecase.pk }}">
+                                        <div class="misuse-case-header">
+                                            <label class="pull-left">{{ misusecase.name }}</label>
+                                            <label id="muo-date-header">{{ misusecase.created_at }}</label>
                                         </div>
-                                        <div class="misusecaseDiv">
+                                        <div class="misuse-case-div">
                                             {{ misusecase.description }}
                                         </div>
                                     </div>
                                 {% endfor %}
                             </div>
-                            <div class="fatScrollDiv"></div>
+                            <div class="fat-scroll-div"></div>
                             {# fatScrollDiv is to loaded from usecase.html after the ajax response#}
                         </div>
                     </div>
