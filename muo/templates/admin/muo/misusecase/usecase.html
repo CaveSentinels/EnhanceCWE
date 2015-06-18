@@ -1,0 +1,24 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'muo/misusecase_search_style.css' %}">
+
+<div class="fat-scroll-div">
+    {% for usecase in use_cases %}
+        <div class="use-case-container">
+            <div class="use-case-header">
+                <label class="pull-left">{{ usecase.name }}</label>
+                <label id="muo-date-header">{{ usecase.created_at }}</label>
+            </div>
+            <div class="use-case-div">
+                {{ usecase.description }}
+            </div>
+            <div class="osr-div">
+                {{ usecase.osr }}
+            </div>
+            <div class="usecase-footer">
+                <span class="fa fa-thumbs-o-up fa-2x"></span>
+                <span class="fa fa-thumbs-o-down fa-2x"></span>
+                <span class="fa fa-comment-o fa-2x"></span>
+            </div>
+        </div>
+    {% endfor %}
+</div>

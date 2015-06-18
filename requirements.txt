@@ -3,4 +3,5 @@ django-admin-bootstrapped==2.5.0
 django-autocomplete-light==2.2.0rc4
 psycopg2==2.6
 pytz==2015.4
+djangorestframework==3.1.2
 nltk==3.0

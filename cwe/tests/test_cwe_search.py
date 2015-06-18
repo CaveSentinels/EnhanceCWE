@@ -1,5 +1,6 @@
 from django.test import TestCase
 from cwe.cwe_search import CWESearchLocator, CWEKeywordSearch
+from cwe.models import *
 
 # Create your tests here.
 
@@ -64,13 +65,6 @@ class CWESearchTest(TestCase):
         self.construct_test_database()
         self.cwe_keyword_search_obj = CWESearchLocator.get_instance()
 
-    def tearDown(self):
-        """ Predefined database to delete the database
-        :param text: None
-        :return: None
-        """
-        pass
-
     def construct_test_database(self):
         """ This function creates the temporary database
         :param text: None
@@ -78,103 +72,103 @@ class CWESearchTest(TestCase):
         """
         from cwe.models import Keyword, Category, CWE
 
-        kw = Keyword(name='xml') # 1
-        kw.save()
+        xml = Keyword(name='xml') # 1
+        xml.save()
 
-        kw = Keyword(name='execut') # 2
-        kw.save()
+        execut = Keyword(name='execut') # 2
+        execut.save()
 
-        kw = Keyword(name='remot') # 3
-        kw.save()
+        remot = Keyword(name='remot') # 3
+        remot.save()
 
-        kw = Keyword(name='scripting') # 4
-        kw.save()
+        scripting = Keyword(name='scripting') # 4
+        scripting.save()
 
-        kw = Keyword(name='cross-sit') # 5
-        kw.save()
+        cross = Keyword(name='cross-sit') # 5
+        cross.save()
 
-        kw = Keyword(name='upload') # 6
-        kw.save()
+        upload = Keyword(name='upload') # 6
+        upload.save()
 
-        kw = Keyword(name='file') # 7
-        kw.save()
+        file = Keyword(name='file') # 7
+        file.save()
 
-        kw = Keyword(name='cod') # 8
-        kw.save()
+        cod = Keyword(name='cod') # 8
+        cod.save()
 
-        kw = Keyword(name='javascript') # 9
-        kw.save()
+        javascript = Keyword(name='javascript') # 9
+        javascript.save()
 
-        kw = Keyword(name='ver') # 10
-        kw.save()
+        ver = Keyword(name='ver') # 10
+        ver.save()
 
-        kw = Keyword(name='lack') # 11
-        kw.save()
+        lack = Keyword(name='lack') # 11
+        lack.save()
 
-        kw = Keyword(name='valid') # 12
-        kw.save()
+        valid = Keyword(name='valid') # 12
+        valid.save()
 
-        kw = Keyword(name='unauth') # 13
-        kw.save()
+        unauth = Keyword(name='unauth') # 13
+        unauth.save()
 
-        kw = Keyword(name='bypass') # 14
-        kw.save()
+        bypass = Keyword(name='bypass') # 14
+        bypass.save()
 
-        kw = Keyword(name='auth') # 15
-        kw.save()
+        auth = Keyword(name='auth') # 15
+        auth.save()
 
-        kw = Keyword(name='inject') # 16
-        kw.save()
+        inject = Keyword(name='inject') # 16
+        inject.save()
 
-        kw = Keyword(name='sql') # 17
-        kw.save()
+        sql = Keyword(name='sql') # 17
+        sql.save()
 
         cwe = CWE(code=106, name='XML Injection')
         cwe.save()
-        cwe.keywords.add(1)
-        cwe.keywords.add(16)
+        cwe.keywords.add(xml)
+        cwe.keywords.add(inject)
         cwe.save()
 
         cwe = CWE(code=105, name='Remote Code Execution')
         cwe.save()
-        cwe.keywords.add(2)
-        cwe.keywords.add(3)
-        cwe.keywords.add(8)
+        cwe.keywords.add(execut)
+        cwe.keywords.add(remot)
+        cwe.keywords.add(cod)
         cwe.save()
 
         cwe = CWE(code=104, name='Cross site scripting')
         cwe.save()
-        cwe.keywords.add(4)
-        cwe.keywords.add(5)
+        cwe.keywords.add(scripting)
+        cwe.keywords.add(cross)
         cwe.save()
 
         cwe = CWE(code=103, name='File Upload Vulnerability')
         cwe.save()
-        cwe.keywords.add(6)
-        cwe.keywords.add(7)
+        cwe.keywords.add(upload)
+        cwe.keywords.add(file)
         cwe.save()
 
         cwe = CWE(code=102, name='Code Injection')
         cwe.save()
-        cwe.keywords.add(8)
-        cwe.keywords.add(9)
-        cwe.keywords.add(16)
+        cwe.keywords.add(cod)
+        cwe.keywords.add(javascript)
+        cwe.keywords.add(inject)
         cwe.save()
 
         cwe = CWE(code=101, name='Authentication bypass')
         cwe.save()
-        cwe.keywords.add(10)
-        cwe.keywords.add(11)
-        cwe.keywords.add(12)
-        cwe.keywords.add(13)
-        cwe.keywords.add(14)
-        cwe.keywords.add(15)
+        cwe.keywords.add(ver)
+        cwe.keywords.add(lack)
+        cwe.keywords.add(valid)
+        cwe.keywords.add(unauth)
+        cwe.keywords.add(bypass)
+        cwe.keywords.add(auth)
         cwe.save()
 
         cwe = CWE(code=100, name='SQL Injection')
         cwe.save()
-        cwe.keywords.add(16)
-        cwe.keywords.add(17)
+        cwe.keywords.add(inject)
+        cwe.keywords.add(sql)
         cwe.save()
 
 
