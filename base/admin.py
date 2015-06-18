@@ -120,6 +120,7 @@ class BaseAdminSite(AdminSite):
 
 # Instantiating admin site and registering User and Group admin models
 admin_site = BaseAdminSite(name='admin')
+admin.site = admin_site
 admin_site.register(User, UserAdmin)
 admin_site.register(Group, GroupAdmin)
 

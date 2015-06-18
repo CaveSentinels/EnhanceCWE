@@ -1,26 +1,26 @@
 from django.contrib.auth.models import Group, User
 from django.db import models
 from registration.signals import user_registered
-from registration import forms
-from django.utils.translation import ugettext_lazy as _
-
-
-Group.add_to_class('if_assignable', models.BooleanField(default=False))
-
-
 from django.dispatch import receiver
+
+# Adds a boolean field 'if_assignable' to the group
+Group.add_to_class('is_auto_assign', models.BooleanField(default=False))
+
+
 @receiver(user_registered, dispatch_uid="user_accepted_id")
 def include_in_group(sender, **kwargs):
-    # kwargs contains a dictionary of
-    # 1. profile, 2. request, 3. signal, 4. user (userid)
-    registered_user_id = kwargs["user"].username
-    user_in_db = User.objects.filter(username=registered_user_id)
-    user_id = user_in_db[0].id
+    """
+    This method listens to a signal "user_registered" and adds him to the groups which are assignable.
+    :param: sender and argument array
+    :return: null
+    """
 
-    group_list = Group.objects.filter(if_assignable=True)
+    # Get the user object which is sent from the form
+    user = kwargs["user"]
+
+    # Filter all those groups with assignable attribute set to True
+    group_list = Group.objects.filter(is_auto_assign=True)
+
+    # Iterate over the list and add these groups to the user
     for group in group_list:
-        group.user_set.add(user_id)
-
-    print 'User added to group'
-
-
+        user.groups.add(group.id)
