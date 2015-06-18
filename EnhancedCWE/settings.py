@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -42,10 +41,13 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'rest_api',
     'cwe',
     'muo',
     'user_profile',
-    'emailer',
+    'emailer'
 )
 
 MIDDLEWARE_CLASSES = (
@@ -121,6 +123,25 @@ USE_L10N = True
 
 USE_TZ = True
 
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/1.8/howto/static-files/
+
+STATIC_URL = '/static/'
+
+STATICFILES_DIRS = (
+    os.path.join(BASE_DIR, "static"),
+)
+
+
+# Settings for the REST framework
+REST_FRAMEWORK = {
+    # Use token to authenticate users.
+    'DEFAULT_AUTHENTICATION_CLASSES': ['rest_framework.authentication.TokenAuthentication'],
+    # Only authenticated users can view or change information.
+    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated']
+}
+
 # Setting a secure (TLS) connection when talking to the SMTP server
 EMAIL_USE_TLS = True
 # The host to use for sending email.
@@ -131,13 +152,3 @@ EMAIL_HOST_USER = 'enhancedcwe'
 EMAIL_PORT = 587
 # Password to use for the SMTP server defined in EMAIL_HOST.
 EMAIL_HOST_PASSWORD = 'enhancedcwe_masre'
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.8/howto/static-files/
-
-STATIC_URL = '/static/'
-
-STATICFILES_DIRS = (
-    os.path.join(BASE_DIR, "static"),
-)

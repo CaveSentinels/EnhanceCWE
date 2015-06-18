@@ -4,8 +4,9 @@ from django.db import IntegrityError
 from base.models import BaseModel
 from django.utils.encoding import force_text
 from django.utils.translation import ugettext as _
-from django.db.models.signals import pre_delete
+from django.db.models.signals import pre_delete, pre_save
 from django.dispatch import receiver
+from cwe_search import CWESearchLocator
 
 class Category(BaseModel):
     name = models.CharField(max_length=128, unique=True)
@@ -43,6 +44,21 @@ class Keyword(BaseModel):
     def __unicode__(self):
         return self.name
 
+@receiver(pre_save, sender=Keyword, dispatch_uid='keyword_pre_save_signal')
+def pre_save_keyword(sender, instance, *args, **kwargs):
+    """ Change the keyword name to a stemmed format """
+    if isinstance(instance.name, basestring):
+        cwe_search = CWESearchLocator.get_instance()
+        stemmed_name = cwe_search.stem_text([instance.name.lower()])
+        if stemmed_name:
+            # stem_text() returns a list, so we are reading the first element
+            stemmed_name = stemmed_name[0]
+
+            # raise an error if the stemmed name already exist in the database
+            if Keyword.objects.filter(name__exact=stemmed_name).exists():
+                raise IntegrityError("Keyword stemmed name (%s) already exist!" % stemmed_name)
+            else:
+                instance.name = stemmed_name
 
 class CWE(BaseModel):
     code = models.IntegerField(unique=True)

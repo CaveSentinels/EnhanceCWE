@@ -10,6 +10,7 @@ from cwe.admin import CWEAdmin
 class TestSearchCWE(TestCase):
 
     KEYWORD_NAMES = ["authentication", "file"]
+    STEMMED_NAMES = ["authent", "file"]
     CATEGORY_NAMES = ["Web Problems", "Error Handling"]
 
     def construct_test_database(self):
@@ -54,17 +55,12 @@ class TestSearchCWE(TestCase):
 
     def destruct_test_database(self):
 
-        for n in self.KEYWORD_NAMES:
-            kw = Keyword.objects.get(name=n)
-            kw.delete()
+        # First we need to delete all the CWEs in order to delete other stuff.
+        CWE.objects.all().delete()
 
-        for n in self.CATEGORY_NAMES:
-            cat = Category.objects.get(name=n)
-            cat.delete()
-
-        for c in self.CWE_CODES:
-            cwe = CWE.objects.get(code=c)
-            cwe.delete()
+        # Then we can delete keywords and categories.
+        Keyword.objects.all().delete()
+        Category.objects.all().delete()
 
     def test_positive_cwe_model_admin(self):
         # Verify that the model's admin class has specified the name, keyword and category as
@@ -78,6 +74,7 @@ class TestSearchCWE(TestCase):
 class TestAddCWE(TestCase):
 
     KEYWORD_NAMES = ["authentication", "file"]
+    STEMMED_NAMES = ["authent", "file"]
     CATEGORY_NAMES = ["Web Problems", "Error Handling"]
 
     def setUp(self):
@@ -107,13 +104,9 @@ class TestAddCWE(TestCase):
         # Otherwise we cannot delete the keywords and categories.
         CWE.objects.all().delete()
 
-        for n in self.KEYWORD_NAMES:
-            kw = Keyword.objects.get(name=n)
-            kw.delete()
-
-        for n in self.CATEGORY_NAMES:
-            cat = Category.objects.get(name=n)
-            cat.delete()
+        # Then we can delete keywords and categories.
+        Keyword.objects.all().delete()
+        Category.objects.all().delete()
 
     def test_positive_single_category_single_keyword(self):
 
@@ -122,7 +115,7 @@ class TestAddCWE(TestCase):
 
         # Second, try to add the CWE to the database.
         cat1 = Category.objects.get(name=self.CATEGORY_NAMES[0])
-        kw1 = Keyword.objects.get(name=self.KEYWORD_NAMES[0])
+        kw1 = Keyword.objects.get(name=self.STEMMED_NAMES[0])
         cwe = CWE(code=101, name="cwe-101", description="cwe description")
         cwe.save()
         cwe.categories.add(cat1)
@@ -145,9 +138,9 @@ class TestAddCWE(TestCase):
 
         # Second, try to add the CWE to the database
         cat1 = Category.objects.get(name=self.CATEGORY_NAMES[0])
-        kw1 = Keyword.objects.get(name=self.KEYWORD_NAMES[0])
+        kw1 = Keyword.objects.get(name=self.STEMMED_NAMES[0])
         cat2 = Category.objects.get(name=self.CATEGORY_NAMES[1])
-        kw2 = Keyword.objects.get(name=self.KEYWORD_NAMES[1])
+        kw2 = Keyword.objects.get(name=self.STEMMED_NAMES[1])
         cwe = CWE(code=101, name="cwe-101", description="cwe description")
         cwe.save()
         cwe.categories.add(cat1, cat2)
@@ -162,8 +155,8 @@ class TestAddCWE(TestCase):
         self.assertEqual(cwe.keywords.count(), 2)
         self.assertEqual(cwe.categories.get(name=self.CATEGORY_NAMES[0]), cat1)
         self.assertEqual(cwe.categories.get(name=self.CATEGORY_NAMES[1]), cat2)
-        self.assertEqual(cwe.keywords.get(name=self.KEYWORD_NAMES[0]), kw1)
-        self.assertEqual(cwe.keywords.get(name=self.KEYWORD_NAMES[1]), kw2)
+        self.assertEqual(cwe.keywords.get(name=self.STEMMED_NAMES[0]), kw1)
+        self.assertEqual(cwe.keywords.get(name=self.STEMMED_NAMES[1]), kw2)
 
     def test_negative_add_duplicated(self):
 
@@ -199,30 +192,6 @@ class TestAddCWE(TestCase):
     # def test_cwe_compulsory_name_missing_field_check(self):
     #     with self.assertRaises(IntegrityError):
     #         CWE.objects.create(code=100)
-
-    # TODO: The test case below is commented out temporarily because it does not pass. We need to fix it later.
-    #
-    # # A CWE cannot be created with code as -ve
-    # # This test case tries to create a cwe with a negative code
-    # # Currently this is not handled in our code, hence we don't know what error it will throw
-    # # To be replaced with the type of Error Thrown in future
-    # # Defect "x" is raised for this
-    # def test_cwe__code_incorrect__check(self):
-    #     with self.assertRaises(IntegrityError):
-    #         print(CWE.objects.create(code=-5))
-
-    # TODO: The test case below is commented out temporarily because it does not pass. We need to fix it later.
-    #
-    # # A CWE cannot be created with name as -ve integer
-    # # This test case tries to create a cwe with name as an integer
-    # # Currently this is not handled in our code, hence we don't know what error it will throw
-    # # To be replaced with the type of Error Thrown in future
-    # # Defect "x" is raised for this
-    # # To be replaced with the type of Error Thrown in future
-    # def test_cwe_name_incorrect__check(self):
-    #     # either return false or throw an error based on code
-    #     with self.assertRaises(IntegrityError):
-    #         print(CWE.objects.create(code=6, name="-5"))
 
 
 class TestEditCWE(TestCase):
@@ -265,58 +234,46 @@ class TestEditCWE(TestCase):
 class KeywordMethodTests(TestCase):
 
     def setUp(self):
-        Keyword.objects.create(name="keyword1")
-        Keyword.objects.create(name="keyword2")
-        Keyword.objects.create(name="keyword3")
-        Keyword.objects.create(name="keyword4")
+        Keyword.objects.create(name="Authentication")
+        Keyword.objects.create(name="Injection")
 
     # This is a positive test case which checks if the various category got created or not
     def test_keyword_name_got_created(self):
-        # Retrieve the name of the keyword which is being created
-        keyword1 = Keyword.objects.get(name="keyword1")
-        keyword2 = Keyword.objects.get(name="keyword2")
-        keyword3 = Keyword.objects.get(name="keyword3")
-        keyword4 = Keyword.objects.get(name="keyword4")
         # validate it with what we created in the setUp Method
-        self.assertEquals(keyword1.name,"keyword1")
-        self.assertEquals(keyword2.name,"keyword2")
-        self.assertEquals(keyword3.name,"keyword3")
-        self.assertEquals(keyword4.name,"keyword4")
+        self.assertIsNotNone(Keyword.objects.get(name="authent"))
+        self.assertIsNotNone(Keyword.objects.get(name="inject"))
 
     # This test case checks if only unique CWE Keywords are created
     # If we try to create the  category with the same name, it should throw an Integrity Error
     def test_keyword_name_created_validate(self):
         with self.assertRaises(IntegrityError):
-            Keyword.objects.create(name="keyword1")
+            Keyword.objects.create(name="Authentication")
+
+    # This test case checks if only unique CWE Keywords are created and case insensitive
+    # If we try to create the  category with the same name, it should throw an Integrity Error
+    def test_keyword_name_created_validate_case(self):
+        with self.assertRaises(IntegrityError):
+            Keyword.objects.create(name="AUTHENTICATION")
+
+    # This test case checks if only unique CWE Keywords are created and stemmed
+    # If we try to create the  category with the same name, it should throw an Integrity Error
+    def test_keyword_name_created_validate_stemmed(self):
+        with self.assertRaises(IntegrityError):
+            Keyword.objects.create(name="authent")
 
     # This test case validates the method which will give the name of the keyword
     # It also validates if the return type is a String
     def test_keyword_creation_method(self):
-        keyword5 = Keyword.objects.create(name="Keyword5")
-        self.assertEqual(keyword5.__unicode__(), keyword5.name)
-        self.assertEqual(isinstance(keyword5.__unicode__(), str), True)
+        keyword = Keyword.objects.get(name="authent")
+        self.assertEqual(isinstance(keyword.__unicode__(), basestring), True)
 
-    # TODO: The test case below is commented out temporarily because it does not pass. We need to fix it later.
-    #
-    # # A Category cannot have name as some special characters, name should be string only
-    # # This Test case tries to create a name which has special characters
-    # # This case is not yet handled in the code, so we don't know what error will be raised
-    # # To be replaced with the type of Error Thrown in future
-    # # Defect no "x" is raised for this
-    # def test_keyword_name_validation(self):
-    #     with self.assertRaises(IntegrityError):
-    #         Category.objects.create(name="!@$5")
+    # This test checks that integer names can be saved successfully
+    def test_keyword_integer_name(self):
+        Keyword(name=404).save()
+        kw = Keyword.objects.get(name="404")
+        self.assertEqual(kw.name, "404")
 
-    # TODO: The test case below is commented out temporarily because it does not pass. We need to fix it later.
-    #
-    # # A Keyword cannot have name as an integer, name should be strings only
-    # # This test case tries to create a keyword with name as a number
-    # # This case is not yet handled in code, so we don't know what error will be raised
-    # # To be replaced with the type of Error Thrown in future
-    # # Defect no "x" raised for this
-    # def test_keyword_name_number_validation(self):
-    #     with self.assertRaises(IntegrityError):
-    #         Category.objects.create(name="5678")
+
 
 class CategoryMethodTests(TestCase):
 
@@ -350,26 +307,4 @@ class CategoryMethodTests(TestCase):
     def test_category_creation_method(self):
         category5 = Category.objects.create(name="Category5")
         self.assertEqual(category5.__unicode__(), category5.name)
-        self.assertEqual(isinstance(category5.__unicode__(), str), True)
-
-    # TODO: The test case below is commented out temporarily because it does not pass. We need to fix it later.
-    #
-    # # A Category cannot have name as some special characters, name should be string only
-    # # This Test case tries to create a name which has special characters
-    # # This case is not yet handled in the code, so we don't know what error will be raised
-    # # To be replaced with the type of Error Thrown in future
-    # # Defect no "x" is raised for this
-    # def test_category_name_validation(self):
-    #     with self.assertRaises(IntegrityError):
-    #         Category.objects.create(name="!@$5")
-
-    # TODO: The test case below is commented out temporarily because it does not pass. We need to fix it later.
-    #
-    # # A Category cannot have name as an integer, name should be strings only
-    # # This test case tries to create a Category with name as a number
-    # # This case is not yet handled in code, so we don't know what error will be raised
-    # # To be replaced with the type of Error Thrown in future
-    # # Defect no "x" raised for this
-    # def test_category_name_number_validation(self):
-    #     with self.assertRaises(IntegrityError):
-    #         Category.objects.create(name="5678")
+        self.assertEqual(isinstance(category5.__unicode__(), basestring), True)
