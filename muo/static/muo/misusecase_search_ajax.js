@@ -43,7 +43,7 @@ jQuery(function() {
 function load_usecases(misuse_case_id) {
     $.ajax({
         url: 'usecases/',
-        type: 'GET',
+        type: 'POST',
         data: {misuse_case_id: misuse_case_id}, // Send the selected misuse case id
 
         success: function(result) {
@@ -62,7 +62,7 @@ function load_usecases(misuse_case_id) {
 function load_misusecases(cwe_ids) {
     $.ajax({
         url: 'misusecases/',
-        type: 'GET',
+        type: 'POST',
         data: {cwe_ids: cwe_ids}, // Send the selected CWE ids
 
         success: function(result) {
@@ -70,7 +70,12 @@ function load_misusecases(cwe_ids) {
             $('.slim-scroll-div').replaceWith(result);
 
             // Select the first misuse case by default
-            misuse_case_id = $($('.misuse-case-container').get(0)).attr("data-value");
+            first_misuse_case_div = $($('.misuse-case-container').get(0));
+
+            first_misuse_case_div.addClass('selected');
+
+            // Get the misuse case id of the first misuse case
+            misuse_case_id = first_misuse_case_div.attr("data-value");
             load_usecases(misuse_case_id);
         },
 

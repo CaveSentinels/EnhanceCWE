@@ -58,11 +58,11 @@ class MisuseCaseAdmin(BaseAdmin):
 
 
     def misusecases_view(self, request):
-        if request.method != 'GET':
-            raise Http404("Invalid access not using GET request!")
+        if request.method != 'POST':
+            raise Http404("Invalid access using GET request!")
 
         #  Get the selected CWE ids from the request
-        selected_cwe_ids = request.GET.getlist('cwe_ids', None)
+        selected_cwe_ids = request.POST.getlist('cwe_ids', None)
 
         if len(selected_cwe_ids) == 0:
             # If list of CWE ids is empty return all the misuse cases
@@ -78,10 +78,10 @@ class MisuseCaseAdmin(BaseAdmin):
 
 
     def usecases_view(self, request):
-        if request.method != 'GET':
-            raise Http404("Invalid access not using GET request!")
+        if request.method != 'POST':
+            raise Http404("Invalid access using GET request!")
 
-        misuse_case_id = request.GET['misuse_case_id']
+        misuse_case_id = request.POST['misuse_case_id']
 
         try:
             # Fetch the misuse case object for the misuse_case_id
