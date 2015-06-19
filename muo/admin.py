@@ -50,10 +50,31 @@ class MisuseCaseAdmin(BaseAdmin):
         urls = super(MisuseCaseAdmin, self).get_urls()
 
         additional_urls = [
+            url(r'^misusecases/$', self.admin_site.admin_view(self.misusecases_view)),
             url(r'^usecases/$', self.admin_site.admin_view(self.usecases_view)),
         ]
 
         return additional_urls + urls
+
+
+    def misusecases_view(self, request):
+        if request.method != 'GET':
+            raise Http404("Invalid access not using GET request!")
+
+        #  Get the selected CWE ids from the request
+        selected_cwe_ids = request.GET.getlist('cwe_ids', None)
+
+        if len(selected_cwe_ids) == 0:
+            # If list of CWE ids is empty return all the misuse cases
+            misuse_cases = MisuseCase.objects.all()
+        else:
+            #  Get the use cases for the selected CWE ids
+            misuse_cases = MisuseCase.objects.filter(cwes__in=selected_cwe_ids)
+
+        #  Create a context with all the corresponding misuse cases
+        context = {'misuse_cases': misuse_cases}
+
+        return TemplateResponse(request, "admin/muo/misusecase/misusecase.html", context)
 
 
     def usecases_view(self, request):
@@ -80,12 +101,7 @@ class MisuseCaseAdmin(BaseAdmin):
             return super(MisuseCaseAdmin, self).changelist_view(request, extra_context)
 
         # Render the custom template for the changelist_view
-        # TODO: Don't pass misuse cases and use cases here. Decide what will be shown the first time page is rendered
-        misuse_cases = MisuseCase.objects.all()
-        use_cases = UseCase.objects.all()
-
-        context = {'misuse_cases': misuse_cases,
-                   'use_cases': use_cases}
+        context = {}
 
         return render(request, 'admin/muo/misusecase/misusecase_search.html', context)
 

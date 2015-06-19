@@ -1,0 +1,17 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'muo/misusecase_search_style.css' %}">
+<script src="{% static 'muo/misusecase_search_ajax.js' %}"></script>
+
+<div class="slim-scroll-div">
+    {% for misusecase in misuse_cases %}
+        <div class="misuse-case-container" data-value="{{ misusecase.pk }}">
+            <div class="misuse-case-header">
+                <label class="pull-left">{{ misusecase.name }}</label>
+                <label id="muo-date-header">{{ misusecase.created_at }}</label>
+            </div>
+            <div class="misuse-case-div">
+                {{ misusecase.description }}
+            </div>
+        </div>
+    {% endfor %}
+</div>
