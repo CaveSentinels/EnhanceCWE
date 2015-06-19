@@ -11,5 +11,3 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunSQL("ALTER TABLE auth_group ADD COLUMN is_auto_assign BOOLEAN DEFAULT FALSE"),
     ]
-
-# ALTER TABLE auth_user ADD COLUMN is_auto_assign BOOLEAN;
