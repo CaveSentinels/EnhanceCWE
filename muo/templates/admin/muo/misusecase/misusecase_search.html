@@ -36,7 +36,7 @@
                                                 </div>
                                                 <div class="controls col-md-12">
                                                     <div class="related-widget-wrapper">
-                                                        <span id="id_cwes-wrapper" class="modern-style autocomplete-light-widget cwes multiple" data-widget-bootstrap="normal" data-widget-ready="1">
+                                                        <span id="id_cwes-wrapper" class="modern-style autocomplete-light-widget cwes multiple" style="width: 97%;" data-widget-bootstrap="normal" data-widget-ready="1">
                                                             <span id="id_cwes-deck" class="deck"></span>
                                                             <input type="text" name="cwes-autocomplete" id="id_cwes-autocomplete" value="" class=" autocomplete vTextField" data-autocomplete-choice-selector="[data-value]" data-autocomplete-url="/autocomplete/CWEAutocomplete/" placeholder="Start typing CWE code or name..." autocomplete="on">
                                                             <select style="display:none" class="value-select" name="cwes" id="id_cwes" multiple="multiple"></select>
@@ -51,6 +51,7 @@
                                                             <span class="glyphicon glyphicon-search"></span>
                                                         </a>
                                                         <div style="clear: both"></div></div>
+                                                        <input type="submit" id="refresh_button" class="btn btn-primary pull-right" style="margin-top: 7px; margin-right: 33px;" value="{% trans 'Refresh Misuse Cases' %}" name="_refresh" />
                                                     </div>
                                                 </div>
                                             </div>
@@ -68,21 +69,10 @@
                                 <label id="use-case-title-label">Use Cases & Overlooked Security Requirements</label>
                             </div>
                             <hr style="margin: 0px;"></hr>
-                            <div class="slim-scroll-div">
-                                {% for misusecase in misuse_cases %}
-                                    <div class="misuse-case-container" data-value="{{ misusecase.pk }}">
-                                        <div class="misuse-case-header">
-                                            <label class="pull-left">{{ misusecase.name }}</label>
-                                            <label id="muo-date-header">{{ misusecase.created_at }}</label>
-                                        </div>
-                                        <div class="misuse-case-div">
-                                            {{ misusecase.description }}
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
+                            <div class="slim-scroll-div"></div>
+                            {# slim-scroll-div is to loaded from misusecase.html after the ajax response #}
                             <div class="fat-scroll-div"></div>
-                            {# fatScrollDiv is to loaded from usecase.html after the ajax response#}
+                            {# fat-scroll-div is to loaded from usecase.html after the ajax response #}
                         </div>
                     </div>
                 </div>

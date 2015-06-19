@@ -27,7 +27,8 @@
     width: 35%;
     position: relative;
     margin-top: 0px;
-    text-align: center;
+    padding-left: 15px;
+    text-align: left;
 }
 
 .muo-search-container #use-case-title-label {
@@ -35,15 +36,18 @@
     float: right;
     position: relative;
     margin-top: 0px;
-    text-align: center;
+    padding-left: 15px;
+    text-align: left;
 }
 
 .muo-search-container .misuse-case-container {
 
 }
 
-.muo-search-container .misuse-case-container:hover {
+.muo-search-container .misuse-case-container:hover,
+    .muo-search-container .misuse-case-container.selected {
     background-color: #ecf0f5;
+    cursor: pointer;
 }
 
 .muo-search-container .misuse-case-header {
