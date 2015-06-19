@@ -47,7 +47,7 @@ INSTALLED_APPS = (
     'cwe',
     'muo',
     'user_profile',
-    'emailer'
+    'emailer',
 )
 
 MIDDLEWARE_CLASSES = (
