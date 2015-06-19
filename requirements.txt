@@ -4,3 +4,4 @@ django-autocomplete-light==2.2.0rc4
 psycopg2==2.6
 pytz==2015.4
 nltk==3.0
+sqlparse==0.1.15
