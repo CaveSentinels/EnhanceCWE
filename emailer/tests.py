@@ -17,7 +17,7 @@ class EmailTest(TestCase):
         # Verify that the subject of the first message is correct.
         self.assertEqual(mail.outbox[0].subject, 'Subject here')
 
-    #def test_muo_submitted_for_review(self):
+
 
 
 
