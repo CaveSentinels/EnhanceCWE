@@ -8,7 +8,7 @@ class EmailTest(TestCase):
     def test_send_email(self):
         # Send message.
         mail.send_mail('Subject here', 'Here is the message.',
-            'enhancedcwe@gmail.com', ['swati201088@gmail.com'],
+            'enhancedcwe@gmail.com', ['example@gmail.com'],
             fail_silently=False)
 
         # Test that one message has been sent.
@@ -17,16 +17,10 @@ class EmailTest(TestCase):
         # Verify that the subject of the first message is correct.
         self.assertEqual(mail.outbox[0].subject, 'Subject here')
 
+    #def test_muo_submitted_for_review(self):
 
 
-    @patch('full.path.to.signals.question_posted.send')
-    def test_question_posted_signal_triggered(self, mock):
-        #form = YourForm()
-        form.cleaned_data = {'name': 'Jan Nowak'}
-        form.save()
 
-        # Check that your signal was called.
-        self.assertTrue(mock.called)
 
-        # Check that your signal was called only once.
-        self.assertEqual(mock.call_count, 1)
+
+
