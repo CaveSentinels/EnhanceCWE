@@ -6,22 +6,30 @@ jQuery(function() {
     };
 
 
-    $(".misuse-case-container").click(function(){
-        // get the misuse_case_id of the clicked misuse case
+    $(".misuse-case-container").off().on('click', function(){
+        // get the misuse case id of the clicked misuse case
         var misuse_case_id = $(this).attr("data-value");
 
-        // Remove the selection from the last selected misuse case div
-        $('.misuse-case-container.selected').removeClass('selected');
+        // get the misuse case id of the last selected misuse case
+        var last_selected_misuse_case_id = $('.misuse-case-container.selected').attr("data-value");
 
-        // Select the current div
-        $(this).addClass('selected');
+        // If the selected misuse case is clicked again, do nothing, otherwise send the ajax
+        // request to get the use cases corresponding to the clicked misuse case
+        if (misuse_case_id != last_selected_misuse_case_id) {
+            // Remove the selection from the last selected misuse case div
+            $('.misuse-case-container.selected').removeClass('selected');
 
-        // Load usecases corresponding to the selected misuse
-        load_usecases(misuse_case_id)
+            // Select the current div
+            $(this).addClass('selected');
+
+            // Load usecases corresponding to the selected misuse
+            load_usecases(misuse_case_id);
+        }
+
     });
 
 
-    $("#refresh_button").click(function(){
+    $("#refresh_button").off().on('click', function(){
         // Prevent the default django action on button click. Otherwise it'll reload the whole page
         event.preventDefault();
 
