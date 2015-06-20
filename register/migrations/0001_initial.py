@@ -6,9 +6,9 @@ def check_and_add_column(apps, schema_editor):
     import sqlite3
     conn = sqlite3.connect('db7.sqlite3')
     cur = conn.cursor()
-    columns = [i[1] for i in cur.execute('PRAGMA table_info(auth_group)')]
+    result = [True for i in cur.execute('PRAGMA table_info(auth_group)') if i[1] == 'is_auto_assign']
 
-    if 'is_auto_assign' not in columns:
+    if not result:
         cur.execute('ALTER TABLE auth_group ADD COLUMN is_auto_assign BOOLEAN DEFAULT FALSE')
 
 
