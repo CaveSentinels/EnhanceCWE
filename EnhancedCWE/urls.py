@@ -21,8 +21,8 @@ from base import admin as base_admin
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [
-    # url(r'^admin/', include(admin.site.urls)),
     url(r'^admin/', include(base_admin.admin_site.urls)),
     url(r'^autocomplete/', include('autocomplete_light.urls')),
+    url('^registration/', include('registration.urls')),
     url(r'restapi/', include('rest_api.urls'))
 ]
