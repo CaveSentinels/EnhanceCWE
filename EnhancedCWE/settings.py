@@ -41,14 +41,15 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'register',
+    'registration',
+    'registration.supplements.default',
     'rest_framework',
     'rest_framework.authtoken',
     'rest_api',
     'cwe',
     'muo',
-    'register',
-    'registration',
-    'registration.supplements.default',
+
 )
 
 # Email settings
