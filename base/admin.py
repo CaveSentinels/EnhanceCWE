@@ -131,6 +131,8 @@ class BaseAdmin(admin.ModelAdmin):
     necessary to most admin models.
     Interested models should inherit from this class instead of models.Model
     """
+    actions_on_top = False
+    actions_on_bottom = True
 
     actions = ['delete_selected']
 

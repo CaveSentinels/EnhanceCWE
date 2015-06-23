@@ -56,7 +56,8 @@
     padding: 15px;
 }
 
-.muo-search-container .use-case-footer {
+.muo-search-container .usecase-footer {
+    height: 20px;
 }
 
 .muo-search-container .misuse-case-div {

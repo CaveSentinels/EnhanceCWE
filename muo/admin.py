@@ -4,12 +4,13 @@ from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.contrib.admin.templatetags.admin_urls import add_preserved_filters
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.http import Http404
 from django.template.response import TemplateResponse
 from django.conf.urls import url
 import autocomplete_light
 from models import *
+from django.utils.safestring import mark_safe
 
 from django.http import HttpResponseRedirect
 from base.admin import BaseAdmin, admin_site
@@ -182,3 +183,91 @@ class MUOContainerAdmin(BaseAdmin):
         self.message_user(request, msg, messages.SUCCESS)
         return HttpResponseRedirect(redirect_url)
 
+
+
+@admin.register(IssueReport, site=admin_site)
+class IssueReportAdmin(BaseAdmin):
+    form = autocomplete_light.modelform_factory(IssueReport, fields="__all__")
+    fields = [('name', 'status'), 'type', 'usecase', 'usecase_duplicate', 'description', ('created_by', 'created_at')]
+    list_display = ['name', 'type', 'created_by', 'created_at', 'status',]
+    readonly_fields = ['name', 'status', 'created_by', 'created_at']
+    search_fields = ['name', 'usecase__id', 'usecase__name', 'created_by__name']
+    list_filter = ['type', 'status']
+    date_hierarchy = 'created_at'
+
+
+    def get_urls(self):
+        urls = super(IssueReportAdmin, self).get_urls()
+        my_urls = [
+            # url will be /admin/muo/issuereport/new_report
+            url(r'new_report/$', self.admin_site.admin_view(self.new_report_view)),
+            url(r'add_report/$', self.admin_site.admin_view(self.render_add_report)),
+        ]
+        return my_urls + urls
+
+
+    def new_report_view(self, request):
+        """
+        This view is called by muo search using ajax to display the report issue popup
+        """
+        if request.method == "POST":
+            # read the usecase_id that triggered this action
+            usecase_id = request.POST.get('usecase_id')
+            usecase = get_object_or_404(UseCase, pk=usecase_id)
+
+            # Render issue report form and default initial values, if any
+            ModelForm = self.get_form(request)
+            initial = self.get_changeform_initial_data(request)
+            initial['usecase'] = usecase
+            form = ModelForm(initial=initial)
+
+            context = dict(
+                # Include common variables for rendering the admin template.
+                self.admin_site.each_context(request),
+                form=form,
+                usecase=usecase,
+            )
+            return TemplateResponse(request, "admin/muo/reportissue/new_report.html", context)
+        else:
+            raise Http404("Invalid access using GET request!")
+
+
+    def render_add_report(self, request):
+        """
+        Handle adding new report created using muo search popup
+        """
+
+        if request.method == 'POST':
+
+            ModelForm = self.get_form(request)
+            form = ModelForm(request.POST, request.FILES)
+            if form.is_valid():
+
+                # Check if this user already created a report for this usecase
+                usecase_id = request.POST.get('usecase')
+                previous_report = IssueReport.objects.filter(created_by=request.user, usecase=usecase_id)
+
+                if previous_report:
+                    self.message_user(request, "You have already created an issue report for this use case (%s)!" % previous_report[0].name, messages.ERROR)
+
+                else:
+                    new_object = form.save()
+                    self.message_user(request, "Report %s has been created will be reviewed by our admins" % new_object.name , messages.SUCCESS)
+            else:
+                # submitted form is invalid
+                errors = ["%s: %s" % (form.fields[field].label, error[0]) for field, error in form.errors.iteritems()]
+                errors = '<br/>'.join(errors)
+                self.message_user(request, mark_safe("Invalid report content!<br/>%s" % errors) , messages.ERROR)
+
+            # Go back to misuse case view
+            opts = self.model._meta
+            post_url = reverse('admin:%s_%s_changelist' %
+                               (opts.app_label, 'misusecase'),
+                               current_app=self.admin_site.name)
+            preserved_filters = self.get_preserved_filters(request)
+            post_url = add_preserved_filters({'preserved_filters': preserved_filters, 'opts': opts}, post_url)
+
+            return HttpResponseRedirect(post_url)
+
+        else:
+            raise Http404("Invalid access using GET request!")

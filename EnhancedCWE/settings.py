@@ -49,7 +49,7 @@ INSTALLED_APPS = (
     'rest_api',
     'cwe',
     'muo',
-
+    'widget_tweaks',
 )
 
 # Email settings
