@@ -96,15 +96,17 @@ class MisuseCaseAdmin(BaseAdmin):
         return TemplateResponse(request, "admin/muo/misusecase/usecase.html", context)
 
 
-    def changelist_view(self, request, extra_context=None):
-        if request.GET.get('_popup', False):
-            #  If its a popup request let super handle it
-            return super(MisuseCaseAdmin, self).changelist_view(request, extra_context)
-
-        # Render the custom template for the changelist_view
-        context = {}
-
-        return render(request, 'admin/muo/misusecase/misusecase_search.html', context)
+    # def changelist_view(self, request, extra_context=None):
+    #     if request.GET.get('_popup', False):
+    #         #  If its a popup request let super handle it
+    #         return super(MisuseCaseAdmin, self).changelist_view(request, extra_context)
+    #
+    #     urls = super(MisuseCaseAdmin, self).get_urls()
+    #
+    #     # Render the custom template for the changelist_view
+    #     context = {}
+    #
+    #     return render(request, 'admin/muo/misusecase/misusecase_search.html', context)
 
 
 @admin.register(MUOContainer, site=admin_site)
@@ -127,9 +129,13 @@ class MUOContainerAdmin(BaseAdmin):
             return qs
         return qs.filter(Q(created_by=request.user) | Q(status='approved'))
 
-    # Override response_change method of admin/options.py to handle the click of
-    # newly added buttons
+
     def response_change(self, request, obj, *args, **kwargs):
+        '''
+        Override response_change method of admin/options.py to handle the click of
+        newly added buttons
+        '''
+
         # Get the metadata about self (it tells you app and current model)
         opts = self.model._meta
 
@@ -162,6 +168,10 @@ class MUOContainerAdmin(BaseAdmin):
             elif "_edit" in request.POST:
                 obj.action_save_in_draft()
                 msg = "You can now edit the MUO"
+
+            elif "_promote" in request.POST:
+                obj.action_promote()
+                msg = "This MUO has been promoted and now everyone will have access to it."
                 
             else:
                 # Let super class 'ModelAdmin' handle rest of the button clicks i.e. 'save' 'save and continue' etc.
@@ -182,7 +192,6 @@ class MUOContainerAdmin(BaseAdmin):
 
         self.message_user(request, msg, messages.SUCCESS)
         return HttpResponseRedirect(redirect_url)
-
 
 
 @admin.register(IssueReport, site=admin_site)
