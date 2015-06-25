@@ -233,3 +233,4 @@ def post_save_issue_report(sender, instance, created, using, **kwargs):
     if created:
         instance.name = "Issue/{0:05d}".format(instance.id)
         instance.save()
+
