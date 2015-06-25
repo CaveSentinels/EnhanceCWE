@@ -1,6 +1,7 @@
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 from registration.forms import RegistrationForm
+from captcha.fields import ReCaptchaField
 
 
 class CustomRegistrationForm(RegistrationForm):
@@ -10,4 +11,6 @@ class CustomRegistrationForm(RegistrationForm):
     """
     first_name = forms.CharField(label=_('First name'),max_length=30,required=True)
     last_name = forms.CharField(label=_('Last name'),max_length=30,required=True)
+
+    recaptcha = ReCaptchaField(label="I'm a human")
 

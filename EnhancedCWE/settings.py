@@ -35,6 +35,7 @@ INSTALLED_APPS = (
     'admin_lte',
     'django_admin_bootstrapped',
     'autocomplete_light',
+    'captcha',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -50,6 +51,7 @@ INSTALLED_APPS = (
     'cwe',
     'muo',
     'widget_tweaks',
+
 )
 
 # Email settings
@@ -59,9 +61,17 @@ EMAIL_HOST_USER = 'enhancedcwe'
 EMAIL_PORT = 587
 EMAIL_HOST_PASSWORD = 'enhancedcwe_masre'
 
-# REGISTRATION_SUPPLEMENT_CLASS = 'register.models.MyRegistrationSupplement'
+
+# START: Registration settings
 ACCOUNT_ACTIVATION_DAYS = 7
 REGISTRATION_BACKEND_CLASS = 'register.backends.CustomRegistrationBackend'
+# END
+
+# START: Capcha settings
+RECAPTCHA_PUBLIC_KEY = '6LeuwggTAAAAAGXDRJ0uFgVGPJZLhZdBRdUK1O87'
+RECAPTCHA_PRIVATE_KEY = '6LeuwggTAAAAAFssdSpwuDFw-V3-W64Pn9OM-mXs'
+NOCAPTCHA=False
+# END
 
 
 MIDDLEWARE_CLASSES = (
