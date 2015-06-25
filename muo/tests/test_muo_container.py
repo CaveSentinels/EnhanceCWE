@@ -8,7 +8,8 @@ from django.contrib.auth.models import User
 class TestMUOContainer(TestCase):
     """
     This class is the test suite for the MUOContainer model class. It contains
-    test cases for the custom methods in the MUOContainer model.
+    test cases for the custom methods in the MUOContainer model which are not
+    related to the custom MUOs.
     """
 
     def setUp(self):
