@@ -35,6 +35,7 @@ INSTALLED_APPS = (
     'admin_lte',
     'django_admin_bootstrapped',
     'autocomplete_light',
+    'captcha',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -50,7 +51,6 @@ INSTALLED_APPS = (
     'cwe',
     'muo',
     'widget_tweaks',
-    'captcha',
 
 )
 
