@@ -10,6 +10,7 @@
 {% if show_reject %}<button type="button" class="btn btn-default" data-toggle="modal" data-target="#reject-model" name="_reject" >{% trans 'Reject' %}</button>{% endif %}
 {% if show_submit_for_review %}<input type="submit" value="{% trans 'Submit for Review' %}" class="btn btn-default" name="_submit_for_review" />{% endif %}
 {% if show_edit %}<input type="submit" value="{% trans 'Reopen' %}" class="btn btn-default" name="_edit" />{% endif %}
+{% if show_promote %}<input type="submit" value="{% trans 'Promote' %}" class="btn btn-default" name="_promote" />{% endif %}
 
 {% if show_save_as_new %}<input type="submit" value="{% trans 'Save as new' %}" class="btn btn-default" name="_saveasnew" {{ onclick_attrib }}/>{% endif %}
 {% if show_save_and_add_another %}<input type="submit" value="{% trans 'Save and add another' %}" class="btn btn-default" name="_addanother" {{ onclick_attrib }} />{% endif %}

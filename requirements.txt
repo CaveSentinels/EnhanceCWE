@@ -7,3 +7,4 @@ djangorestframework==3.1.2
 nltk==3.0
 django-inspectional-registration
 django-widget-tweaks
+django-recaptcha
