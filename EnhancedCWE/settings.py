@@ -36,6 +36,8 @@ INSTALLED_APPS = (
     'django_admin_bootstrapped',
     'autocomplete_light',
     'captcha',
+    'frontpage',
+    'crispy_forms',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -165,3 +167,6 @@ REST_FRAMEWORK = {
     # Only authenticated users can view or change information.
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated']
 }
+
+
+CRISPY_TEMPLATE_PACK = 'bootstrap3'

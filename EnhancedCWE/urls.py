@@ -14,7 +14,6 @@ Including another URLconf
     2. Add a URL to urlpatterns:  url(r'^blog/', include(blog_urls))
 """
 from django.conf.urls import include, url
-from django.contrib import admin
 from base import admin as base_admin
 
 
@@ -22,6 +21,7 @@ from base import admin as base_admin
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [
     url(r'^admin/', include(base_admin.admin_site.urls)),
+    url(r'^$', include('frontpage.urls', namespace='frontpage')),
     url(r'^autocomplete/', include('autocomplete_light.urls')),
     url('^registration/', include('registration.urls')),
     url(r'restapi/', include('rest_api.urls'))

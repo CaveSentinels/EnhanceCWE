@@ -1,0 +1,17 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_static bootstrapped_goodies_tags %}
+
+{# Allow indexing by search engine robots#}
+{% block blockbots %}{% endblock %}
+
+{% block extra_header_menu %}
+    {% if not user.is_authenticated %}
+        <li><a href="{% url 'admin:login' %}">{% trans 'Log in' %}</a></li>
+    {% endif %}
+{% endblock %}
+
+{% block navbar %}
+    <section class="content-header">
+        {% block content_title %} {% endblock %}
+    </section>
+{% endblock %}

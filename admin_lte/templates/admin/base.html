@@ -91,6 +91,7 @@
                   </button>
                 </div>
 
+                {% if user.is_authenticated %}
                 <!-- Collect the nav links, forms, and other content for toggling -->
                 <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
                   <ul class="nav navbar-nav">
@@ -133,13 +134,13 @@
                     </div>
                   </form>
                 </div><!-- /.navbar-collapse -->
+                {% endif %}
 
                 <!-- Navbar Right Menu -->
                 <div class="navbar-custom-menu">
                     <ul class="nav navbar-nav">
 
-                    {% if has_permission %}
-
+                    {% if user.is_authenticated %}
                     <!-- Recent Actions-->
                     <li class="dropdown links-menu" id="recent-actions-module">
                         <!-- Menu toggle button -->
@@ -180,9 +181,6 @@
                     <!-- Notifications Menu -->
                     {% block notification-dropmenu %} {% endblock %}
 
-                    <!-- Extra Menu -->
-                    {% block extra-dropmenu %} {% endblock %}
-
 
                     <!-- User Account Menu -->
                     {% block usertools %}
@@ -217,12 +215,19 @@
                                 <ul class="menu"><li><a href="{% url 'admin:logout' %}">{% trans 'Log out' %}</a></li></ul>
                             </li>
                         </ul>
-                    </li>
-                    {% endblock %}
+                        </li>
+                        {% endblock %}
 
-                    {% endif %} <!-- end if has_permission -->
-                </ul>
-            </div>
+                    <!-- end if has_permission -->
+                    {% endif %}
+
+                    <!-- Extra Menu -->
+                    {% block extra_header_menu %} {% endblock %}
+
+                    </ul>
+
+                </div>
+
             </div> <!-- /.container-fluid -->
         </nav>
     </header>
@@ -263,10 +268,10 @@
                             {% endif %}
 
                         {% block content_title %}
-                        {% if title %}
-                            <span class="navbar-brand">{% render_with_template_if_exist title|lower|add:"/admin_app_name.html" title %}</span>
-                        {% endif %}
-                        {% endblock %}
+                            {% if title %}
+                                <span class="navbar-brand">{% render_with_template_if_exist title|lower|add:"/admin_app_name.html" title %}</span>
+                            {% endif %}
+                            {% endblock %}
                         </div>
                     {% block object-tools %}{% endblock %}
                 </div>
