@@ -24,16 +24,16 @@ def muo_submit_row(context):
 
         # Show save and delete buttons only if the muo is created by the current user
         'show_save_and_continue': model_object and
-                                  model_object == 'draft' and
+                                  model_object.status == 'draft' and
                                   user_object == model_object.created_by,
         'show_save_as_new': model_object and
-                            model_object == 'draft' and
+                            model_object.status == 'draft' and
                             user_object == model_object.created_by,
         'show_save': model_object and
-                     model_object == 'draft' and
+                     model_object.status == 'draft' and
                      user_object == model_object.created_by,
         'show_delete_link': model_object and
-                            (model_object == 'draft' or model_object.status == 'in_review') and
+                            model_object.status in ('draft', 'in_review') and
                             user_object == model_object.created_by,
 
         # Show submit for review button only to the creator of the muo and if its in draft state
@@ -43,7 +43,7 @@ def muo_submit_row(context):
 
         # Show edit button only to the creator of the muo and if its either in in_review or rejected state
         'show_edit': model_object and
-                     (model_object.status == 'in_review' or model_object.status == 'rejected') and
+                     model_object.status in ('in_review', 'rejected') and
                      user_object == model_object.created_by,
 
         # Show approve button only to the user if he/she has the can_approve permission and the state of

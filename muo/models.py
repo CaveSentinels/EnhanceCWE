@@ -212,6 +212,7 @@ class MUOContainer(BaseModel):
         if self.is_custom == True and self.status == 'draft':
             self.status = 'approved'
             self.reviewed_by = reviewer
+            self.save()
         else:
             raise ValueError("MUO can only be promoted if it is in draft state and custom.")
 
