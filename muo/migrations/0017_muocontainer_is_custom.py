@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='muocontainer',
-            name='isCustom',
-            field=models.BooleanField(default=False),
+            name='is_custom',
+            field=models.BooleanField(default=False, db_index=True),
         ),
     ]

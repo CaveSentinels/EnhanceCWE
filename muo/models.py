@@ -5,6 +5,7 @@ from base.models import BaseModel
 from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 STATUS = [('draft', 'Draft'),
           ('in_review', 'In Review'),
@@ -63,7 +64,7 @@ class MUOContainer(BaseModel):
     reject_reason = models.TextField(null=True, blank=True)
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
     status = models.CharField(choices=STATUS, max_length=64, default='draft')
-    isCustom = models.BooleanField(default=False)
+    is_custom = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         verbose_name = "MUO Container"
@@ -76,46 +77,54 @@ class MUOContainer(BaseModel):
         )
 
     @staticmethod
-    def create_custom_muo(cwes, misusecase, usecase, osr, created_by):
+    def create_custom_muo(cwe_ids, misusecase, usecase, osr, created_by):
         '''
         This is a static method that creates a custom MUO. It also established the relationship between the
         objects that has to be related on MUO creation i.e. relationship between cwes and misuse case, cwes
         and muo container, misuse case and muo container, misuse cae and use case.
-        :param cwes: (LIST of Integers) List of CWE IDs
+        :param cwe_ids: (LIST of Integers) List of CWE IDs
         :param misusecase: (TEXT) Description of the misuse case
         :param usecase: (TEXT) Description of the use case
         :param osr: (TEXT) Description of the osr
         :param created_by: (USER)
         :return: Void
         '''
-        cwe_objects = list(CWE.objects.filter(pk__in=cwes))
+        cwe_objects = list(CWE.objects.filter(pk__in=cwe_ids))
 
-        if len(cwe_objects) != len(cwes):
+        if len(cwe_objects) != len(cwe_ids):
             # The count of objects returned from the database for the CWE ids passed didn't match the
             # count of the the list of cwe ids. This means some of the IDs were invalid and don't exist
             # in the database.
-            raise ValueError("Looks like some of the ids are not valid")
+            raise ValueError("Looks like there are CWE IDs, which are not valid")
 
         with transaction.atomic():
             # This block should be inside the atmoic context manager because if any of the database transaction
             # fails, all the previous database transaction must be rolled back
 
             # Create the misuse case and establish the relationship with the CWEs
-            misuse_case = MisuseCase(description=misusecase)
-            misuse_case.created_by = created_by
+            misuse_case = MisuseCase(description=misusecase,
+                                     created_by=created_by,
+                                     created_at=timezone.now())
             misuse_case.save()
             misuse_case.cwes.add(*cwe_objects)  # Establish the relationship between the misuse case and CWEs
 
             # Create the MUO container for the misuse case and establish the relationship between the
             # MUO Container and CWEs
-            muo_container = MUOContainer(isCustom=True, status='draft', misuse_case=misuse_case)
-            muo_container.created_by = created_by
+            muo_container = MUOContainer(is_custom=True,
+                                         status='draft',
+                                         misuse_case=misuse_case,
+                                         created_by=created_by,
+                                         created_at=timezone.now())
             muo_container.save()
             muo_container.cwes.add(*cwe_objects) # Establish the relationship between the muo container and cwes
 
             # Create the Use case for the Misuse Case and MUO Container
-            use_case = UseCase(description=usecase, osr=osr, muo_container=muo_container, misuse_case=misuse_case)
-            use_case.created_by = created_by
+            use_case = UseCase(description=usecase,
+                               osr=osr,
+                               muo_container=muo_container,
+                               misuse_case=misuse_case,
+                               created_by=created_by,
+                               created_at=timezone.now())
             use_case.save()
 
 
@@ -193,14 +202,16 @@ class MUOContainer(BaseModel):
         else:
             raise ValueError("MUO can only be moved back to draft state if it is either rejected or 'in-review' state")
 
-    def action_promote(self):
+    def action_promote(self, reviewer=None):
         '''
         This method change the status of the custom MUO the from 'draft' to 'approved'. If the MUO is not
         custom or the state is not 'draft', it raises the ValueError with the appropriate message.
+        :param reviewer: User object that has promoted the MUO
         :return: Null
         '''
-        if self.isCustom == True and self.status == 'draft':
+        if self.is_custom == True and self.status == 'draft':
             self.status = 'approved'
+            self.reviewed_by = reviewer
         else:
             raise ValueError("MUO can only be promoted if it is in draft state and custom.")
 

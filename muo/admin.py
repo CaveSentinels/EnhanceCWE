@@ -96,17 +96,17 @@ class MisuseCaseAdmin(BaseAdmin):
         return TemplateResponse(request, "admin/muo/misusecase/usecase.html", context)
 
 
-    # def changelist_view(self, request, extra_context=None):
-    #     if request.GET.get('_popup', False):
-    #         #  If its a popup request let super handle it
-    #         return super(MisuseCaseAdmin, self).changelist_view(request, extra_context)
-    #
-    #     urls = super(MisuseCaseAdmin, self).get_urls()
-    #
-    #     # Render the custom template for the changelist_view
-    #     context = {}
-    #
-    #     return render(request, 'admin/muo/misusecase/misusecase_search.html', context)
+    def changelist_view(self, request, extra_context=None):
+        if request.GET.get('_popup', False):
+            #  If its a popup request let super handle it
+            return super(MisuseCaseAdmin, self).changelist_view(request, extra_context)
+
+        urls = super(MisuseCaseAdmin, self).get_urls()
+
+        # Render the custom template for the changelist_view
+        context = {}
+
+        return render(request, 'admin/muo/misusecase/misusecase_search.html', context)
 
 
 @admin.register(MUOContainer, site=admin_site)
@@ -158,7 +158,6 @@ class MUOContainerAdmin(BaseAdmin):
             elif "_reject" in request.POST:
                 reject_reason = request.POST.get('reject_reason_text', '')
                 obj.action_reject(reject_reason, request.user)
-                obj.save()
                 msg = "The submission has been sent back to the author for review"
 
             elif "_submit_for_review" in request.POST:
@@ -170,7 +169,7 @@ class MUOContainerAdmin(BaseAdmin):
                 msg = "You can now edit the MUO"
 
             elif "_promote" in request.POST:
-                obj.action_promote()
+                obj.action_promote(request.user)
                 msg = "This MUO has been promoted and now everyone will have access to it."
                 
             else:

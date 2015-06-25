@@ -29,7 +29,7 @@ class TestCustomMUO(TestCase):
         misuse_case.save()
         misuse_case.cwes.add(*[cwe1, cwe2])
 
-        muo_container = MUOContainer.objects.create(misuse_case = misuse_case, isCustom=True, status='draft')
+        muo_container = MUOContainer.objects.create(misuse_case = misuse_case, is_custom=True, status='draft')
         muo_container.save()
         muo_container.cwes.add(*[cwe1, cwe2])
         # The id field is auto incremental and we need to know the id of the currently created object
@@ -55,8 +55,9 @@ class TestCustomMUO(TestCase):
         '''
         muo_container = MUOContainer.objects.get(pk=self.current_id)
         muo_container.status = 'draft'  # Make sure the status is 'draft'
-        muo_container.action_promote()
+        muo_container.action_promote(self.user)
         self.assertEqual(muo_container.status, 'approved')
+        self.assertEqual(muo_container.reviewed_by, self.user)
 
     def test_action_promote_with_status_in_review(self):
         '''
@@ -91,7 +92,7 @@ class TestCustomMUO(TestCase):
         '''
         muo_container = MUOContainer.objects.get(pk=self.current_id)
         muo_container.status = 'draft'  # Make sure the status is 'draft'
-        muo_container.isCustom = False  # Make sure the is_custom flag is 'False'
+        muo_container.is_custom = False  # Make sure the is_custom flag is 'False'
 
         self.assertRaises(ValueError, muo_container.action_promote)
 
@@ -109,12 +110,15 @@ class TestCustomMUO(TestCase):
 
         self.assertIsNotNone(MUOContainer.objects.get(created_by=self.user))
         self.assertEqual(MUOContainer.objects.get(created_by=self.user).status, 'draft')
-        self.assertEqual(MUOContainer.objects.get(created_by=self.user).isCustom, True)
+        self.assertEqual(MUOContainer.objects.get(created_by=self.user).is_custom, True)
         self.assertEqual(MUOContainer.objects.get(created_by=self.user).cwes.count(), len(cwes))
         self.assertEqual(MUOContainer.objects.get(created_by=self.user).misuse_case.description, misuse_case_description)
         self.assertEqual(MUOContainer.objects.get(created_by=self.user).usecase_set.first().description, use_case_description)
 
     def test_create_custom_muo_with_no_cwes(self):
+        '''
+        create_custom_muo should raise IntegrityError when trying to create a custom MUOContainer without any CWE
+        '''
         cwes = []
         misuse_case_description = 'This is a misuse case'
         use_case_description = 'This is a use case'
@@ -123,6 +127,9 @@ class TestCustomMUO(TestCase):
         self.assertRaises(IntegrityError, MUOContainer.create_custom_muo(cwes, misuse_case_description, use_case_description, osr, self.user))
 
     def test_create_custom_muo_with_invalid_cwes(self):
+        '''
+        create_custom_muo should raise IntegrityError when CWE ID passed as an argument is/are not integer
+        '''
         cwes = ['1']
         misuse_case_description = 'This is a misuse case'
         use_case_description = 'This is a use case'
@@ -130,10 +137,13 @@ class TestCustomMUO(TestCase):
 
         self.assertRaises(IntegrityError, MUOContainer.create_custom_muo(cwes, misuse_case_description, use_case_description, osr, self.user))
 
-    # def test_create_custom_muo_with_non_existent_cwe(self):
-    #     cwes = [1, 100]
-    #     misuse_case_description = 'This is a misuse case'
-    #     use_case_description = 'This is a use case'
-    #     osr = 'This is a osr'
-    #
-    #     self.assertEqual(ValueError, MUOContainer.create_custom_muo(cwes, misuse_case_description, use_case_description, osr, self.user))
+    def test_create_custom_muo_with_non_existent_cwe(self):
+        '''
+        create_custom_muo should raise ValueError when CWE ID doesn't exist in the database
+        '''
+        cwes = [1, 100]
+        misuse_case_description = 'This is a misuse case'
+        use_case_description = 'This is a use case'
+        osr = 'This is a osr'
+
+        self.assertRaises(ValueError, MUOContainer.create_custom_muo, cwes, misuse_case_description, use_case_description, osr, self.user)
