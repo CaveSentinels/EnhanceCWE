@@ -41,6 +41,9 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'register',
+    'registration',
+    'registration.supplements.default',
     'rest_framework',
     'rest_framework.authtoken',
     'rest_api',
@@ -48,7 +51,20 @@ INSTALLED_APPS = (
     'muo',
     'user_profile',
     'emailer',
+    'widget_tweaks',
 )
+
+# Email settings
+EMAIL_USE_TLS = True
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST_USER = 'enhancedcwe'
+EMAIL_PORT = 587
+EMAIL_HOST_PASSWORD = 'enhancedcwe_masre'
+
+# REGISTRATION_SUPPLEMENT_CLASS = 'register.models.MyRegistrationSupplement'
+ACCOUNT_ACTIVATION_DAYS = 7
+REGISTRATION_BACKEND_CLASS = 'register.backends.CustomRegistrationBackend'
+
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',

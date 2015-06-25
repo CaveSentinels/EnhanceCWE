@@ -18,7 +18,6 @@
 
 
 {% block content %}
-<section class="content" id="content">
     <form class="form-horizontal" enctype="multipart/form-data" action method="post" id="misusecase_search" novalidate>
         {% csrf_token %}
         <div id="content-main" class="muo-search-container">
@@ -79,5 +78,9 @@
             </div>
         </div>
     </form>
-</section>
+
+{# Modal used for popups, such as report inappropriate#}
+<div class="modal fade" id="muo-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>
+
+
 {% endblock %}

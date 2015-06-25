@@ -54,10 +54,10 @@ class CWEAdmin(BaseAdmin):
                  'classes': ['box-col-md-12']}),
 
         ('Categories', {'fields': ['categories'],
-                   'classes': ['box-col-md-6']}),
+                   'classes': ['box-col-md-12']}),
 
         ('keywords', {'fields': ['keywords'],
-                   'classes': ['box-col-md-6']}),
+                   'classes': ['box-col-md-12']}),
     ]
     search_fields = ['name', 'code', 'categories__name', 'keywords__name']
     list_filter = ['categories', 'keywords', ('created_by', admin.RelatedOnlyFieldListFilter)]

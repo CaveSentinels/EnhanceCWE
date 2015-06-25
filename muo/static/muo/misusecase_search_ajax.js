@@ -45,6 +45,27 @@ jQuery(function() {
         // Load the misuse cases for the selected cwes
         load_misusecases(selected_cwes)
     });
+
+
+    $("#muo-modal").on("show.bs.modal", function (e) {
+        var usecase_id = $(e.relatedTarget).data('usecase-id');
+
+        // Load the report issue dialog
+        $.ajax({
+            url: '/admin/muo/issuereport/new_report/',
+            type: 'POST',
+            data: {usecase_id: usecase_id}, // Send the selected use case id
+
+            success: function(result) {
+                $(e.currentTarget).html(result);
+            },
+
+            error: function(xhr,errmsg,err) {
+                // Show error message in the alert
+                alert("Oops! We have encountered and error \n" + errmsg);
+            }
+        });
+    });
 });
 
 

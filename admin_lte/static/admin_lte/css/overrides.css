@@ -148,51 +148,42 @@ hr.breadcrumbs-separator{
 }
 
 
-.content .form-horizontal #content-main .control-label {
-    float: none;
-    text-align: left;
+/********* FORM ***********/
 
+.form-horizontal .row {
+    margin-right: 0px;
+    margin-left: 0px;
 }
 
-.content .form-horizontal #content-main input[type=text],
-.content .form-horizontal #content-main textarea,
-.content .form-horizontal #content-main .autocomplete-light-widget{
+
+.form-horizontal .form-group {
+    margin-right: 15px;
+    margin-left: 15px;
+}
+
+
+@media (min-width: 970px) {
+  .form-horizontal .control-label {
+    text-align: left;
+  }
+}
+
+.form-horizontal .autocomplete-light-widget{
   border-radius: 0px !important;
   box-shadow: none;
   border-color: #d2d6de;
 }
-.content .form-horizontal #content-main input[type=text]:focus,
-.content .form-horizontal #content-main textarea:focus,
-.content .form-horizontal #content-main .autocomplete-light-widget:hover{
+
+.form-horizontal .autocomplete-light-widget:hover{
   border-color: #3c8dbc !important;
   box-shadow: none;
   outline: 0;
   -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102, 175, 233, .6);
           box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102, 175, 233, .6);
 }
-.content .form-horizontal #content-main input[type=text]::-moz-placeholder,
-.content .form-horizontal #content-main textarea::-moz-placeholder{
-  color: #bbb;
-  opacity: 1;
-}
-.content .form-horizontal #content-main input[type=text]:-ms-input-placeholder,
-.content .form-horizontal #content-main textarea:-ms-input-placeholder {
-  color: #bbb;
-}
-.content .form-horizontal #content-main input[type=text]::-webkit-input-placeholder,
-.content .form-horizontal #content-main textarea::-webkit-input-placeholder{
-  color: #bbb;
-}
-.content .form-horizontal #content-main input[type=text]:not(select),
-.content .form-horizontal #content-main textarea:not(select){
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-}
 
-.content .form-horizontal #content-main input[type=text],
-.content .form-horizontal #content-main textarea,
-.content .form-horizontal #content-main .autocomplete-light-widget {
+
+.form-horizontal .autocomplete-light-widget {
   display: block;
   width: 100%;
   height: 34px;
@@ -212,62 +203,35 @@ hr.breadcrumbs-separator{
 }
 
 
-.content .form-horizontal #content-main .autocomplete-light-widget.modern-style {
+.form-horizontal .autocomplete-light-widget.modern-style {
     display: inline-table;
     padding: 6px;
     margin-bottom: 1px;
 }
 
-.content .form-horizontal #content-main .autocomplete-light-widget.modern-style input {
+.form-horizontal .autocomplete-light-widget.modern-style input {
     border: none;
 }
 
-.content .form-horizontal #content-main input[type=text]::-moz-placeholder,
-.content .form-horizontal #content-main textarea::-moz-placeholder{
-  color: #999;
-  opacity: 1;
-}
-.content .form-horizontal #content-main input[type=text]:-ms-input-placeholder,
-.content .form-horizontal #content-main textarea:-ms-input-placeholder{
-  color: #999;
-}
-.content .form-horizontal #content-main input[type=text]::-webkit-input-placeholder,
-.content .form-horizontal #content-main textarea::-webkit-input-placeholder{
-  color: #999;
-}
-.content .form-horizontal #content-main input[type=text][disabled],
-.content .form-horizontal #content-main input[type=text][readonly],
-.content .form-horizontal #content-main textarea[disabled],
-.content .form-horizontal #content-main textarea[readonly],
-.content .form-horizontal #content-main fieldset[disabled] input[type=text]  {
-  background-color: #eee;
-  opacity: 1;
-}
-.content .form-horizontal #content-main input[type=text][disabled],
-.content .form-horizontal #content-main textarea[disabled],
-.content .form-horizontal #content-main fieldset[disabled] input[type=text] {
-  cursor: not-allowed;
-}
-.content .form-horizontal #content-main textarea {
+
+.form-horizontal textarea {
   height: auto;
+    max-width: 100%;
 }
 
-.content .form-horizontal #content-main .inline {
+.form-horizontal .inline {
     display: inline-block;
 }
 
-.content .form-horizontal #content-main .delete .inline{
+.form-horizontal .delete .inline{
     display: block;
 }
 
-.content .form-horizontal #content-main .delete input[type=text]{
+.form-horizontal .delete input[type=text]{
     margin-top: 2px;
 }
 
-.content .form-horizontal .form-group{
-    margin-right: 0;
-    margin-left: 0;
-}
+
 
 
 .layout-top-nav .breadcrumb{
@@ -281,7 +245,7 @@ hr.breadcrumbs-separator{
 }
 
 
-.content .form-horizontal #content-main input.autocomplete {
+.form-horizontal input.autocomplete {
     display: inline;
     width: initial;
     height: initial;
@@ -290,33 +254,41 @@ hr.breadcrumbs-separator{
     margin: 3px 0 0 0;
 }
 
-.content .form-horizontal #content-main .related-widget-wrapper {
+.form-horizontal .related-widget-wrapper {
     width: 100%;
 }
 
 
-.content .form-horizontal #content-main .related-widget-wrapper a {
+.form-horizontal .related-widget-wrapper a {
     float: right;
     margin-top:6px;
 }
 
-.content .form-horizontal #content-main .autocomplete-light-widget{
-    width:91%;
+.form-horizontal .autocomplete-light-widget{
+    width:100%;
 }
 
-.content .form-horizontal #content-main .autocomplete-light-widget.multiple{
-    width:88%;
-}
+/*.form-horizontal .related-widget-wrapper select {*/
+    /*width: 86%;*/
+/*}*/
 
-.content .form-horizontal #content-main .autocomplete-light-widget.modern-style .deck [data-value],
-.content .form-horizontal #content-main .autocomplete-light-widget.modern-style .deck .choice {
+/*.form-horizontal .autocomplete-light-widget{*/
+    /*width:91%;*/
+/*}*/
+
+/*.form-horizontal .autocomplete-light-widget.multiple{*/
+    /*width:88%;*/
+/*}*/
+
+.form-horizontal .autocomplete-light-widget.modern-style .deck [data-value],
+.form-horizontal .autocomplete-light-widget.modern-style .deck .choice {
     border: 1px solid #9daccc;
     background: #e2e6f0;
     padding: 0px 4px 3px 3px;
     margin-top: 1px;
 }
 
-.content .form-horizontal #content-main .autocomplete-light-widget .deck [data-value] .remove {
+.form-horizontal .autocomplete-light-widget .deck [data-value] .remove {
     margin-top: 5px;
 }
 
@@ -327,18 +299,23 @@ hr.breadcrumbs-separator{
     width: 100%;
 }
 
-.content .form-horizontal #content-main{
+.form-horizontal #content-main{
     margin-right: -15px;
     margin-left: -15px;
 }
 
-.content .fieldset-box .box {
-    min-height: 215px;
-}
+/*.content .fieldset-box .box {*/
+    /*min-height: 215px;*/
+/*}*/
 
 
 .box-header>.fa, .box-header>.glyphicon, .box-header>.ion, .box-header .box-title {
     background: none;
     border: none;
     padding: initial;
+}
+
+
+fieldset .field-box{
+    margin-right:0;
 }

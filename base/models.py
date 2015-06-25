@@ -9,7 +9,7 @@ class BaseModel(models.Model):
     necessary to most models.
     Interested models should inherit from this class instead of models.Model
     """
-    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    created_at = models.DateTimeField(default=timezone.now)
     modified_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, null=True, related_name='+')
     modified_by = models.ForeignKey(User, null=True, related_name='+')

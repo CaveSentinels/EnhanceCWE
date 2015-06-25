@@ -120,6 +120,7 @@ class BaseAdminSite(AdminSite):
 
 # Instantiating admin site and registering User and Group admin models
 admin_site = BaseAdminSite(name='admin')
+admin.site = admin_site
 admin_site.register(User, UserAdmin)
 admin_site.register(Group, GroupAdmin)
 
@@ -130,6 +131,8 @@ class BaseAdmin(admin.ModelAdmin):
     necessary to most admin models.
     Interested models should inherit from this class instead of models.Model
     """
+    actions_on_top = False
+    actions_on_bottom = True
 
     actions = ['delete_selected']
 

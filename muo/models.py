@@ -7,7 +7,19 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from signals import *
 
-STATUS = [('draft', 'Draft'), ('in_review', 'In Review'), ('approved', 'Approved'), ('rejected', 'Rejected')]
+STATUS = [('draft', 'Draft'),
+          ('in_review', 'In Review'),
+          ('approved', 'Approved'),
+          ('rejected', 'Rejected')]
+
+ISSUE_TYPES = [('incorrect', 'Incorrect Content'),
+                ('spam', 'Spam'),
+                ('duplicate', 'Duplicate')]
+
+ISSUE_STATUS = [('new', 'New'),
+                 ('investigating', 'Investigating'),
+                 ('re-investigating', 'Re-Investigating'),
+                 ('resolved', 'Resolved')]
 
 
 class Tag(BaseModel):
@@ -195,4 +207,29 @@ def post_save_usecase(sender, instance, created, using, **kwargs):
     """ Set the value of the field 'name' after creating the object """
     if created:
         instance.name = "UC/{0:05d}".format(instance.id)
+        instance.save()
+
+
+
+class IssueReport(BaseModel):
+    name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
+    description = models.TextField(null=True, blank=True)
+    type = models.CharField(choices=ISSUE_TYPES, max_length=64)
+    status = models.CharField(choices=ISSUE_STATUS, max_length=64, default='new')
+    usecase = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name='issue_reports')
+    usecase_duplicate = models.ForeignKey(UseCase, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Issue Report"
+        verbose_name_plural = "Issue Reports"
+
+    def __unicode__(self):
+        return self.name
+
+
+@receiver(post_save, sender=IssueReport, dispatch_uid='issue_report_post_save_signal')
+def post_save_issue_report(sender, instance, created, using, **kwargs):
+    """ Set the value of the field 'name' after creating the object """
+    if created:
+        instance.name = "Issue/{0:05d}".format(instance.id)
         instance.save()

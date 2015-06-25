@@ -1,4 +1,4 @@
-{% load bootstrapped_goodies_tags %}
+{% load bootstrapped_goodies_tags widget_tweaks %}
 
 {% if 'box-col-md-9' in fieldset.classes %}
 <div class="fieldset-box col-md-9">
@@ -14,9 +14,9 @@
 
 {% endif %}
 
-    <div class="box box-primary">
+    <div class="box box-primary ">
         {% if fieldset.name %}
-            <div class="box-header">
+            <div class="box-header with-border">
                 {% if 'collapse' in fieldset.classes %}
                 <a data-toggle="collapse" data-target="#fieldset-{% if stacked_prefix %}{{ stacked_prefix }}-{% endif %}{{ forloop.counter }} .fields">
                 <h3 class="box-title">
@@ -42,25 +42,23 @@
                     {% for line in fieldset %}
                         <div class="row"><div class="control-group {% if line.fields|length_is:'1' and line.errors %} error{% endif %}{% for field in line %}{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not line.has_visible_field %} hidden{% endif %}{% endfor %}">
                             {% for field in line %}
-                                <div class="col-md-{% widthratio 12 line.fields|length 1 %} form-group {% if not line.fields|length_is:'1' %} field-box{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not field.is_readonly and field.errors %} errors{% endif %}{% if field.field.is_hidden %} hidden{% endif %}{% endif %}">
+                                <div class="col-md-{% widthratio 12 line.fields|length 1 %} {% if not line.fields|length_is:'1' %} field-box{% if field.field.name %} field-{{ field.field.name }}{% endif %}{% if not field.is_readonly and field.errors %} errors{% endif %}{% if field.field.is_hidden %} hidden{% endif %}{% endif %}">
                                     {% if field.is_checkbox %}
-                                        <div class="control-label col-md-3">
+                                        <div class="form-group">
                                             {{ field.label_tag }}
-                                        </div>
-                                        <div class="controls col-md-12">
+
                                             <div class="checkbox">
                                                 {% dab_field_rendering field.field %} {% if field.field.help_text %}<span class="help-block">{{ field.field.help_text|safe }}</span>{% endif %}
                                             </div>
                                         </div>
                                     {% else %}
-                                        <div class="control-label col-md-3">
+                                        <div class="form-group">
                                             {{ field.label_tag }}
-                                        </div>
-                                        <div class="controls col-md-12">
+
                                             {% if field.is_readonly %}
                                                 <p>{{ field.contents }}</p>
                                             {% else %}
-                                                {% dab_field_rendering field.field %}
+                                                {% dab_field_rendering field.field|add_class:"form-control" %}
                                             {% endif %}
                                             {% if not field.is_readonly and field.errors %}<span class="text-danger">{{ field.errors|striptags }}</span>{% endif %}
                                             {% if field.field.help_text %}
