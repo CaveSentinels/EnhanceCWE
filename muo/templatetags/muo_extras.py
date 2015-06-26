@@ -22,19 +22,25 @@ def muo_submit_row(context):
         # Do not show save and add another button
         'show_save_and_add_another': False,
 
-        # Show save and delete buttons only if the muo is created by the current user
-        'show_save_and_continue': model_object and
+        # Always show save and delete buttons on the add form
+        # Show save and delete buttons on the change form only if the muo is created by the current user
+        # and it is in 'draft' state
+        'show_save_and_continue': model_object is None or
+                                  (model_object and
                                   model_object.status == 'draft' and
-                                  user_object == model_object.created_by,
-        'show_save_as_new': model_object and
+                                  user_object == model_object.created_by),
+        'show_save_as_new': model_object is None or
+                            (model_object and
                             model_object.status == 'draft' and
-                            user_object == model_object.created_by,
-        'show_save': model_object and
+                            user_object == model_object.created_by),
+        'show_save': model_object is None or
+                     (model_object and
                      model_object.status == 'draft' and
-                     user_object == model_object.created_by,
-        'show_delete_link': model_object and
+                     user_object == model_object.created_by),
+        'show_delete_link': model_object is None or
+                            (model_object and
                             model_object.status in ('draft', 'in_review') and
-                            user_object == model_object.created_by,
+                            user_object == model_object.created_by),
 
         # Show submit for review button only to the creator of the muo and if its in draft state
         'show_submit_for_review': model_object and
