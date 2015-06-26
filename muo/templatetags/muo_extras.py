@@ -67,3 +67,21 @@ def muo_submit_row(context):
     })
 
     return ctx
+
+@register.inclusion_tag('admin/muo/reportissue/reportissue_submit_line.html', takes_context=True)
+def report_action_row(context):
+    ctx = original_submit_row(context)
+
+    model_object = ctx.get('original')
+    user_object = context.get('user')
+    ctx.update({
+
+        'show_investigate_issue': user_object.has_perm('muo.can_change') and
+                                    model_object and model_object.status in 'approved',
+
+
+        'show_resolve_issue': user_object.has_perm('muo.can_change') and
+                                    model_object and model_object.status in 'approved',
+    })
+
+    return ctx
