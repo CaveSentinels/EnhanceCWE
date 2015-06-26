@@ -181,6 +181,18 @@ class MUOContainerAdmin(BaseAdmin):
     date_hierarchy = 'created_at'
     inlines = [UseCaseAdminInLine]
 
+
+    def get_actions(self, request):
+        """
+        Overriding the method in order to disable the delete selected (and bulk delete) option the
+        changelist form
+        """
+        actions = super(MUOContainerAdmin, self).get_actions(request)
+        if 'delete_selected' in actions:
+            del actions['delete_selected']
+        return actions
+
+
     def get_queryset(self, request):
         """
             If user doesn't have access to view all MUO Containers (review), then limit to his own MUOs
@@ -211,6 +223,27 @@ class MUOContainerAdmin(BaseAdmin):
                     [field.name for field in self.opts.local_fields] +
                     [field.name for field in self.opts.local_many_to_many]
                 ))
+
+
+    def has_delete_permission(self, request, obj=None):
+        """
+        Overriding the method such that the delete option on the change form is not available
+        for the users except the original author. The delete option is only available to the
+        original author if the related MUOContainer is in draft state
+        """
+
+        if obj is None:
+            # This is add form, let super handle this
+            return super(MUOContainerAdmin, self).has_delete_permission(request, obj=None)
+        else:
+            # This is change form. Only original author is allowed to delete the MUOContainer
+            # and that too if it is in 'draft' state
+            if request.user == obj.created_by and obj.status == 'draft':
+                return super(MUOContainerAdmin, self).has_delete_permission(request, obj=None)
+            else:
+                # Set deletion permission to False
+                return False
+
 
 
     def response_change(self, request, obj, *args, **kwargs):
