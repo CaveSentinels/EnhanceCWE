@@ -7,7 +7,7 @@
                     aria-hidden="true">×</span></button>
             <h4 class="modal-title">Report {{ usecase.name }}</h4>
         </div>
-        <form class="form-horizontal" enctype="multipart/form-data" action="/admin/muo/issuereport/add_report/" method="post" novalidate>
+        <form class="form-horizontal" enctype="multipart/form-data" action="{% url 'admin:muo_issuereport_add_report' %}" method="post" novalidate>
             <div class="modal-body">
                 {% csrf_token %}
                 <input id="id_usecase" name="usecase" value="{{ usecase.id }}" hidden="hidden"/>

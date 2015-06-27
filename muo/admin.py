@@ -13,16 +13,16 @@ from models import *
 from django.utils.safestring import mark_safe
 
 from django.http import HttpResponseRedirect
-from base.admin import BaseAdmin, admin_site
+from base.admin import BaseAdmin
 
 
-@admin.register(Tag, site=admin_site)
+@admin.register(Tag)
 class TagAdmin(BaseAdmin):
     fields = ['name']
     search_fields = ['name']
 
 
-@admin.register(UseCase, site=admin_site)
+@admin.register(UseCase)
 class UseCaseAdmin(BaseAdmin):
     fields = ['name', 'misuse_case', 'description', 'osr', 'tags']
     readonly_fields = ['name']
@@ -37,7 +37,7 @@ class UseCaseAdminInLine(admin.StackedInline):
     readonly_fields = ['name']
 
 
-@admin.register(MisuseCase, site=admin_site)
+@admin.register(MisuseCase)
 class MisuseCaseAdmin(BaseAdmin):
     fields = ['name', 'cwes', ('description', 'tags')]
     readonly_fields = ['name']
@@ -107,7 +107,7 @@ class MisuseCaseAdmin(BaseAdmin):
         return render(request, 'admin/muo/misusecase/misusecase_search.html', context)
 
 
-@admin.register(MUOContainer, site=admin_site)
+@admin.register(MUOContainer)
 class MUOContainerAdmin(BaseAdmin):
     form = autocomplete_light.modelform_factory(CWE, fields="__all__")
     fields = ['name', 'cwes', 'misuse_case', 'new_misuse_case', 'status']
@@ -185,7 +185,7 @@ class MUOContainerAdmin(BaseAdmin):
 
 
 
-@admin.register(IssueReport, site=admin_site)
+@admin.register(IssueReport)
 class IssueReportAdmin(BaseAdmin):
     form = autocomplete_light.modelform_factory(IssueReport, fields="__all__")
     fields = [('name', 'status'), 'type', 'usecase', 'usecase_duplicate', 'description', ('created_by', 'created_at')]
@@ -198,10 +198,12 @@ class IssueReportAdmin(BaseAdmin):
 
     def get_urls(self):
         urls = super(IssueReportAdmin, self).get_urls()
+        info = self.model._meta.app_label, self.model._meta.model_name
+
         my_urls = [
             # url will be /admin/muo/issuereport/new_report
-            url(r'new_report/$', self.admin_site.admin_view(self.new_report_view)),
-            url(r'add_report/$', self.admin_site.admin_view(self.render_add_report)),
+            url(r'new_report/$', self.admin_site.admin_view(self.new_report_view), name='%s_%s_new_report' % info),
+            url(r'add_report/$', self.admin_site.admin_view(self.render_add_report), name='%s_%s_add_report' % info),
         ]
         return my_urls + urls
 
@@ -244,15 +246,16 @@ class IssueReportAdmin(BaseAdmin):
             if form.is_valid():
 
                 # Check if this user already created a report for this usecase
-                usecase_id = request.POST.get('usecase')
-                previous_report = IssueReport.objects.filter(created_by=request.user, usecase=usecase_id)
+                # usecase_id = request.POST.get('usecase')
+                # previous_report = IssueReport.objects.filter(created_by=request.user, usecase=usecase_id)
+                previous_report = False
 
                 if previous_report:
                     self.message_user(request, "You have already created an issue report for this use case (%s)!" % previous_report[0].name, messages.ERROR)
 
                 else:
                     new_object = form.save()
-                    self.message_user(request, "Report %s has been created will be reviewed by our admins" % new_object.name , messages.SUCCESS)
+                    self.message_user(request, "Report %s has been created will be reviewed by our reviewers" % new_object.name , messages.SUCCESS)
             else:
                 # submitted form is invalid
                 errors = ["%s: %s" % (form.fields[field].label, error[0]) for field, error in form.errors.iteritems()]

@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib import admin
-from base.admin import BaseAdmin, admin_site
+from base.admin import BaseAdmin
 from models import *
 from django.template.response import TemplateResponse
 from django.http import Http404, HttpResponseRedirect
@@ -10,7 +10,7 @@ from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.contrib.admin.templatetags.admin_urls import add_preserved_filters
 
-@admin.register(Category, site=admin_site)
+@admin.register(Category)
 class CategoryAdmin(BaseAdmin):
     fields = ['name']
     search_fields = ['name']
@@ -38,14 +38,14 @@ class KeywordAdminForm(forms.ModelForm):
         return self.cleaned_data["name"]
 
 
-@admin.register(Keyword, site=admin_site)
+@admin.register(Keyword)
 class KeywordAdmin(BaseAdmin):
     form = KeywordAdminForm
     fields = ['name']
     search_fields = ['name']
 
 
-@admin.register(CWE, site=admin_site)
+@admin.register(CWE)
 class CWEAdmin(BaseAdmin):
     model = CWE
     form = autocomplete_light.modelform_factory(CWE, fields="__all__")

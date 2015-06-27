@@ -49,10 +49,11 @@ jQuery(function() {
 
     $("#muo-modal").on("show.bs.modal", function (e) {
         var usecase_id = $(e.relatedTarget).data('usecase-id');
+        var url = $(e.relatedTarget).data('ajax-url');
 
         // Load the report issue dialog
         $.ajax({
-            url: '/admin/muo/issuereport/new_report/',
+            url: url,
             type: 'POST',
             data: {usecase_id: usecase_id}, // Send the selected use case id
 

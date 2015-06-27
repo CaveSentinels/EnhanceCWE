@@ -1,14 +1,20 @@
 {% extends "admin/base_site.html" %}
-{% load i18n admin_static bootstrapped_goodies_tags %}
+{% load i18n %}
+{% load account %}
 
 {# Allow indexing by search engine robots#}
 {% block blockbots %}{% endblock %}
 
+
 {% block extra_header_menu %}
-    {% if not user.is_authenticated %}
-        <li><a href="{% url 'admin:login' %}">{% trans 'Log in' %}</a></li>
-    {% endif %}
+    {% block login_register_options %}
+        {% if not user.is_authenticated %}
+            <li><a href="{% url 'account_login' %}">{% trans 'Log in' %}</a></li>
+            <li><a href="{% url 'account_signup' %}">{% trans 'Register' %}</a></li>
+        {% endif %}
+    {% endblock %}
 {% endblock %}
+
 
 {% block navbar %}
     <section class="content-header">
