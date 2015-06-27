@@ -77,11 +77,11 @@ def report_action_row(context):
     ctx.update({
         #Show investigate button only when the issue is in open state and the user has approve & reject perm
         'show_investigate_issue': model_object and model_object.status == 'open' and
-                                  user_object.has_perm('muo.can_approve', 'can_reject'),
+                                  user_object.has_perm('muo.can_approve', 'muo.can_reject'),
 
         #Show resolve button only when the issue is in open state and the user has approve & reject perm
-        'show_resolve_issue': model_object and model_object.status == 'open' and
-                                  user_object.has_perm('muo.can_approve', 'can_reject'),
+        'show_resolve_issue': model_object and model_object.status == 'investigating' and
+                                  user_object.has_perm('muo.can_approve', 'muo.can_reject'),
     })
 
     return ctx
