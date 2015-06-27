@@ -16,9 +16,8 @@ ISSUE_TYPES = [('incorrect', 'Incorrect Content'),
                 ('spam', 'Spam'),
                 ('duplicate', 'Duplicate')]
 
-ISSUE_STATUS = [('new', 'New'),
+ISSUE_STATUS = [('open', 'Open'),
                  ('investigating', 'Investigating'),
-                 ('re-investigating', 'Re-Investigating'),
                  ('resolved', 'Resolved')]
 
 
@@ -276,7 +275,7 @@ class IssueReport(BaseModel):
     name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
     description = models.TextField(null=True, blank=True)
     type = models.CharField(choices=ISSUE_TYPES, max_length=64)
-    status = models.CharField(choices=ISSUE_STATUS, max_length=64, default='new')
+    status = models.CharField(choices=ISSUE_STATUS, max_length=64, default='open')
     usecase = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name='issue_reports')
     usecase_duplicate = models.ForeignKey(UseCase, on_delete=models.SET_NULL, null=True, blank=True)
 
