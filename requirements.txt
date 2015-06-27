@@ -8,3 +8,4 @@ nltk==3.0
 django-widget-tweaks
 django-recaptcha
 django-allauth
+django-crispy-forms
