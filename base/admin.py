@@ -140,9 +140,10 @@ class BaseAdmin(admin.ModelAdmin):
         """ If user only has view access, then make all fields readonly"""
         if not self.has_change_permission(request, obj) \
                 and not self.has_add_permission(request):
-            fields = [f.name for f in self.model._meta.fields]
-            return fields
-
+            return list(set(
+                    [field.name for field in self.model._meta.local_fields] +
+                    [field.name for field in self.model._meta.local_many_to_many]
+                ))
         else:
             return super(BaseAdmin, self).get_readonly_fields(request, obj)
 
