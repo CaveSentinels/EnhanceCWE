@@ -49,7 +49,7 @@ def muo_submit_row(context):
         'show_delete_link': show_delete_link and
                             (model_object is None or
                             (model_object and
-                            model_object.status == 'draft' and
+                            model_object.status in ('draft', 'rejected') and
                             user_object == model_object.created_by)),
 
         # Show submit for review button only to the creator of the muo and if its in draft state

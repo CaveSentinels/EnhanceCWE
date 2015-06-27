@@ -49,7 +49,7 @@ class UseCaseAdminInLine(admin.StackedInline):
         else:
             # This is change form. Only original author is allowed to delete the UseCase from the related
             # MUOContainer if it is in 'draft' state
-            if request.user == obj.created_by and obj.status == 'draft':
+            if request.user == obj.created_by and obj.status in ('draft', 'rejected'):
                 return super(UseCaseAdminInLine, self).has_delete_permission(request, obj=None)
             else:
                 # Set deletion permission to False
@@ -238,7 +238,7 @@ class MUOContainerAdmin(BaseAdmin):
         else:
             # This is change form. Only original author is allowed to delete the MUOContainer
             # and that too if it is in 'draft' state
-            if request.user == obj.created_by and obj.status == 'draft':
+            if request.user == obj.created_by and obj.status in ('draft', 'rejected'):
                 return super(MUOContainerAdmin, self).has_delete_permission(request, obj=None)
             else:
                 # Set deletion permission to False
