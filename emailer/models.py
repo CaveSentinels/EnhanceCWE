@@ -22,7 +22,7 @@ def on_muo_accepted(sender, instance, **kwargs):
     if instance.created_by.profile.notify_muo_accepted:
         subject = constants.MUO_ACCEPTED_SUBJECT
         action = constants.ACCEPTED
-        generate_email(instance, subject, action)
+        notify_owner(instance, subject, action)
 
 # This method will send an email when an MUO gets rejected
 @receiver(muo_rejected)
@@ -30,7 +30,7 @@ def on_muo_rejected(sender, instance, **kwargs):
     if instance.created_by.profile.notify_muo_rejected:
         subject = constants.MUO_REJECTED_SUBJECT
         action = constants.REJECTED
-        generate_email(instance, subject, action)
+        notify_owner(instance, subject, action)
 
 # This method will send an email when the MUO is voted up by any user
 @receiver(muo_voted_up)
@@ -38,7 +38,7 @@ def on_muo_voted_up(sender, instance, **kwargs):
     if instance.created_by.profile.notify_muo_voted_up:
         subject = constants.MUO_VOTED_UP_SUBJECT
         action = constants.VOTEDUP
-        generate_email(instance, subject, action)
+        notify_owner(instance, subject, action)
 
 # This method will send an email when the MUO is voted down by any user
 @receiver(muo_voted_down)
@@ -46,7 +46,7 @@ def on_muo_voted_down(sender, instance, **kwargs):
     if instance.created_by.profile.notify_muo_voted_down:
         subject = constants.MUO_VOTED_DOWN_SUBJECT
         action = constants.VOTEDDOWN
-        generate_email(instance, subject, action)
+        notify_owner(instance, subject, action)
 
 # This method will send an email when the MUO is commented upon
 @receiver(muo_commented)
@@ -54,7 +54,7 @@ def on_muo_commented(sender, instance,**kwargs):
     if instance.created_by.profile.notify_muo_commented:
         subject = constants.MUO_COMMENTED_SUBJECT
         action = constants.COMMENTED
-        generate_email(instance, subject, action)
+        notify_owner(instance, subject, action)
 
 # TODO: All other reviewers should be notified - need to handle that
 @receiver(muo_duplicate)
@@ -70,7 +70,7 @@ def on_muo_duplicate(sender,instance, **kwargs):
     emails = [user.email for user in users]
     subject = constants.MUO_DUPLICATE_SUBJECT
     action = constants.DUPLICATE
-    generate_bulk_email(instance, subject, action, emails)
+    notify_reviewers(instance, subject, action, emails)
 
 
 # TODO: All other reviewers should be notified  - need to handle that
@@ -87,7 +87,7 @@ def on_muo_inappropriate(sender,instance, **kwargs):
     emails = [user.email for user in users]
     subject = constants.MUO_INAPPROPRIATE_SUBJECT
     action = constants.INAPPROPRIATE
-    generate_bulk_email(instance, subject, action, emails)
+    notify_reviewers(instance, subject, action, emails)
 
 
 # TODO: All other reviewers should be notified - need to handle that
@@ -103,7 +103,7 @@ def on_muo_submitted_for_review(sender,instance, **kwargs):
     emails = [user.email for user in users]
     subject = constants.MUO_SUBMITTED_FOR_REVIEW_SUBJECT
     action = constants.SUBMITTED
-    generate_bulk_email(instance, subject, action, emails)
+    notify_reviewers(instance, subject, action, emails)
 
 
 # TODO: All reviewers should be notified - need to handle that
@@ -120,7 +120,7 @@ def on_custom_muo_created(sender,instance,**kwargs):
     emails = [user.email for user in users]
     subject = constants.CUSTOM_MUO_CREATED_SUBJECT
     action = constants.CREATED
-    generate_bulk_email(instance, subject, action, emails)
+    notify_reviewers(instance, subject, action, emails)
 
 
 # All other reviewers should be notified and also the created_by user - need to handle that
@@ -129,7 +129,7 @@ def on_custom_muo_promoted_generic(sender,instance,**kwargs):
     if instance.created_by.profile.notify_custom_muo_promoted_as_generic:
         subject = constants.CUSTOM_MUO_PROMOTED_SUBJECT
         action = constants.PROMOTED
-        generate_email(instance, subject, action)
+        notify_owner(instance, subject, action)
 
     # Send an email to all the reviewers who wants to be notified when the custom muo gets promoted as generic
     muo_container_type = ContentType.objects.get(app_label='muo', model='muocontainer')
@@ -143,12 +143,12 @@ def on_custom_muo_promoted_generic(sender,instance,**kwargs):
     emails = [user.email for user in users]
     subject = constants.CUSTOM_MUO_PROMOTED_SUBJECT
     action = constants.PROMOTED
-    generate_bulk_email(instance, subject, action, emails)
+    notify_reviewers(instance, subject, action, emails)
 
 """
 This method is called when we have to send the email after fixing all the parameters
 """
-def generate_email(instance, subject, action):
+def notify_owner(instance, subject, action):
     user = instance.created_by
     muo_name = instance.name
     send_mail(subject, get_template('emailer/muo_action.html').render(
@@ -162,7 +162,7 @@ def generate_email(instance, subject, action):
 """
 This method is called when we have to send bulk email to many recipients
 """
-def generate_bulk_email(instance, subject, action, emails):
+def notify_reviewers(instance, subject, action, emails):
     send_mail(subject, get_template('emailer/muo_action_bulk.html').render(
         Context({
             'muo_name': instance.muo_name,
