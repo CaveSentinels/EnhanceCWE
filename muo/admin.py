@@ -229,7 +229,7 @@ class IssueReportAdmin(BaseAdmin):
                 form=form,
                 usecase=usecase,
             )
-            return TemplateResponse(request, "admin/muo/reportissue/new_report.html", context)
+            return TemplateResponse(request, "admin/muo/issuereport/new_report.html", context)
         else:
             raise Http404("Invalid access using GET request!")
 
@@ -244,18 +244,8 @@ class IssueReportAdmin(BaseAdmin):
             ModelForm = self.get_form(request)
             form = ModelForm(request.POST, request.FILES)
             if form.is_valid():
-
-                # Check if this user already created a report for this usecase
-                # usecase_id = request.POST.get('usecase')
-                # previous_report = IssueReport.objects.filter(created_by=request.user, usecase=usecase_id)
-                previous_report = False
-
-                if previous_report:
-                    self.message_user(request, "You have already created an issue report for this use case (%s)!" % previous_report[0].name, messages.ERROR)
-
-                else:
-                    new_object = form.save()
-                    self.message_user(request, "Report %s has been created will be reviewed by our reviewers" % new_object.name , messages.SUCCESS)
+                new_object = form.save()
+                self.message_user(request, "Report %s has been created will be reviewed by our reviewers" % new_object.name , messages.SUCCESS)
             else:
                 # submitted form is invalid
                 errors = ["%s: %s" % (form.fields[field].label, error[0]) for field, error in form.errors.iteritems()]
