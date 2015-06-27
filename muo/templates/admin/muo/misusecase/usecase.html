@@ -26,7 +26,10 @@
 
                 </div>
                 <div class="pull-right">
-                    <a href="#muo-modal" class="btn btn-xs" data-toggle="modal" data-usecase-id="{{ usecase.pk }}" title data-original-title="Report Issue">
+                    <a href="#muo-modal" class="btn btn-xs" data-toggle="modal"
+                       data-ajax-url="{% url 'admin:muo_issuereport_new_report' %}"
+                       data-usecase-id="{{ usecase.pk }}"
+                       title data-original-title="Report Issue">
                         <span class="fa fa-exclamation-triangle"></span>
                         Report Issue
                     </a>
