@@ -36,6 +36,68 @@ class UseCaseAdminInLine(admin.StackedInline):
     fields = ['name', 'description', 'osr']
     readonly_fields = ['name']
 
+    def has_delete_permission(self, request, obj=None):
+        """
+        Overriding the method such that the delete option on the UseCaseAdminInline form on change form
+        is not available for the users except the original author. The delete option is only available
+        to the original author if the related MUOContainer is in draft state
+        """
+
+        if obj is None:
+            # This is add form, let super handle this
+            return super(UseCaseAdminInLine, self).has_delete_permission(request, obj=None)
+        else:
+            # This is change form. Only original author is allowed to delete the UseCase from the related
+            # MUOContainer if it is in 'draft' state
+            if request.user == obj.created_by and obj.status in ('draft', 'rejected'):
+                return super(UseCaseAdminInLine, self).has_delete_permission(request, obj=None)
+            else:
+                # Set deletion permission to False
+                return False
+
+
+    def get_readonly_fields(self, request, obj=None):
+        """
+        Overriding the method such that all the fields on the UseCaseAdminInline form on change form
+        are read-only for all the users except the original author. Only the original author can edit
+        the fields that too when the related MUOContainer is in the 'draft' state
+        """
+
+        if obj is None:
+            # This is add form, let super handle this
+            return super(UseCaseAdminInLine, self).get_readonly_fields(request, obj)
+        else:
+            # This is the change form. Only the original author is allowed to edit the UseCase if the
+            # related MUOContainer is in the 'draft' state
+            if request.user == obj.created_by and obj.status == 'draft':
+                return super(UseCaseAdminInLine, self).get_readonly_fields(request, obj)
+            else:
+                # Set all the fields as read-only
+                return list(set(
+                    [field.name for field in self.opts.local_fields] +
+                    [field.name for field in self.opts.local_many_to_many]
+                ))
+
+    def get_max_num(self, request, obj=None, **kwargs):
+        """
+        Overriding the method such that the 'Add another Use Case' option on the UseCaseAdminInline form
+        on change form is not available for the users except the original author. The 'Add another UseCase'
+        option is only available to the original author if the related MUOContainer is in draft state
+        """
+
+        if obj is None:
+            # This is add form, let super handle this
+            return super(UseCaseAdminInLine, self).get_max_num(request, obj=None, **kwargs)
+        else:
+            # This is change form. Only original author is allowed to add another Use Case in the
+            # MUOContainer if it is in 'draft' state
+            if request.user == obj.created_by and obj.status == 'draft':
+                return super(UseCaseAdminInLine, self).get_max_num(request, obj=None, **kwargs)
+            else:
+                # No 'Add another Use Case' button
+                return 0
+
+
 
 @admin.register(MisuseCase, site=admin_site)
 class MisuseCaseAdmin(BaseAdmin):
@@ -119,6 +181,18 @@ class MUOContainerAdmin(BaseAdmin):
     date_hierarchy = 'created_at'
     inlines = [UseCaseAdminInLine]
 
+
+    def get_actions(self, request):
+        """
+        Overriding the method in order to disable the delete selected (and bulk delete) option the
+        changelist form
+        """
+        actions = super(MUOContainerAdmin, self).get_actions(request)
+        if 'delete_selected' in actions:
+            del actions['delete_selected']
+        return actions
+
+
     def get_queryset(self, request):
         """
             If user doesn't have access to view all MUO Containers (review), then limit to his own MUOs
@@ -128,6 +202,48 @@ class MUOContainerAdmin(BaseAdmin):
         if request.user.has_perm('muo.can_view_all'):
             return qs
         return qs.filter(Q(created_by=request.user) | Q(status='approved'))
+
+
+    def get_readonly_fields(self, request, obj=None):
+        """
+        Overriding the method such that the change form is read-only for all the user. Only the original
+        author of the MUOContainer can edit it that too only when MUOContainer is in 'draft' state
+        """
+
+        if obj is None:
+            # This is add form, let super handle this
+            return super(MUOContainerAdmin, self).get_readonly_fields(request, obj)
+        else:
+            # This is change form. Only original author is allowed to edit the MUOContainer in draft state
+            if request.user == obj.created_by and obj.status == 'draft':
+                return super(MUOContainerAdmin, self).get_readonly_fields(request, obj)
+            else:
+                # Set all the fields as read-only
+                return list(set(
+                    [field.name for field in self.opts.local_fields] +
+                    [field.name for field in self.opts.local_many_to_many]
+                ))
+
+
+    def has_delete_permission(self, request, obj=None):
+        """
+        Overriding the method such that the delete option on the change form is not available
+        for the users except the original author. The delete option is only available to the
+        original author if the related MUOContainer is in draft state
+        """
+
+        if obj is None:
+            # This is add form, let super handle this
+            return super(MUOContainerAdmin, self).has_delete_permission(request, obj=None)
+        else:
+            # This is change form. Only original author is allowed to delete the MUOContainer
+            # and that too if it is in 'draft' state
+            if request.user == obj.created_by and obj.status in ('draft', 'rejected'):
+                return super(MUOContainerAdmin, self).has_delete_permission(request, obj=None)
+            else:
+                # Set deletion permission to False
+                return False
+
 
 
     def response_change(self, request, obj, *args, **kwargs):
