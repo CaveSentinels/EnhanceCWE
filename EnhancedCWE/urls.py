@@ -27,5 +27,5 @@ urlpatterns = [
     url(r'^app/password_change/', 'allauth.account.views.password_change'),
     url(r'^app/', include(admin.site.urls)),
     url(r'^autocomplete/', include('autocomplete_light.urls')),
-    url(r'restapi/', include('rest_api.urls')),
+    url(r'api/v1/', include('rest_api.urls'))   # Add "v1" to indicate the version.
 ]
