@@ -1,7 +1,6 @@
 import re
 from cwe.models import CWE
 from cwe.cwe_search import CWESearchLocator
-from muo.models import MisuseCase
 from muo.models import UseCase
 from rest_framework import status
 from rest_framework.views import APIView
@@ -18,45 +17,65 @@ class CWEAllList(APIView):
     queryset = CWE.objects.all()
     serializer_class = CWESerializer
 
-    DEFAULT_OFFSET = 0  # The default value of offset in GET method
-    DEFAULT_MAX = 100   # The default value of max in GET method
+    PARAM_OFFSET = "offset"
+    PARAM_LIMIT = "limit"
 
-    def get(self, request, offset=DEFAULT_OFFSET, max_return=DEFAULT_MAX):
+    DEFAULT_OFFSET = "0"  # The default value of offset in GET method
+    DEFAULT_LIMIT = "10"   # The default value of limit in GET method
+    MAX_RETURN = "20"  # 20 CWEs will be returned at most, regardless many is specified in "limit".
+
+    def _validate_parameter(self, value):
+        # This regular expression matches integers like "1", "101", but not "+1", "-1", "1.2", "1.a", etc.
+        # See [here](http://regexr.com/) for test.
+        param_pattern_regex = r"^[0-9]+$"
+        return re.match(param_pattern_regex, value) is not None
+
+    def _form_err_msg_not_positive_integer(self, param_name, param_value):
+        return ("Invalid arguments: '" + param_name +
+                "' should be a positive integer like '101', but now '" + param_name +
+                "' = '" + param_value + "'")
+
+    def get(self, request):
         """
         @brief: Return the CWE objects in the database.
         @param: [in] request: The HTTP request.
-        @param: [in] offset: The starting index of all the CWE objects. Must be >= 0 and
-            less than the count of all the CWE objects.
-        @param: [in] max_return: The count of CWE objects to be returned at most.
-            Must be >= 0.
         @return: rest_framework.response.Response
         """
 
-        # offset and max are string. Need to convert them to integers.
-        offset = int(offset)
-        max_return = int(max_return)
+        # Get the value of the parameters.
 
-        # offset and max should not be negative numbers.
-        # TODO: However, because the URL pattern ensures that offset and max will be non-negative
-        # integers, should we still verify the arguments here?
-        if offset < 0 or max_return < 0:
-            err_msg = ("Invalid arguments: 'offset' and 'max_return' should not be negative, but offset=" +
-                       str(offset) + " and max_return=" + str(max_return))
-            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+        offset_str = request.GET.get(self.PARAM_OFFSET)
+        if offset_str is None:
+            # No 'offset' is passed in.
+            offset_str = self.DEFAULT_OFFSET
+        else:
+            # 'offset' is provided. Check if it is in the correct format.
+            if self._validate_parameter(offset_str) is False:
+                err_msg = self._form_err_msg_not_positive_integer(self.PARAM_OFFSET, offset_str)
+                return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
 
-        # Although offset can be greater than the size of CWE objects from Python's view
-        # because Python's list access is rewound if the index exceeds the size,
-        # it may make no sense to the API users because they can't assume the implementation
-        # language and can only comprehend the behavior with a common sense while the
-        # common sense expects an access violation when upper limit is exceeded.
-        if offset > CWE.objects.all().count():
-            err_msg = ("Invalid argument: 'offset' should not exceed the count of CWE objects, but CWE has " +
-                       str(len(CWE.objects.all())) + " object(s) while offset=" + str(offset))
-            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+        limit_str = request.GET.get(self.PARAM_LIMIT)
+        if limit_str is None:
+            # No 'limit' is passed in.
+            limit_str = self.DEFAULT_LIMIT
+        else:
+            # 'limit' is provided. Check if it is in the correct format.
+            if self._validate_parameter(limit_str) is False:
+                err_msg = self._form_err_msg_not_positive_integer(self.PARAM_LIMIT, limit_str)
+                return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+
+        # 'offset' and 'limit' are string. Need to convert them to integers.
+        # We do not want to use 'limit' as variable name because it conflicts
+        # with a Python built-in function.
+        offset = int(offset_str)
+        limit = int(limit_str)
+        limit = (limit if limit < self.MAX_RETURN else self.MAX_RETURN)
 
         # Now the arguments should be valid and we just fetch the required amount of objects
         # from database and return them.
-        cwe_all = CWE.objects.all()[offset:offset+max_return]
+        # Note: offset may be larger than the number of CWE objects. In this case, an empty
+        # list will be returned.
+        cwe_all = CWE.objects.all()[offset:offset+limit]
         serializer = CWESerializer(cwe_all, many=True)
         return Response(data=serializer.data)
 
@@ -66,27 +85,20 @@ class CWERelatedList(APIView):
     @brief: List the CWEs that are related to the given text.
     """
 
-    def _find_related_cwes(self, text):
-        """
-        @brief: Find the CWEs that are related with the given text.
-        @param: [in] text: The CWEs will be searched against the given text.
-        @return: A list of CWEs.
-        """
+    PARAM_TEXT = "text"
 
-        cwe_count_tuples = CWESearchLocator.get_instance().search_cwes(text)
-        cwe_list = [cwe_count_tuple[0] for cwe_count_tuple in cwe_count_tuples]
-
-        return cwe_list
-
-    def get(self, request, text):
+    def get(self, request):
         """
         @brief: Return the CWE objects that are suggested given the text.
         @param: [in] request: The HTTP request.
-        @param: [in] text: The text which should be parsed and related CWEs be extracted from.
         @return: rest_framework.response.Response
         """
 
-        cwe_list = self._find_related_cwes(text=text)
+        text = request.GET.get(self.PARAM_TEXT)
+
+        cwe_count_tuples = CWESearchLocator.get_instance().search_cwes(text)
+
+        cwe_list = [cwe_count_tuple[0] for cwe_count_tuple in cwe_count_tuples]
         serializer = CWESerializer(cwe_list, many=True)
 
         return Response(data=serializer.data)
@@ -96,6 +108,8 @@ class MisuseCaseRelated(APIView):
     """
     @brief: List the misuse cases that are related to the specified CWEs.
     """
+
+    PARAM_CWES = "cwes"
 
     def _validate_parameter(self, cwes_str):
         # This regular expression matches strings like "101" or "101,102,103".
@@ -107,8 +121,8 @@ class MisuseCaseRelated(APIView):
         return set(cwes_str.split(','))
 
     def _form_err_msg_malformed_cwes(self, cwes_str):
-        return ("CWE code list is malformed: \"" + cwes_str + "\". " +
-                "It should be in the form of either \"101\" or \"101,102,103\""
+        return ("CWE code list is malformed: '" + cwes_str + "'. " +
+                "It should be one or more positive integers separated by comma."
                 )
 
     def _form_err_msg_cwes_not_found(self, cwe_codes_not_found):
@@ -124,7 +138,7 @@ class MisuseCaseRelated(APIView):
         """
 
         # Get the "cwes" parameter value.
-        cwes_str = request.GET.get("cwes")
+        cwes_str = request.GET.get(self.PARAM_CWES)
 
         # Validate the parameter or throw exception.
         if self._validate_parameter(cwes_str=cwes_str) is False:
@@ -164,6 +178,8 @@ class UseCaseRelated(APIView):
     @brief: List the misuse cases that are related to the specified CWEs.
     """
 
+    PARAM_MISUSE_CASES = "misuse_cases"
+
     def _validate_parameter(self, misuse_cases_str):
         # This regular expression matches strings like "1" or "1,2,3".
         # See [here](http://regexr.com/) for test.
@@ -174,8 +190,8 @@ class UseCaseRelated(APIView):
         return set(misuse_cases_str.split(','))
 
     def _form_err_msg_malformed_misuse_cases(self, misuse_cases_str):
-        return ("Misuse case ID list is malformed: \"" + misuse_cases_str + "\". " +
-                "It should be in the form of either \"1\" or \"1,2,3\""
+        return ("Misuse case ID list is malformed: '" + misuse_cases_str + "'. " +
+                "It should be one or more positive integers separated by comma."
                 )
 
     def get(self, request):
@@ -185,7 +201,7 @@ class UseCaseRelated(APIView):
         """
 
         # Get the "misuse_cases" parameter value.
-        misuse_cases_str = request.GET.get("misuse_cases")
+        misuse_cases_str = request.GET.get(self.PARAM_MISUSE_CASES)
 
         # Validate the parameter or throw exception.
         if self._validate_parameter(misuse_cases_str=misuse_cases_str) is False:
