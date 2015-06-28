@@ -287,7 +287,7 @@ class MUOContainerAdmin(BaseAdmin):
             elif "_promote" in request.POST:
                 obj.action_promote(request.user)
                 msg = "This MUO has been promoted and now everyone will have access to it."
-                
+
             else:
                 # Let super class 'ModelAdmin' handle rest of the button clicks i.e. 'save' 'save and continue' etc.
                 return super(MUOContainerAdmin, self).response_change(request, obj, *args, **kwargs)
@@ -388,3 +388,47 @@ class IssueReportAdmin(BaseAdmin):
 
         else:
             raise Http404("Invalid access using GET request!")
+
+
+    def response_change(self, request, obj, *args, **kwargs):
+        '''
+        Override response_change method of admin/options.py to handle the click of
+        newly added buttons
+        '''
+
+        # Get the metadata about self (it tells you app and current model)
+        opts = self.model._meta
+
+        # Get the primary key of the model object i.e. Issue Report
+        pk_value = obj._get_pk_val()
+
+        preserved_filters = self.get_preserved_filters(request)
+
+        redirect_url = reverse('admin:%s_%s_change' %
+                                   (opts.app_label, opts.model_name),
+                                   args=(pk_value,))
+        redirect_url = add_preserved_filters({'preserved_filters': preserved_filters, 'opts': opts}, redirect_url)
+
+        # Check which button is clicked, handle accordingly.
+        try:
+            if "_investigate" in request.POST:
+                obj.action_investigate()
+                msg = "The report is now being investigated."
+
+            elif "_resolve" in request.POST:
+                obj.action_resolve()
+                msg = "The report is now resolved."
+
+            elif "_reopen" in request.POST:
+                obj.action_reopen()
+                msg = "The report has been re-opened."
+
+        except ValueError as e:
+            # In case the state of the object is not suitable for the corresponding action,
+            # model will raise the value exception with the appropriate message. Catch the
+            # exception and show the error message to the user
+            msg = e.message
+            self.message_user(request, msg, messages.ERROR)
+
+        self.message_user(request, msg, messages.SUCCESS)
+        return HttpResponseRedirect(redirect_url)

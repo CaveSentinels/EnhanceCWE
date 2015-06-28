@@ -18,6 +18,7 @@ ISSUE_TYPES = [('incorrect', 'Incorrect Content'),
 
 ISSUE_STATUS = [('open', 'Open'),
                  ('investigating', 'Investigating'),
+                ('reopen','Re-open'),
                  ('resolved', 'Resolved')]
 
 
@@ -286,6 +287,31 @@ class IssueReport(BaseModel):
     def __unicode__(self):
         return self.name
 
+    """
+        This method change the status of the issue report object to 'investigating' and This change
+        is allowed only if the current status is either open or re open.
+        """
+    def action_investigate(self):
+        if self.status in ('open','reopen'):
+            self.status = 'investigating'
+            self.save()
+    """
+        This method change the status of the issue report object to 'resolved' and This change
+        is allowed only if the current status is 'investigating'.
+        """
+    def action_resolve(self):
+        if self.status == 'investigating':
+            self.status = 'resolved'
+            self.save()
+    """
+        This method change the status of the issue report object to 're open' and This change
+        is allowed only if the current status is 'investigating' or 'resolved'.
+        """
+    def action_reopen(self):
+        if self.status in ('resolved','investigating'):
+            self.status = 'reopen'
+            self.save()
+
 
 @receiver(post_save, sender=IssueReport, dispatch_uid='issue_report_post_save_signal')
 def post_save_issue_report(sender, instance, created, using, **kwargs):
@@ -293,3 +319,5 @@ def post_save_issue_report(sender, instance, created, using, **kwargs):
     if created:
         instance.name = "Issue/{0:05d}".format(instance.id)
         instance.save()
+
+
