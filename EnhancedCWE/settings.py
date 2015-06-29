@@ -56,6 +56,8 @@ INSTALLED_APPS = (
     'rest_api',
     'cwe',
     'muo',
+    'user_profile',
+    'emailer',
     'widget_tweaks',
 
 )
@@ -178,7 +180,6 @@ REST_FRAMEWORK = {
     # Only authenticated users can view or change information.
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated']
 }
-
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
