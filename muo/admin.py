@@ -413,15 +413,16 @@ class IssueReportAdmin(BaseAdmin):
         try:
             if "_investigate" in request.POST:
                 obj.action_investigate()
-                msg = "The report is now being investigated."
+                msg = "The issue is now being investigated."
 
             elif "_resolve" in request.POST:
-                obj.action_resolve()
-                msg = "The report is now resolved."
+                resolve_reason = request.POST.get('resolve_reason_text', '')
+                obj.action_resolve(resolve_reason,request.user)
+                msg = "The issue is now resolved because" + resolve_reason
 
             elif "_reopen" in request.POST:
                 obj.action_reopen()
-                msg = "The report has been re-opened."
+                msg = "The issue has been re-opened."
 
         except ValueError as e:
             # In case the state of the object is not suitable for the corresponding action,

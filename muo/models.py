@@ -299,11 +299,17 @@ class IssueReport(BaseModel):
         This method change the status of the issue report object to 'resolved' and This change
         is allowed only if the current status is 'investigating'.
         """
-    def action_resolve(self):
+    def action_resolve(self,resolve_reason,reviewer=None):
         if self.status == 'investigating':
             self.status = 'resolved'
+            self.resolve_reason = resolve_reason
+            self.reviewed_by = reviewer
+
             self.save()
-    """
+        else:
+            raise ValueError("In order to resolve a report, it should be in investigating state")
+
+        """
         This method change the status of the issue report object to 're open' and This change
         is allowed only if the current status is 'investigating' or 'resolved'.
         """
