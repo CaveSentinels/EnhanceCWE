@@ -110,6 +110,8 @@ hr.breadcrumbs-separator{
 
 .navbar.title-bar {
     margin-bottom: 5px;
+    margin-right: 15px;
+    margin-left: 15px;
 }
 
 
@@ -239,10 +241,10 @@ hr.breadcrumbs-separator{
     padding: 8px 15px;
 }
 
-.layout-top-nav .content{
-    padding-right: 0;
-    padding-left: 0;
-}
+/*.layout-top-nav .content{*/
+    /*padding-right: 0;*/
+    /*padding-left: 0;*/
+/*}*/
 
 
 .form-horizontal input.autocomplete {

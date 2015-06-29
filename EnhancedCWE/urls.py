@@ -15,14 +15,17 @@ Including another URLconf
 """
 from django.conf.urls import include, url
 from django.contrib import admin
-from base import admin as base_admin
 
 
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [
-    url(r'^admin/', include(base_admin.admin_site.urls)),
+    url(r'^$', include('frontpage.urls', namespace='frontpage')),
+    url(r'^accounts/', include('allauth.urls')),
+    url(r'^app/login/', 'allauth.account.views.login'),
+    url(r'^app/logout/', 'allauth.account.views.logout'),
+    url(r'^app/password_change/', 'allauth.account.views.password_change'),
+    url(r'^app/', include(admin.site.urls)),
     url(r'^autocomplete/', include('autocomplete_light.urls')),
-    url('^registration/', include('registration.urls')),
-    url(r'restapi/', include('rest_api.urls'))
+    url(r'api/v1/', include('rest_api.urls'))   # Add "v1" to indicate the version.
 ]

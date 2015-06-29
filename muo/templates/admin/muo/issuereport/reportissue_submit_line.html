@@ -1,0 +1,14 @@
+{% load i18n admin_urls %}
+<div class="pull-left">
+    {% if show_delete_link %}
+        {% url opts|admin_urlname:'delete' original.pk|admin_urlquote as delete_url %}
+        <a class="btn btn-danger deletelink" href="{% add_preserved_filters delete_url %}">{% trans "Delete" %}</a>
+    {% endif %}
+</div>
+<div class="pull-right">
+
+{% if show_investigate_issue %}<input type="submit" value="{% trans 'Investigate' %}" class="btn btn-default" name="_investigate" />{% endif %}
+{% if show_resolve_issue %}<input type="submit" value="{% trans 'Resolve' %}" class="btn btn-default" name="_resolve" />{% endif %}
+</div>
+<div class="spacer"></div>
+

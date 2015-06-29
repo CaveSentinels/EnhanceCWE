@@ -13,16 +13,16 @@ from models import *
 from django.utils.safestring import mark_safe
 
 from django.http import HttpResponseRedirect
-from base.admin import BaseAdmin, admin_site
+from base.admin import BaseAdmin
 
 
-@admin.register(Tag, site=admin_site)
+@admin.register(Tag)
 class TagAdmin(BaseAdmin):
     fields = ['name']
     search_fields = ['name']
 
 
-@admin.register(UseCase, site=admin_site)
+@admin.register(UseCase)
 class UseCaseAdmin(BaseAdmin):
     fields = ['name', 'misuse_case', 'description', 'osr', 'tags']
     readonly_fields = ['name']
@@ -36,8 +36,70 @@ class UseCaseAdminInLine(admin.StackedInline):
     fields = ['name', 'description', 'osr']
     readonly_fields = ['name']
 
+    def has_delete_permission(self, request, obj=None):
+        """
+        Overriding the method such that the delete option on the UseCaseAdminInline form on change form
+        is not available for the users except the original author. The delete option is only available
+        to the original author if the related MUOContainer is in draft state
+        """
 
-@admin.register(MisuseCase, site=admin_site)
+        if obj is None:
+            # This is add form, let super handle this
+            return super(UseCaseAdminInLine, self).has_delete_permission(request, obj=None)
+        else:
+            # This is change form. Only original author is allowed to delete the UseCase from the related
+            # MUOContainer if it is in 'draft' state
+            if request.user == obj.created_by and obj.status in ('draft', 'rejected'):
+                return super(UseCaseAdminInLine, self).has_delete_permission(request, obj=None)
+            else:
+                # Set deletion permission to False
+                return False
+
+
+    def get_readonly_fields(self, request, obj=None):
+        """
+        Overriding the method such that all the fields on the UseCaseAdminInline form on change form
+        are read-only for all the users except the original author. Only the original author can edit
+        the fields that too when the related MUOContainer is in the 'draft' state
+        """
+
+        if obj is None:
+            # This is add form, let super handle this
+            return super(UseCaseAdminInLine, self).get_readonly_fields(request, obj)
+        else:
+            # This is the change form. Only the original author is allowed to edit the UseCase if the
+            # related MUOContainer is in the 'draft' state
+            if request.user == obj.created_by and obj.status == 'draft':
+                return super(UseCaseAdminInLine, self).get_readonly_fields(request, obj)
+            else:
+                # Set all the fields as read-only
+                return list(set(
+                    [field.name for field in self.opts.local_fields] +
+                    [field.name for field in self.opts.local_many_to_many]
+                ))
+
+    def get_max_num(self, request, obj=None, **kwargs):
+        """
+        Overriding the method such that the 'Add another Use Case' option on the UseCaseAdminInline form
+        on change form is not available for the users except the original author. The 'Add another UseCase'
+        option is only available to the original author if the related MUOContainer is in draft state
+        """
+
+        if obj is None:
+            # This is add form, let super handle this
+            return super(UseCaseAdminInLine, self).get_max_num(request, obj=None, **kwargs)
+        else:
+            # This is change form. Only original author is allowed to add another Use Case in the
+            # MUOContainer if it is in 'draft' state
+            if request.user == obj.created_by and obj.status == 'draft':
+                return super(UseCaseAdminInLine, self).get_max_num(request, obj=None, **kwargs)
+            else:
+                # No 'Add another Use Case' button
+                return 0
+
+
+
+@admin.register(MisuseCase)
 class MisuseCaseAdmin(BaseAdmin):
     fields = ['name', 'cwes', ('description', 'tags')]
     readonly_fields = ['name']
@@ -109,7 +171,7 @@ class MisuseCaseAdmin(BaseAdmin):
         return render(request, 'admin/muo/misusecase/misusecase_search.html', context)
 
 
-@admin.register(MUOContainer, site=admin_site)
+@admin.register(MUOContainer)
 class MUOContainerAdmin(BaseAdmin):
     form = autocomplete_light.modelform_factory(CWE, fields="__all__")
     fields = ['name', 'cwes', 'misuse_case', 'new_misuse_case', 'status']
@@ -118,6 +180,18 @@ class MUOContainerAdmin(BaseAdmin):
     search_fields = ['name', 'status']
     date_hierarchy = 'created_at'
     inlines = [UseCaseAdminInLine]
+
+
+    def get_actions(self, request):
+        """
+        Overriding the method in order to disable the delete selected (and bulk delete) option the
+        changelist form
+        """
+        actions = super(MUOContainerAdmin, self).get_actions(request)
+        if 'delete_selected' in actions:
+            del actions['delete_selected']
+        return actions
+
 
     def get_queryset(self, request):
         """
@@ -128,6 +202,48 @@ class MUOContainerAdmin(BaseAdmin):
         if request.user.has_perm('muo.can_view_all'):
             return qs
         return qs.filter(Q(created_by=request.user) | Q(status='approved'))
+
+
+    def get_readonly_fields(self, request, obj=None):
+        """
+        Overriding the method such that the change form is read-only for all the user. Only the original
+        author of the MUOContainer can edit it that too only when MUOContainer is in 'draft' state
+        """
+
+        if obj is None:
+            # This is add form, let super handle this
+            return super(MUOContainerAdmin, self).get_readonly_fields(request, obj)
+        else:
+            # This is change form. Only original author is allowed to edit the MUOContainer in draft state
+            if request.user == obj.created_by and obj.status == 'draft':
+                return super(MUOContainerAdmin, self).get_readonly_fields(request, obj)
+            else:
+                # Set all the fields as read-only
+                return list(set(
+                    [field.name for field in self.opts.local_fields] +
+                    [field.name for field in self.opts.local_many_to_many]
+                ))
+
+
+    def has_delete_permission(self, request, obj=None):
+        """
+        Overriding the method such that the delete option on the change form is not available
+        for the users except the original author. The delete option is only available to the
+        original author if the related MUOContainer is in draft state
+        """
+
+        if obj is None:
+            # This is add form, let super handle this
+            return super(MUOContainerAdmin, self).has_delete_permission(request, obj=None)
+        else:
+            # This is change form. Only original author is allowed to delete the MUOContainer
+            # and that too if it is in 'draft' state
+            if request.user == obj.created_by and obj.status in ('draft', 'rejected'):
+                return super(MUOContainerAdmin, self).has_delete_permission(request, obj=None)
+            else:
+                # Set deletion permission to False
+                return False
+
 
 
     def response_change(self, request, obj, *args, **kwargs):
@@ -193,7 +309,7 @@ class MUOContainerAdmin(BaseAdmin):
         return HttpResponseRedirect(redirect_url)
 
 
-@admin.register(IssueReport, site=admin_site)
+@admin.register(IssueReport)
 class IssueReportAdmin(BaseAdmin):
     form = autocomplete_light.modelform_factory(IssueReport, fields="__all__")
     fields = [('name', 'status'), 'type', 'usecase', 'usecase_duplicate', 'description', ('created_by', 'created_at')]
@@ -206,10 +322,12 @@ class IssueReportAdmin(BaseAdmin):
 
     def get_urls(self):
         urls = super(IssueReportAdmin, self).get_urls()
+        info = self.model._meta.app_label, self.model._meta.model_name
+
         my_urls = [
             # url will be /admin/muo/issuereport/new_report
-            url(r'new_report/$', self.admin_site.admin_view(self.new_report_view)),
-            url(r'add_report/$', self.admin_site.admin_view(self.render_add_report)),
+            url(r'new_report/$', self.admin_site.admin_view(self.new_report_view), name='%s_%s_new_report' % info),
+            url(r'add_report/$', self.admin_site.admin_view(self.render_add_report), name='%s_%s_add_report' % info),
         ]
         return my_urls + urls
 
@@ -235,7 +353,7 @@ class IssueReportAdmin(BaseAdmin):
                 form=form,
                 usecase=usecase,
             )
-            return TemplateResponse(request, "admin/muo/reportissue/new_report.html", context)
+            return TemplateResponse(request, "admin/muo/issuereport/new_report.html", context)
         else:
             raise Http404("Invalid access using GET request!")
 
@@ -250,17 +368,8 @@ class IssueReportAdmin(BaseAdmin):
             ModelForm = self.get_form(request)
             form = ModelForm(request.POST, request.FILES)
             if form.is_valid():
-
-                # Check if this user already created a report for this usecase
-                usecase_id = request.POST.get('usecase')
-                previous_report = IssueReport.objects.filter(created_by=request.user, usecase=usecase_id)
-
-                if previous_report:
-                    self.message_user(request, "You have already created an issue report for this use case (%s)!" % previous_report[0].name, messages.ERROR)
-
-                else:
-                    new_object = form.save()
-                    self.message_user(request, "Report %s has been created will be reviewed by our admins" % new_object.name , messages.SUCCESS)
+                new_object = form.save()
+                self.message_user(request, "Report %s has been created will be reviewed by our reviewers" % new_object.name , messages.SUCCESS)
             else:
                 # submitted form is invalid
                 errors = ["%s: %s" % (form.fields[field].label, error[0]) for field, error in form.errors.iteritems()]

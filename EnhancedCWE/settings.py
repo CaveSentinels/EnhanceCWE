@@ -32,19 +32,25 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = (
     'base',
+    'register',
     'admin_lte',
     'django_admin_bootstrapped',
     'autocomplete_light',
     'captcha',
+    'frontpage',
+
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+
+    'crispy_forms',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'register',
-    'registration',
-    'registration.supplements.default',
     'rest_framework',
     'rest_framework.authtoken',
     'rest_api',
@@ -64,9 +70,12 @@ EMAIL_PORT = 587
 EMAIL_HOST_PASSWORD = 'enhancedcwe_masre'
 
 
-# START: Registration settings
-ACCOUNT_ACTIVATION_DAYS = 7
-REGISTRATION_BACKEND_CLASS = 'register.backends.CustomRegistrationBackend'
+# START: allauth settings
+LOGIN_REDIRECT_URL = '/app/'
+ACCOUNT_FORMS = {'signup': 'register.forms.CustomSingupForm'}
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
 # END
 
 # START: Capcha settings
@@ -104,7 +113,10 @@ TEMPLATES = [
                 "django.template.context_processors.media",
                 "django.template.context_processors.static",
                 "django.template.context_processors.tz",
-                "django.contrib.messages.context_processors.messages"
+                "django.contrib.messages.context_processors.messages",
+                'django.core.context_processors.request',
+                'allauth.account.context_processors.account',
+                'allauth.socialaccount.context_processors.socialaccount',
             ],
             'debug': True,
         },
@@ -116,7 +128,8 @@ from django.contrib import messages
 MESSAGE_TAGS = {
             messages.SUCCESS: 'alert-success success',
             messages.WARNING: 'alert-warning warning',
-            messages.ERROR: 'alert-danger error'
+            messages.ERROR: 'alert-danger error',
+            messages.INFO: 'alert-success success',
 }
 
 WSGI_APPLICATION = 'EnhancedCWE.wsgi.application'
@@ -168,13 +181,15 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated']
 }
 
-# Setting a secure (TLS) connection when talking to the SMTP server
-EMAIL_USE_TLS = True
-# The host to use for sending email.
-EMAIL_HOST = 'smtp.gmail.com'
-# Username to use for the SMTP server defined in EMAIL_HOST
-EMAIL_HOST_USER = 'enhancedcwe'
-# Port to use for the SMTP server defined in EMAIL_HOST.
-EMAIL_PORT = 587
-# Password to use for the SMTP server defined in EMAIL_HOST.
-EMAIL_HOST_PASSWORD = 'enhancedcwe_masre'
+CRISPY_TEMPLATE_PACK = 'bootstrap3'
+
+
+AUTHENTICATION_BACKENDS = (
+    # Needed to login by username in Django admin, regardless of `allauth`
+    'django.contrib.auth.backends.ModelBackend',
+
+    # `allauth` specific authentication methods, such as login by e-mail
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+
+SITE_ID = 1
