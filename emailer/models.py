@@ -19,7 +19,7 @@ They create the email body by fetching the parameters and send the email
 # This method will send an email when an MUO gets accepted
 @receiver(muo_accepted)
 def on_muo_accepted(sender, instance, **kwargs):
-    if instance.created_by.profile.notify_muo_accepted:
+    if instance.created_by and instance.created_by.profile.notify_muo_accepted:
         subject = constants.MUO_ACCEPTED_SUBJECT
         action = constants.ACCEPTED
         notify_owner(instance, subject, action)
@@ -27,7 +27,7 @@ def on_muo_accepted(sender, instance, **kwargs):
 # This method will send an email when an MUO gets rejected
 @receiver(muo_rejected)
 def on_muo_rejected(sender, instance, **kwargs):
-    if instance.created_by.profile.notify_muo_rejected:
+    if instance.created_by and instance.created_by.profile.notify_muo_rejected:
         subject = constants.MUO_REJECTED_SUBJECT
         action = constants.REJECTED
         notify_owner(instance, subject, action)
@@ -35,7 +35,7 @@ def on_muo_rejected(sender, instance, **kwargs):
 # This method will send an email when the MUO is voted up by any user
 @receiver(muo_voted_up)
 def on_muo_voted_up(sender, instance, **kwargs):
-    if instance.created_by.profile.notify_muo_voted_up:
+    if instance.created_by and instance.created_by.profile.notify_muo_voted_up:
         subject = constants.MUO_VOTED_UP_SUBJECT
         action = constants.VOTEDUP
         notify_owner(instance, subject, action)
@@ -43,7 +43,7 @@ def on_muo_voted_up(sender, instance, **kwargs):
 # This method will send an email when the MUO is voted down by any user
 @receiver(muo_voted_down)
 def on_muo_voted_down(sender, instance, **kwargs):
-    if instance.created_by.profile.notify_muo_voted_down:
+    if instance.created_by and instance.created_by.profile.notify_muo_voted_down:
         subject = constants.MUO_VOTED_DOWN_SUBJECT
         action = constants.VOTEDDOWN
         notify_owner(instance, subject, action)
@@ -51,7 +51,7 @@ def on_muo_voted_down(sender, instance, **kwargs):
 # This method will send an email when the MUO is commented upon
 @receiver(muo_commented)
 def on_muo_commented(sender, instance,**kwargs):
-    if instance.created_by.profile.notify_muo_commented:
+    if instance.created_by and instance.created_by.profile.notify_muo_commented:
         subject = constants.MUO_COMMENTED_SUBJECT
         action = constants.COMMENTED
         notify_owner(instance, subject, action)
@@ -126,7 +126,7 @@ def on_custom_muo_created(sender,instance,**kwargs):
 # All other reviewers should be notified and also the created_by user - need to handle that
 @receiver(custom_muo_promoted_generic)
 def on_custom_muo_promoted_generic(sender,instance,**kwargs):
-    if instance.created_by.profile.notify_custom_muo_promoted_as_generic:
+    if instance.created_by and instance.created_by.profile.notify_custom_muo_promoted_as_generic:
         subject = constants.CUSTOM_MUO_PROMOTED_SUBJECT
         action = constants.PROMOTED
         notify_owner(instance, subject, action)

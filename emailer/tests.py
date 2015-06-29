@@ -1,9 +1,11 @@
+from django.contrib.contenttypes.models import ContentType
 from django.core import mail
 from django.test import TestCase
 from mock import patch
 from muo.models import MUOContainer, MisuseCase, UseCase
 from cwe.models import CWE
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission
+
 
 class EmailTest(TestCase):
 
@@ -12,23 +14,31 @@ class EmailTest(TestCase):
         test_user = User(username='test_user', is_active=True)
         test_user.save()
         self.user = test_user
+
+        # Adding reviewer user with permissions to be notified on submit for approval
+        reviewer = User(username='a_reviewer', is_active=True)
+        reviewer.profile.notify_muo_accepted = True
+        reviewer.profile.notify_muo_rejected = True
+        reviewer.save()
+        muo_container_type = ContentType.objects.get(app_label='muo', model='muocontainer')
+        perm = Permission.objects.filter(codename__in=('can_approve', 'can_reject'), content_type = muo_container_type)
+        reviewer.user_permissions.add(*perm)
+
         cwe1 = CWE(code=1, name='CWE-1')
         cwe1.save()
         misuse_case = MisuseCase()
         misuse_case.save()
         misuse_case.cwes.add(*[cwe1])
-        muo_container = MUOContainer.objects.create(misuse_case=misuse_case, status='in_review')
-        muo_container.save()
-        muo_container.cwes.add(*[cwe1])
-        muo_container.save()
 
-        muo_container_draft = MUOContainer.objects.create(misuse_case=misuse_case, status='draft')
-        muo_container_draft.save()
-        muo_container.cwes.add(*[cwe1])
+        muo_container = MUOContainer.objects.create(misuse_case=misuse_case, created_by=self.user)
         muo_container.save()
+        muo_container.cwes.add(*[cwe1])
+
+        use_case = UseCase(muo_container=muo_container)  # Usecase cannot be created without MUOContainer
+        use_case.save()  # save in the database
 
         self.muo_container = muo_container
-        self.muo_container_draft = muo_container_draft
+
 
     def test_send_email(self):
         # Send message.
@@ -43,6 +53,7 @@ class EmailTest(TestCase):
     # This is to test to check if signals are generated when muo gets accepted
     @patch('muo.signals.muo_accepted.send')
     def test_muo_accepted_signal_triggered(self, mock):
+        self.muo_container.status = 'in_review'
         self.muo_container.action_approve(self.user)
         # Check that the signal was called.
         self.assertTrue(mock.called)
@@ -52,6 +63,7 @@ class EmailTest(TestCase):
     # This is to test to check if signals are generated when muo gets rejected
     @patch('muo.signals.muo_rejected.send')
     def test_muo_rejected_signal_triggered(self, mock):
+        self.muo_container.status = 'in_review'
         self.muo_container.action_reject("reason",self.user)
         # Check that the signal was called.
         self.assertTrue(mock.called)
@@ -90,7 +102,8 @@ class EmailTest(TestCase):
 
     @patch('muo.signals.muo_submitted_for_review.send')
     def test_muo_submitted_for_review_signal_triggered(self, mock):
-        self.muo_container_draft.action_submit()
+        self.muo_container.status = 'draft'
+        self.muo_container.action_submit()
         # Check that the signal was called.
         self.assertTrue(mock.called)
         # Check that the signal was called only once.
