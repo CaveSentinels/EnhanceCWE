@@ -1,9 +1,9 @@
 from django.contrib import admin
-from base.admin import BaseAdmin, admin_site
+from base.admin import BaseAdmin
 from models import *
 
 
-@admin.register(UserProfile, site=admin_site)
+@admin.register(UserProfile)
 class UserProfileAdmin(BaseAdmin):
     fields = ['user',
               'notify_muo_accepted',
