@@ -163,12 +163,13 @@ def notify_owner(instance, subject, action):
 This method is called when we have to send bulk email to many recipients
 """
 def notify_reviewers(instance, subject, action, emails):
-    send_mail(subject, get_template('emailer/muo_action_bulk.html').render(
-        Context({
-            'muo_name': instance.muo_name,
-            'action': action,
-            })
-        ), constants.SENDER_EMAIL, emails, fail_silently=True)
+    if emails:
+        send_mail(subject, get_template('emailer/muo_action_bulk.html').render(
+            Context({
+                'muo_name': instance.name,
+                'action': action,
+                })
+            ), constants.SENDER_EMAIL, emails, fail_silently=True)
 
 
 
