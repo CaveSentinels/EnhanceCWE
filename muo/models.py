@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
+import time
 
 STATUS = [('draft', 'Draft'),
           ('in_review', 'In Review'),
@@ -295,21 +296,24 @@ class IssueReport(BaseModel):
         if self.status in ('open','reopen'):
             self.status = 'investigating'
             self.save()
+
+        else:
+            raise ValueError("In order to investigate a report, it should be in open or re-open state")
     """
         This method change the status of the issue report object to 'resolved' and This change
         is allowed only if the current status is 'investigating'.
         """
-    def action_resolve(self,resolve_reason,reviewer=None):
+    def action_resolve(self):
         if self.status == 'investigating':
             self.status = 'resolved'
-            self.resolve_reason = resolve_reason
-            self.reviewed_by = reviewer
-
+            # Get the current date when it got resolved
+            # TODO: This has to be used in future
+            current_date = time.strftime("%c")
             self.save()
         else:
             raise ValueError("In order to resolve a report, it should be in investigating state")
 
-        """
+    """
         This method change the status of the issue report object to 're open' and This change
         is allowed only if the current status is 'investigating' or 'resolved'.
         """
@@ -317,6 +321,8 @@ class IssueReport(BaseModel):
         if self.status in ('resolved','investigating'):
             self.status = 'reopen'
             self.save()
+        else:
+            raise ValueError("In order to re open an issue it should be in resolved or investigating state")
 
 
 @receiver(post_save, sender=IssueReport, dispatch_uid='issue_report_post_save_signal')

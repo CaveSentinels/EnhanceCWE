@@ -417,8 +417,8 @@ class IssueReportAdmin(BaseAdmin):
 
             elif "_resolve" in request.POST:
                 resolve_reason = request.POST.get('resolve_reason_text', '')
-                obj.action_resolve(resolve_reason,request.user)
-                msg = "The issue is now resolved because" + resolve_reason
+                obj.action_resolve()
+                msg = "The issue is now resolved because  " + resolve_reason
 
             elif "_reopen" in request.POST:
                 obj.action_reopen()
