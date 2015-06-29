@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = (
     'base',
+    'register',
     'admin_lte',
     'django_admin_bootstrapped',
     'autocomplete_light',
@@ -42,7 +43,6 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'register',
     'registration',
     'registration.supplements.default',
     'rest_framework',
@@ -71,6 +71,10 @@ REGISTRATION_BACKEND_CLASS = 'register.backends.CustomRegistrationBackend'
 RECAPTCHA_PUBLIC_KEY = '6LeuwggTAAAAAGXDRJ0uFgVGPJZLhZdBRdUK1O87'
 RECAPTCHA_PRIVATE_KEY = '6LeuwggTAAAAAFssdSpwuDFw-V3-W64Pn9OM-mXs'
 NOCAPTCHA=False
+# END
+
+# START: Required change for captcha integration
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 # END
 
 

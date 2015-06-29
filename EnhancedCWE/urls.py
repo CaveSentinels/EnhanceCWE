@@ -16,13 +16,22 @@ Including another URLconf
 from django.conf.urls import include, url
 from django.contrib import admin
 from base import admin as base_admin
-
-
+from register.forms import MyAuthenticationForm
+from register import views
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
+
+
 urlpatterns = [
+
     url(r'^admin/', include(base_admin.admin_site.urls)),
     url(r'^autocomplete/', include('autocomplete_light.urls')),
     url('^registration/', include('registration.urls')),
-    url(r'restapi/', include('rest_api.urls'))
+    url(r'restapi/', include('rest_api.urls')),
 ]
+
+
+# START: Required change for captcha integration
+admin.autodiscover()
+admin.site.login_form = MyAuthenticationForm
+# END
