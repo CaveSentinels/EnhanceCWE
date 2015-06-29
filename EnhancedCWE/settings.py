@@ -38,13 +38,13 @@ INSTALLED_APPS = (
     'autocomplete_light',
     'captcha',
     'frontpage',
-
+    'crispy_forms',
+    'fluent_comments',
+    'django_comments',
     'django.contrib.sites',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-
-    'crispy_forms',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -192,3 +192,6 @@ AUTHENTICATION_BACKENDS = (
 )
 
 SITE_ID = 1
+COMMENTS_APP = 'fluent_comments'
+FLUENT_COMMENTS_EXCLUDE_FIELDS = ('name', 'email', 'url')
+FLUENT_COMMENTS_USE_EMAIL_NOTIFICATION = False

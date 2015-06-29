@@ -9,3 +9,4 @@ django-widget-tweaks
 django-recaptcha
 django-allauth
 django-crispy-forms
+django-fluent-comments

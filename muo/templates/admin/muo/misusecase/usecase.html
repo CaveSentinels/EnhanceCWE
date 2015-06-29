@@ -1,3 +1,8 @@
+{% load comments %}
+
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}fluent_comments/css/ajaxcomments.css" />
+<script type="text/javascript" src="{{ STATIC_URL }}fluent_comments/js/ajaxcomments.js"></script>
+
 
 <div class="fat-scroll-div">
     {% for usecase in use_cases %}
@@ -20,9 +25,14 @@
                     <a href="" class="btn btn-xs">
                         <span class="fa fa-thumbs-o-down"></span>
                     </a>
-                    <a href="" class="btn btn-xs">
-                        <span class="fa fa-comment-o"></span>
+                    {% if user.is_authenticated %}
+                        <a href="" class="btn btn-xs">
+                        <span class="fa fa-comment-o">
+                            {% get_comment_count for usecase as comment_count %} {{ comment_count }}
+                            comments
+                        </span>
                     </a>
+                    {% endif %}
 
                 </div>
                 <div class="pull-right">
@@ -35,6 +45,11 @@
                     </a>
                 </div>
             </div>
+
+            {% if user.is_authenticated %}
+                {% render_comment_list for usecase %}
+                {% render_comment_form for usecase %}
+            {% endif %}
 
         </div>
     {% endfor %}

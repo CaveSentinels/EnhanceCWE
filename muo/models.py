@@ -1,3 +1,5 @@
+from django.contrib.contenttypes.models import ContentType
+from django.core import urlresolvers
 from django.db import models, transaction
 from django.conf import settings
 from cwe.models import CWE
