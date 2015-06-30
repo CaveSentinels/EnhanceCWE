@@ -7,6 +7,7 @@ from base.models import BaseModel
 from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from signals import *
 from django.utils import timezone
 
 STATUS = [('draft', 'Draft'),
@@ -151,6 +152,8 @@ class MUOContainer(BaseModel):
             self.status = 'approved'
             self.reviewed_by = reviewer
             self.save()
+            # Send email
+            muo_accepted.send(sender=self, instance=self)
         else:
             raise ValueError("In order to approve an MUO, it should be in 'in-review' state")
 
@@ -176,6 +179,8 @@ class MUOContainer(BaseModel):
             self.reject_reason = reject_reason
             self.reviewed_by = reviewer
             self.save()
+            # Send email
+            muo_rejected.send(sender=self, instance=self)
         else:
             raise ValueError("In order to approve an MUO, it should be in 'in-review' state")
 
@@ -189,6 +194,8 @@ class MUOContainer(BaseModel):
 
             self.status = 'in_review'
             self.save()
+            # Send email
+            muo_submitted_for_review.send(sender=self, instance=self)
         else:
             raise ValueError("You can only submit MUO for review if it is 'draft' state")
 
