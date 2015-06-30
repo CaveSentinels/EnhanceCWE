@@ -8,5 +8,7 @@ nltk==3.0
 django-widget-tweaks
 django-recaptcha
 django-allauth
-django-crispy-forms
 django-fluent-comments
+django-contrib-comments
+-e git+https://github.com/maraujop/django-crispy-forms.git@dev#egg=django-crispy-forms
+

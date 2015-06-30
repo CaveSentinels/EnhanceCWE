@@ -1,8 +1,6 @@
-{% load comments %}
+{% load comments static %}
 
-<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}fluent_comments/css/ajaxcomments.css" />
-<script type="text/javascript" src="{{ STATIC_URL }}fluent_comments/js/ajaxcomments.js"></script>
-
+<script type="text/javascript" src="{% static 'fluent_comments/js/ajaxcomments.js' %}"></script>
 
 <div class="fat-scroll-div">
     {% for usecase in use_cases %}
@@ -19,19 +17,18 @@
             </div>
             <div class="usecase-footer">
                 <div class="pull-left">
-                    <a href="" class="btn btn-xs">
-                        <span class="fa fa-thumbs-o-up"></span>
-                    </a>
-                    <a href="" class="btn btn-xs">
-                        <span class="fa fa-thumbs-o-down"></span>
-                    </a>
+{#                    <a href="" class="btn btn-xs">#}
+{#                        <span class="fa fa-thumbs-o-up"></span>#}
+{#                    </a>#}
+{#                    <a href="" class="btn btn-xs">#}
+{#                        <span class="fa fa-thumbs-o-down"></span>#}
+{#                    </a>#}
                     {% if user.is_authenticated %}
-                        <a href="" class="btn btn-xs">
-                        <span class="fa fa-comment-o">
-                            {% get_comment_count for usecase as comment_count %} {{ comment_count }}
-                            comments
+                        <a href="#comments-block-{{ usecase.id }}" class="btn btn-xs">
+                        <span class="fa fa-comment-o ">
                         </span>
-                    </a>
+                        {% get_comment_count for usecase as comment_count %} {{ comment_count }} comments
+                        </a>
                     {% endif %}
 
                 </div>
@@ -46,15 +43,14 @@
                 </div>
             </div>
 
-            {% if user.is_authenticated %}
+            <div class="comments-container" id="comments-block-{{ usecase.id }}">
                 {% render_comment_list for usecase %}
                 {% render_comment_form for usecase %}
-            {% endif %}
+            </div>
 
         </div>
     {% endfor %}
 
 
 </div>
-
 

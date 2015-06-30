@@ -321,3 +321,18 @@ hr.breadcrumbs-separator{
 fieldset .field-box{
     margin-right:0;
 }
+
+.checkbox {
+    padding-bottom: 0;
+}
+
+.checkbox label{
+    margin-bottom:0;
+}
+
+.checkbox input[type="checkbox"] {
+    position: absolute;
+    float: none;
+    margin-left: -20px;
+    margin-right: 0px;
+}

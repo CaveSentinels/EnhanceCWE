@@ -28,5 +28,5 @@ urlpatterns = [
     url(r'^app/', include(admin.site.urls)),
     url(r'^autocomplete/', include('autocomplete_light.urls')),
     url(r'api/v1/', include('rest_api.urls')),   # Add "v1" to indicate the version.
-    url(r'^blog/comments/', include('fluent_comments.urls')),
+    url(r'^comments/', include('comments.urls')),
 ]

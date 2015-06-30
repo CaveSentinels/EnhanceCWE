@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = (
     'base',
+    'muo',
     'register',
     'admin_lte',
     'django_admin_bootstrapped',
@@ -39,6 +40,7 @@ INSTALLED_APPS = (
     'captcha',
     'frontpage',
     'crispy_forms',
+    'comments',
     'fluent_comments',
     'django_comments',
     'django.contrib.sites',
@@ -55,9 +57,7 @@ INSTALLED_APPS = (
     'rest_framework.authtoken',
     'rest_api',
     'cwe',
-    'muo',
     'widget_tweaks',
-
 )
 
 # Email settings

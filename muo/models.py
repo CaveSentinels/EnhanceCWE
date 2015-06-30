@@ -264,6 +264,12 @@ class UseCase(BaseModel):
         return "%s - %s..." % (self.name, self.description[:70])
 
 
+    def get_absolute_url(self, language=None):
+        content_type = ContentType.objects.get_for_model(MisuseCase)
+        url = urlresolvers.reverse("admin:%s_%s_changelist" % (content_type.app_label, content_type.model))
+        return "%s?mu=%s&uc=%s" % (url, self.misuse_case.id, self.id)
+
+
 @receiver(post_save, sender=UseCase, dispatch_uid='usecase_post_save_signal')
 def post_save_usecase(sender, instance, created, using, **kwargs):
     """ Set the value of the field 'name' after creating the object """
