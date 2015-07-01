@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('muo', '0019_auto_20150628_2221'),
+        ('muo', '0018_auto_20150628_0356'),
     ]
 
     operations = [
@@ -28,5 +28,10 @@ class Migration(migrations.Migration):
             model_name='issuereport',
             name='reviewed_by',
             field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, blank=True, to=settings.AUTH_USER_MODEL, null=True),
+        ),
+        migrations.AlterField(
+            model_name='issuereport',
+            name='status',
+            field=models.CharField(default=b'open', max_length=64, choices=[(b'open', b'Open'), (b'investigating', b'Investigating'), (b'reopen', b'Re-open'), (b'resolved', b'Resolved')]),
         ),
     ]
