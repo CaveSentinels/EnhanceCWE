@@ -7,6 +7,8 @@ from user_profile.models import *
 from django.contrib.auth.models import User, Permission
 from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
+from django_comments.signals import comment_was_posted
+from muo.models import *
 import constants
 
 
@@ -49,12 +51,14 @@ def on_muo_voted_down(sender, instance, **kwargs):
         notify_owner(instance, subject, action)
 
 # This method will send an email when the MUO is commented upon
-@receiver(muo_commented)
-def on_muo_commented(sender, instance,**kwargs):
-    if instance.created_by and instance.created_by.profile.notify_muo_commented:
-        subject = constants.MUO_COMMENTED_SUBJECT
-        action = constants.COMMENTED
-        notify_owner(instance, subject, action)
+@receiver(comment_was_posted)
+def on_muo_commented(sender, comment, request, **kwargs):
+    if comment.content_type == ContentType.objects.get_for_model(UseCase):
+        instance = comment.content_object
+        if instance.created_by and instance.created_by.profile.notify_muo_commented:
+            subject = constants.MUO_COMMENTED_SUBJECT
+            action = constants.COMMENTED
+            notify_owner(instance, subject, action)
 
 # TODO: All other reviewers should be notified - need to handle that
 @receiver(muo_duplicate)
