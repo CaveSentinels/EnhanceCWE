@@ -59,7 +59,7 @@ def post_save_misusecase(sender, instance, created, using, **kwargs):
 class MUOContainer(BaseModel):
     name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
     cwes = models.ManyToManyField(CWE, related_name='muo_container')
-    misuse_case = models.ForeignKey(MisuseCase, on_delete=models.PROTECT)
+    misuse_case = models.ForeignKey(MisuseCase, on_delete=models.PROTECT, null=True, blank=True)
     new_misuse_case = models.TextField(null=True, blank=True)
     reject_reason = models.TextField(null=True, blank=True)
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
@@ -136,11 +136,25 @@ class MUOContainer(BaseModel):
         This method change the status of the MUOContainer object to 'approved' and it creates the
         relationship between the misuse case and all the use cases of the muo container.This change
         is allowed only if the current status is 'in_review'. If the current status is not
-        'in_review', it raises the ValueError with appropriate message.
+        'in_review', it raises the ValueError with appropriate message. In case of a new misuse case
+        is written, it also creates the MisuseCase object and then relate it to the CWEs and the
+        MUOContainer.
         :param reviewer: User object that approved the MUO
         :raise ValueError: if status not in 'in-review'
         """
         if self.status == 'in_review':
+            if self.misuse_case is None:
+                # misuse_case is None that means the author has written a new misuse case.
+                # A new misuse case object needs to be created and related with the current
+                # MUOContainer and CWEs
+                misuse_case = MisuseCase(description=self.new_misuse_case,
+                                         created_by=self.created_by,
+                                         created_at=self.created_at)
+                misuse_case.save()
+                misuse_case.cwes.add(*list(self.cwes.all()))
+                self.misuse_case = misuse_case
+                self.new_misuse_case = None  # Remove the text from the new_misuse_case
+
             # Create the relationship between the misuse case of the muo container with all the
             # use cases of the container
             for usecase in self.usecase_set.all():
