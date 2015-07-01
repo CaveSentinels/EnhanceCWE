@@ -7,5 +7,6 @@ djangorestframework==3.1.2
 nltk==3.0
 django-widget-tweaks
 django-recaptcha
+mock
 django-allauth
 django-crispy-forms
