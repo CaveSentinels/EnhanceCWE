@@ -1,6 +1,45 @@
 {% extends "admin/change_form.html" %}
 {% load muo_extras %}
 
+{% block extrahead %}
+    {{ block.super }}
+    <script type="text/javascript">
+    jQuery(function ($) {
+        if (document.getElementById('id_choice')) {
+            if ($('#id_choice_0').is(':checked')) {
+                // Misuse case field should be shown
+                show_misuse_case()
+            }
+            else {
+                // New Misuse Case field should be shown
+                show_new_misuse_case()
+            }
+        }
+
+        $('#id_choice_0').click(function(e) {
+            show_misuse_case()
+        });
+
+        $('#id_choice_1').click(function(e) {
+            show_new_misuse_case()
+        });
+
+    });
+
+    function show_misuse_case() {
+        $('.field-new_misuse_case').hide();
+        $('.field-misuse_case').show();
+    }
+
+    function show_new_misuse_case() {
+        $('.field-new_misuse_case').show();
+        $('.field-misuse_case').hide();
+    }
+
+</script>
+{% endblock %}
+
+
 {# Priting the rejection reason at the top of the form#}
 {% block form_top %}
 {% if original.status == 'rejected' %}
@@ -23,3 +62,8 @@
 {% block submit_buttons_bottom %}
     {% muo_submit_row %}
 {% endblock %}
+
+
+
+
+
