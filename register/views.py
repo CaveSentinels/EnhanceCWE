@@ -39,12 +39,12 @@ def login(self, request, extra_context=None):
     # START: Required change for captcha integration
     if 'invalid_login' in request.session:
         if request.session["invalid_login"] >= 2:
-            context['display_capcha'] = True
+            context['display_captcha'] = True
         else:
-            context['display_capcha'] = False
+            context['display_captcha'] = False
 
     else:
-        context['display_capcha'] = False
+        context['display_captcha'] = False
     # END
 
 
@@ -58,7 +58,7 @@ def login(self, request, extra_context=None):
     return login_auth(request, **defaults)
 
 
-# monkey patch index()
+# monkey patch login()
 admin.AdminSite.login = login
 
 @sensitive_post_parameters()
@@ -79,7 +79,7 @@ def login_auth(request, template_name='registration/login.html',
 
         # START: Required change for captcha integration
         # Here we suppress the Captcha validation error when it is not supposed to be shown on the UI
-        if extra_context['display_capcha'] == False and 'recaptcha' in form.errors:
+        if extra_context['display_captcha'] == False and 'recaptcha' in form.errors:
             del form.errors['recaptcha']
         # END
 

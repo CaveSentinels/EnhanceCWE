@@ -14,7 +14,6 @@ Including another URLconf
     2. Add a URL to urlpatterns:  url(r'^blog/', include(blog_urls))
 """
 from django.conf.urls import include, url
-from django.contrib import admin
 from base import admin as base_admin
 from register.forms import MyAuthenticationForm
 from register import views
@@ -31,7 +30,3 @@ urlpatterns = [
 ]
 
 
-# START: Required change for captcha integration
-admin.autodiscover()
-admin.site.login_form = MyAuthenticationForm
-# END

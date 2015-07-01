@@ -3,8 +3,8 @@ from django.utils.translation import ugettext_lazy as _
 from registration.forms import RegistrationForm
 from captcha.fields import ReCaptchaField
 from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.models import User
-from django.db import models
+from django.contrib import admin
+
 
 
 class CustomRegistrationForm(RegistrationForm):
@@ -53,3 +53,6 @@ class MyAuthenticationForm(AuthenticationForm):
 
         return self.cleaned_data
 
+
+admin.autodiscover()
+admin.site.login_form = MyAuthenticationForm

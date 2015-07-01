@@ -73,10 +73,6 @@ RECAPTCHA_PRIVATE_KEY = '6LeuwggTAAAAAFssdSpwuDFw-V3-W64Pn9OM-mXs'
 NOCAPTCHA=False
 # END
 
-# START: Required change for captcha integration
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-# END
-
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
