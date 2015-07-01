@@ -32,19 +32,21 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = (
     'base',
+    'muo',
     'register',
     'admin_lte',
     'django_admin_bootstrapped',
     'autocomplete_light',
     'captcha',
     'frontpage',
-
+    'crispy_forms',
+    'comments',
+    'fluent_comments',
+    'django_comments',
     'django.contrib.sites',
     'allauth',
     'allauth.account',
-    'allauth.socialaccount',
-
-    'crispy_forms',
+    # 'allauth.socialaccount',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -55,11 +57,9 @@ INSTALLED_APPS = (
     'rest_framework.authtoken',
     'rest_api',
     'cwe',
-    'muo',
     'user_profile',
     'emailer',
     'widget_tweaks',
-
 )
 
 # Email settings
@@ -193,3 +193,6 @@ AUTHENTICATION_BACKENDS = (
 )
 
 SITE_ID = 1
+COMMENTS_APP = 'fluent_comments'
+FLUENT_COMMENTS_EXCLUDE_FIELDS = ('name', 'email', 'url')
+FLUENT_COMMENTS_USE_EMAIL_NOTIFICATION = False

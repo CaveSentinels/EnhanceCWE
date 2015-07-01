@@ -9,4 +9,6 @@ django-widget-tweaks
 django-recaptcha
 mock
 django-allauth
-django-crispy-forms
+django-fluent-comments
+django-contrib-comments
+-e git+https://github.com/maraujop/django-crispy-forms.git@dev#egg=django-crispy-forms

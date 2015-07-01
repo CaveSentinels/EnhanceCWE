@@ -1,3 +1,5 @@
+from django.contrib.contenttypes.models import ContentType
+from django.core import urlresolvers
 from django.db import models, transaction
 from django.conf import settings
 from cwe.models import CWE
@@ -73,7 +75,7 @@ class MUOContainer(BaseModel):
         permissions = (
             ('can_approve', 'Can approve MUO container'),
             ('can_reject', 'Can reject MUO container'),
-            ('can_view_all', 'Can view all MUO container'),
+            ('can_view_all', 'Can view all MUO containers'),
         )
 
     @staticmethod
@@ -281,6 +283,12 @@ class UseCase(BaseModel):
 
     def __unicode__(self):
         return "%s - %s..." % (self.name, self.description[:70])
+
+
+    def get_absolute_url(self, language=None):
+        content_type = ContentType.objects.get_for_model(MisuseCase)
+        url = urlresolvers.reverse("admin:%s_%s_changelist" % (content_type.app_label, content_type.model))
+        return "%s?mu=%s&uc=%s" % (url, self.misuse_case.id, self.id)
 
 
 @receiver(post_save, sender=UseCase, dispatch_uid='usecase_post_save_signal')

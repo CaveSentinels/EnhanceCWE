@@ -20,10 +20,6 @@ muo_voted_up = Signal(providing_args=["instance"])
 muo_voted_down = Signal(providing_args=["instance"])
 
 
-# Sent when the MUO has been commented on
-muo_commented = Signal(providing_args=['instance'])
-
-
 # Sent when the MUO has been marked as duplicate
 muo_duplicate = Signal(providing_args=["instance"])
 
