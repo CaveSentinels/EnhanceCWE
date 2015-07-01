@@ -320,6 +320,7 @@ class IssueReportAdmin(BaseAdmin):
     date_hierarchy = 'created_at'
 
 
+
     def get_urls(self):
         urls = super(IssueReportAdmin, self).get_urls()
         info = self.model._meta.app_label, self.model._meta.model_name
@@ -412,17 +413,21 @@ class IssueReportAdmin(BaseAdmin):
         # Check which button is clicked, handle accordingly.
         try:
             if "_investigate" in request.POST:
-                obj.action_investigate()
+                obj.action_investigate(request.user)
                 msg = "The issue is now being investigated."
 
             elif "_resolve" in request.POST:
                 resolve_reason = request.POST.get('resolve_reason_text', '')
-                obj.action_resolve()
+                obj.action_resolve(resolve_reason,request.user)
                 msg = "The issue is now resolved because  " + resolve_reason
 
             elif "_reopen" in request.POST:
-                obj.action_reopen()
+                obj.action_reopen(request.user)
                 msg = "The issue has been re-opened."
+
+            elif "_open" in request.POST:
+                obj.action_open(request.user)
+                msg = "The issue is now opened."
 
         except ValueError as e:
             # In case the state of the object is not suitable for the corresponding action,

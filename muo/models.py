@@ -7,7 +7,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from signals import *
 from django.utils import timezone
-import time
+
 
 STATUS = [('draft', 'Draft'),
           ('in_review', 'In Review'),
@@ -287,7 +287,9 @@ class IssueReport(BaseModel):
     status = models.CharField(choices=ISSUE_STATUS, max_length=64, default='open')
     usecase = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name='issue_reports')
     usecase_duplicate = models.ForeignKey(UseCase, on_delete=models.SET_NULL, null=True, blank=True)
-
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
+    reviewed_at = models.DateField(null=True)
+    resolve_reason = models.TextField(null=True, blank=True)
     class Meta:
         verbose_name = "Issue Report"
         verbose_name_plural = "Issue Reports"
@@ -295,41 +297,61 @@ class IssueReport(BaseModel):
     def __unicode__(self):
         return self.name
 
-    """
+    def action_investigate(self, reviewer= None):
+        """
         This method change the status of the issue report object to 'investigating' and This change
         is allowed only if the current status is either open or re open.
         """
-    def action_investigate(self):
         if self.status in ('open','reopen'):
             self.status = 'investigating'
+            self.reviewed_at = timezone.now()
+            self.reviewed_by = reviewer
             self.save()
 
         else:
             raise ValueError("In order to investigate a report, it should be in open or re-open state")
-    """
+
+    def action_resolve(self, resolve_reason, reviewer= None):
+        """
         This method change the status of the issue report object to 'resolved' and This change
         is allowed only if the current status is 'investigating'.
         """
-    def action_resolve(self):
         if self.status == 'investigating':
             self.status = 'resolved'
             # Get the current date when it got resolved
             # TODO: This has to be used in future
-            current_date = time.strftime("%c")
+            self.reviewed_by = reviewer
+            self.reviewed_at = timezone.now()
+            self.resolve_reason = resolve_reason
             self.save()
         else:
             raise ValueError("In order to resolve a report, it should be in investigating state")
 
-    """
+    def action_reopen(self, reviewer=None):
+        """
         This method change the status of the issue report object to 're open' and This change
         is allowed only if the current status is 'investigating' or 'resolved'.
         """
-    def action_reopen(self):
-        if self.status in ('resolved','investigating'):
+        if self.status == 'resolved':
             self.status = 'reopen'
+            self.reviewed_by = reviewer
+            self.reviewed_at = timezone.now()
             self.save()
         else:
-            raise ValueError("In order to re open an issue it should be in resolved or investigating state")
+            raise ValueError("In order to re open an issue it should be in resolved state")
+
+    def action_open(self,reviewer= None):
+        """
+        This method change the status of the issue report object to 'open' and This change
+        is allowed only if the current status is 'investigating'.
+        """
+        if self.status == 'investigating':
+            self.status = 'open'
+            self.reviewed_at = timezone.now()
+            self.reviewed_by = reviewer
+            self.save()
+        else:
+            raise ValueError("In order to open an issue it should be in open state")
 
 
 @receiver(post_save, sender=IssueReport, dispatch_uid='issue_report_post_save_signal')

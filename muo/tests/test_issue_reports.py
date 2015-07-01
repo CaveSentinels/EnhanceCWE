@@ -41,15 +41,16 @@ class TestIssueReport(TestCase):
         This method checks if the state gets changed to investigating or not
         """
         issue_report = self.get_issue_report("open")
-        issue_report.action_investigate()
+        issue_report.action_investigate(reviewer=self.reviewer)
         self.assertEqual(issue_report.status, 'investigating')
 
     def test_action_resolve(self):
         """
         This method checks if the state gets changed to resolved
         """
+        resolve_reason = "This issue is resolved"
         issue_report = self.get_issue_report("investigating")
-        issue_report.action_resolve()
+        issue_report.action_resolve(reviewer = self.reviewer, resolve_reason=resolve_reason)
         self.assertEqual(issue_report.status,'resolved')
 
     def test_action_reopen(self):
@@ -57,10 +58,10 @@ class TestIssueReport(TestCase):
         This method checks if the state gets changed to re-open or not
         """
         issue_report = self.get_issue_report("investigating")
-        issue_report.action_reopen()
-        self.assertEqual(issue_report.status,'reopen')
+        issue_report.action_open(reviewer=self.reviewer)
+        self.assertEqual(issue_report.status,'open')
         issue_report = self.get_issue_report("resolved")
-        issue_report.action_reopen()
+        issue_report.action_reopen(reviewer=self.reviewer)
         self.assertEqual(issue_report.status,'reopen')
 
     def test_action_investigate_negative(self):
@@ -68,6 +69,7 @@ class TestIssueReport(TestCase):
         This is a negative test case which tries to see if action_investigate method is called when the state is investigate
         It should throw an error
         """
+
         issue_report = self.get_issue_report("investigating")
         self.assertRaises(ValueError, issue_report.action_investigate)
 
@@ -77,7 +79,8 @@ class TestIssueReport(TestCase):
         It should throw an error
         """
         issue_report = self.get_issue_report("open")
-        self.assertRaises(ValueError, issue_report.action_resolve)
+        resolve_reason = "This is an issue"
+        self.assertRaises(ValueError, issue_report.action_resolve,resolve_reason)
 
     def test_action_reopen_negative(self):
         """
@@ -86,6 +89,7 @@ class TestIssueReport(TestCase):
         """
         issue_report = self.get_issue_report("open")
         self.assertRaises(ValueError, issue_report.action_reopen)
+
 
 
 
