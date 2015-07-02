@@ -35,32 +35,32 @@ def muo_submit_row(context):
                                   (model_object is None or
                                   (model_object and
                                   model_object.status == 'draft' and
-                                  user_object == model_object.created_by)),
+                                  (user_object == model_object.created_by or user_object.has_perm('can_edit_all')))),
         'show_save_as_new': show_save_as_new and
                             (model_object is None or
                             (model_object and
                             model_object.status == 'draft' and
-                            user_object == model_object.created_by)),
+                            (user_object == model_object.created_by or user_object.has_perm('can_edit_all')))),
         'show_save': show_save and
                      (model_object is None or
                      (model_object and
                      model_object.status == 'draft' and
-                     user_object == model_object.created_by)),
+                     (user_object == model_object.created_by or user_object.has_perm('can_edit_all')))),
         'show_delete_link': show_delete_link and
                             (model_object is None or
                             (model_object and
                             model_object.status in ('draft', 'rejected') and
-                            user_object == model_object.created_by)),
+                            (user_object == model_object.created_by or user_object.has_perm('can_edit_all')))),
 
         # Show submit for review button only to the creator of the muo and if its in draft state
         'show_submit_for_review': model_object and
                                   model_object.status == 'draft' and
-                                  user_object == model_object.created_by,
+                                  (user_object == model_object.created_by or user_object.has_perm('can_edit_all')),
 
         # Show edit button only to the creator of the muo and if its either in in_review or rejected state
         'show_edit': model_object and
                      model_object.status in ('in_review', 'rejected') and
-                     user_object == model_object.created_by,
+                     (user_object == model_object.created_by or user_object.has_perm('can_edit_all')),
 
         # Show approve button only to the user if he/she has the can_approve permission and the state of
         # muo is in in_review
