@@ -59,6 +59,7 @@ INSTALLED_APPS = (
     'user_profile',
     'emailer',
     'widget_tweaks',
+    'invitation',
 
 )
 
