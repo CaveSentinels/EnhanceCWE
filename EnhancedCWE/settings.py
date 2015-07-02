@@ -32,6 +32,8 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = (
     'base',
+    'invitation',
+
     'register',
     'admin_lte',
     'django_admin_bootstrapped',
@@ -59,7 +61,7 @@ INSTALLED_APPS = (
     'user_profile',
     'emailer',
     'widget_tweaks',
-    'invitation',
+
 
 )
 
