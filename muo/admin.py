@@ -357,7 +357,6 @@ class MUOContainerAdmin(BaseAdmin):
                 return False
 
 
-
     def response_change(self, request, obj, *args, **kwargs):
         '''
         Override response_change method of admin/options.py to handle the click of

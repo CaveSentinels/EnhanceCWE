@@ -36,39 +36,64 @@ class Tag(BaseModel):
         return self.name
 
 
-class MisuseCaseQuerySet(models.QuerySet):
+class MUOQuerySet(models.QuerySet):
     """
-    Define custom methods for the Misuse Case QuerySet
+    Define custom methods for the MUO QuerySet
     """
 
     def approved(self):
-        # Returns the queryset for all the misuse cases that are associated with at least one approved MUOContainer
-        return self.filter(muocontainer__status='approved')
-
-    def draft(self):
-        # Returns the queryset for all the misuse cases that are associated with at least one in draft MUOContainer
-        return self.filter(muocontainer__status='draft')
+        # Returns the queryset for all the approved MUO Containers
+        if self.model == MUOContainer:
+            return self.filter(status='approved')
+        elif self.model == MisuseCase:
+            return self.filter(muocontainer__status='approved')
+        elif self.model == UseCase:
+            return self.filter(muo_container__status='approved')
 
     def rejected(self):
-        # Returns the queryset for all the misuse cases that are associated with at least one in rejected MUOContainer
-        return self.filter(muocontainer__status='rejected')
+        # Returns the queryset for all the rejected MUO Containers
+        if self.model == MUOContainer:
+            return self.filter(status='rejected')
+        elif self.model == MisuseCase:
+            return self.filter(muocontainer__status='rejected')
+        elif self.model == UseCase:
+            return self.filter(muo_container__status='rejected')
+
+    def draft(self):
+        # Returns the queryset for all the draft MUO Containers
+        if self.model == MUOContainer:
+            return self.filter(status='draft')
+        elif self.model == MisuseCase:
+            return self.filter(muocontainer__status='draft')
+        elif self.model == UseCase:
+            return self.filter(muo_container__status='draft')
 
     def in_review(self):
-        # Returns the queryset for all the misuse cases that are associated with at least one in review MUOContainer
-        return self.filter(muocontainer__status='in_review')
+        # Returns the queryset for all the in review MUO Containers
+        if self.model == MUOContainer:
+            return self.filter(status='in_review')
+        elif self.model == MisuseCase:
+            return self.filter(muocontainer__status='in_review')
+        elif self.model == UseCase:
+            return self.filter(muo_container__status='in_review')
 
     def custom(self):
-        # Returns the queryset for all the misuse cases that are associated with at least one custom MUOContainer
-        return self.filter(muocontainer__is_custom=True)
+        # Returns the queryset for all the custom MUO Containers
+        if self.model == MUOContainer:
+            return self.filter(is_custom=True)
+        elif self.model == MisuseCase:
+            return self.filter(muocontainer__is_custom=True)
+        elif self.model == UseCase:
+            return self.filter(muo_container__status=True)
 
 
-class MisuseCaseManager(models.Manager):
+class MUOManager(models.Manager):
     """
-    Define custom methods that can be called on the Misuse Case Manager
+    Define custom methods that can be called on the MUO Manager
     """
 
     def get_queryset(self):
-        return MisuseCaseQuerySet(self.model, using=self._db)
+        return MUOQuerySet(self.model, using=self._db)
 
     def approved(self):
         return self.get_queryset().approved()
@@ -92,7 +117,7 @@ class MisuseCase(BaseModel):
     cwes = models.ManyToManyField(CWE, related_name='misuse_cases')
     tags = models.ManyToManyField(Tag, blank=True)
 
-    objects = MisuseCaseManager()  # Replace the default manager with the MisuseCaseManager
+    objects = MUOManager()  # Replace the default manager with the MUOManager
 
     class Meta:
         verbose_name = "Misuse Case"
@@ -110,56 +135,6 @@ def post_save_misusecase(sender, instance, created, using, **kwargs):
         instance.save()
 
 
-class MUOContainerQuerySet(models.QuerySet):
-    """
-    Define custom methods for the MUOContainer QuerySet
-    """
-
-    def approved(self):
-        # Returns the queryset for all the approved MUOContainers
-        return self.filter(status='approved')
-
-    def draft(self):
-        # Returns the queryset for all the in draft MUOContainers
-        return self.filter(status='draft')
-
-    def rejected(self):
-        # Returns the queryset for all the rejected MUOContainers
-        return self.filter(status='rejected')
-
-    def in_review(self):
-        # Returns the queryset for all the in review MUOContainers
-        return self.filter(status='in_review')
-
-    def custom(self):
-        # Returns the queryset for all the custom MUOContainers
-        return self.filter(is_custom=True)
-
-
-class MUOContainerManager(models.Manager):
-    """
-    Define custom methods that can be called on the MUOContainer Manager
-    """
-
-    def get_queryset(self):
-        return MUOContainerQuerySet(self.model, using=self._db)
-
-    def approved(self):
-        return self.get_queryset().approved()
-
-    def draft(self):
-        return self.get_queryset().draft()
-
-    def rejected(self):
-        return self.get_queryset().rejected()
-
-    def in_review(self):
-        return self.get_queryset().in_review()
-
-    def custom(self):
-        return self.get_queryset().custom()
-
-
 class MUOContainer(BaseModel):
     name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
     cwes = models.ManyToManyField(CWE, related_name='muo_container')
@@ -170,7 +145,7 @@ class MUOContainer(BaseModel):
     status = models.CharField(choices=STATUS, max_length=64, default='draft')
     is_custom = models.BooleanField(default=False, db_index=True)
 
-    objects = MUOContainerManager()  # Replace the default manager with the MisuseCaseManager
+    objects = MUOManager()  # Replace the default manager with the MUOManager
 
     class Meta:
         verbose_name = "MUO Container"
@@ -372,56 +347,6 @@ def post_save_muo_container(sender, instance, created, using, **kwargs):
 #                                 })
 
 
-class UseCaseQuerySet(models.QuerySet):
-    """
-    Define custom methods for the Use Case QuerySet
-    """
-
-    def approved(self):
-        # Returns the queryset for all the use cases that are associated with the approved MUOContainers
-        return self.filter(muo_container__status='approved')
-
-    def draft(self):
-        # Returns the queryset for all the use cases that are associated with the in draft MUOContainers
-        return self.filter(muo_container__status='draft')
-
-    def rejected(self):
-        # Returns the queryset for all the use cases that are associated with the rejected MUOContainers
-        return self.filter(muo_container__status='rejected')
-
-    def in_review(self):
-        # Returns the queryset for all the use cases that are associated with the in review MUOContainers
-        return self.filter(muo_container__status='in_review')
-
-    def custom(self):
-        # Returns the queryset for all the use cases that are associated with the custom MUOContainers
-        return self.filter(muo_container__status=True)
-
-
-class UseCaseManager(models.Manager):
-    """
-    Define custom methods that can be called on the Use Case Manager
-    """
-
-    def get_queryset(self):
-        return UseCaseQuerySet(self.model, using=self._db)
-
-    def approved(self):
-        return self.get_queryset().approved()
-
-    def draft(self):
-        return self.get_queryset().draft()
-
-    def rejected(self):
-        return self.get_queryset().rejected()
-
-    def in_review(self):
-        return self.get_queryset().in_review()
-
-    def custom(self):
-        return self.get_queryset().custom()
-
-
 class UseCase(BaseModel):
     name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
     description = models.TextField()
@@ -430,7 +355,7 @@ class UseCase(BaseModel):
     muo_container = models.ForeignKey(MUOContainer)
     tags = models.ManyToManyField(Tag, blank=True)
 
-    objects = UseCaseManager()  # Replace the default manager with the UseCaseManager
+    objects = MUOManager()  # Replace the default manager with the MUOManager
 
     class Meta:
         verbose_name = "Use Case"
@@ -452,7 +377,6 @@ def post_save_usecase(sender, instance, created, using, **kwargs):
     if created:
         instance.name = "UC/{0:05d}".format(instance.id)
         instance.save()
-
 
 
 class IssueReport(BaseModel):
