@@ -75,8 +75,8 @@ class EmailInvitationAdmin(BaseAdmin):
         else:
             email_add = request.POST['email_address']
 
-            random_key = get_random_string(64).lower()
-            activate_url = '/accounts/signup/'+ random_key
+            random_key = obj.key
+            activate_url = '/accounts/signup?token='+ random_key + '&email='+email_add
             activate_url = build_absolute_uri(request, activate_url, protocol=app_settings.DEFAULT_HTTP_PROTOCOL)
 
 
@@ -85,21 +85,6 @@ class EmailInvitationAdmin(BaseAdmin):
             from django.core.mail import EmailMessage
             email = EmailMessage('Enhanced CWE Invite', message_body, to=[email_add])
             email.send()
-
-            from allauth.account.models import EmailConfirmation
-            from allauth.account.models import EmailAddress
-            from django.contrib.auth.models import User
-            from django.utils import timezone
-
-            user = User(email=email_add)
-            user.save()
-            user_id = user.id
-
-            email_address_in_db = EmailAddress(email = email_add, user_id = user_id)
-            email_address_in_db.save()
-
-            email_confirmation = EmailConfirmation(email_address_id=user_id, key=random_key, created=timezone.now(), sent=timezone.now())
-            email_confirmation.save()
 
             msg = _('The email invitation was sent successfully to ' + email_add)
             self.message_user(request, msg, messages.SUCCESS)
