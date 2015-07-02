@@ -21,7 +21,7 @@ from django.contrib import admin
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [
     url(r'^$', include('frontpage.urls', namespace='frontpage')),
-    url(r'^accounts/signup/$', 'register.views.signup', name='account_signup'),
+    # url(r'^accounts/signup/$', 'register.views.signup', name='account_signup'),
     url(r'^accounts/', include('allauth.urls')),
     url(r'^app/login/', 'allauth.account.views.login'),
     url(r'^app/logout/', 'allauth.account.views.logout'),

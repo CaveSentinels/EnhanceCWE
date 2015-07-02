@@ -1,7 +1,9 @@
 from allauth.account.views import SignupView
 from allauth.account.utils import complete_signup
 from django.contrib.auth.models import Group, User
-from allauth.account.models import EmailAddress
+from allauth.utils import build_absolute_uri
+
+
 
 # from django.views.decorators.csrf import csrf_protect
 
@@ -20,7 +22,13 @@ class MySignupView(SignupView):
         email.verified = True
         email.save()
 
-        return complete_signup(self.request, user, None, self.get_success_url())
+        return complete_signup(self.request, user, 'none', self.get_success_url())
+
+    # def form_valid(self, form):
+    #     user = form.save(self.request)
+    #     return complete_signup(self.request, user,
+    #                            app_settings.EMAIL_VERIFICATION,
+    #                            self.get_success_url())
 
 
 signup = MySignupView.as_view()
