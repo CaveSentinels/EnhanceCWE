@@ -3,7 +3,7 @@ from django.dispatch import receiver
 from django.utils.crypto import get_random_string
 
 class EmailInvitation(models.Model):
-    email_address = models.CharField(max_length=100)
+    email = models.CharField(max_length=100)
     key = models.CharField(verbose_name='key', max_length=64, unique=True)
 
 

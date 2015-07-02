@@ -24,7 +24,8 @@ TO_FIELD_VAR = '_to_field'
 # Register your models here.
 @admin.register(EmailInvitation)
 class EmailInvitationAdmin(BaseAdmin):
-    fields = ['email_address']
+    fields = ['email', 'key']
+    readonly_fields = ['key']
 
 
     def response_add(self, request, obj, post_url_continue=None):
@@ -73,7 +74,7 @@ class EmailInvitationAdmin(BaseAdmin):
             return HttpResponseRedirect(redirect_url)
 
         else:
-            email_add = request.POST['email_address']
+            email_add = request.POST['email']
 
             random_key = obj.key
             activate_url = '/accounts/signup?token='+ random_key + '&email='+email_add
