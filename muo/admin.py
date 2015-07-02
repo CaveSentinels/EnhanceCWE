@@ -100,7 +100,6 @@ class UseCaseAdminInLine(admin.StackedInline):
                 return 0
 
 
-
 @admin.register(MisuseCase)
 class MisuseCaseAdmin(BaseAdmin):
     fields = ['name', 'cwes', ('description', 'tags')]
@@ -131,7 +130,7 @@ class MisuseCaseAdmin(BaseAdmin):
 
         if len(selected_cwe_ids) == 0:
             # If list of CWE ids is empty return all the misuse cases
-            misuse_cases = MisuseCase.objects.all()
+            misuse_cases = MisuseCase.objects.approved()
         else:
             #  Get the use cases for the selected CWE ids
             misuse_cases = MisuseCase.objects.filter(cwes__in=selected_cwe_ids)
