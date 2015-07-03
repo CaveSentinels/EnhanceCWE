@@ -1,7 +1,9 @@
 import re
+from django.contrib.auth.models import User
 from cwe.models import CWE
 from cwe.cwe_search import CWESearchLocator
 from muo.models import UseCase
+from muo.models import MUOContainer
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -276,3 +278,65 @@ class UseCaseRelated(APIView):
         serializer = UseCaseSerializer(set(use_cases.all()), many=True)
 
         return Response(data=serializer.data, exception=Exception())
+
+
+class SaveCustomMUO(APIView):
+
+    PARAM_CWE_IDS = "cwes"
+    PARAM_MISUSE_CASE_DESCRIPTION = "muc"
+    PARAM_USE_CASE_DESCRIPTION = "uc"
+    PARAM_OSR_DESCRIPTION = "osr"
+
+    @staticmethod
+    def _get_arg_or_empty(data, param_name):
+        try:
+            return data[param_name]
+        except KeyError:
+            return str()
+
+    @staticmethod
+    def _validate_cwe_ids(cwe_ids_str):
+        param_pattern_regex = r"^([0-9]+,)*([0-9]+)$"
+        return re.match(param_pattern_regex, cwe_ids_str) is not None
+
+    @staticmethod
+    def _form_err_msg_invalid_cwe_ids(cwe_ids_str):
+        return ("CWE ID list is malformed: \"" + cwe_ids_str + "\". " +
+                "It should be one or more positive integers separated by comma."
+                )
+
+    def post(self, request):
+        # Get and validate the CWE IDs.
+        cwe_ids_str = self._get_arg_or_empty(request.data, self.PARAM_CWE_IDS)
+        if self._validate_cwe_ids(cwe_ids_str) is False:
+            err_msg = self._form_err_msg_invalid_cwe_ids(cwe_ids_str)
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+
+        cwe_id_list = cwe_ids_str.split(',')
+
+        # Get and validate the misuse case.
+        misuse_case = self._get_arg_or_empty(request.data, self.PARAM_MISUSE_CASE_DESCRIPTION)
+
+        # Get and validate the use case.
+        use_case = self._get_arg_or_empty(request.data, self.PARAM_USE_CASE_DESCRIPTION)
+
+        # Get and validate the OSR.
+        osr = self._get_arg_or_empty(request.data, self.PARAM_OSR_DESCRIPTION)
+
+        # Get the user.
+        # Because by the time that this 'post' method is executed, the
+        # user authentication had been done earlier so the user must be
+        # an existent and valid one. There should be no exception.
+        creator = User.objects.get(username=request.user.username)
+
+        # Save the custom MUO.
+        try:
+            MUOContainer.create_custom_muo(cwe_ids=cwe_id_list,
+                                           misusecase=misuse_case,
+                                           usecase=use_case,
+                                           osr=osr,
+                                           created_by=creator)
+        except Exception as e:
+            return Response(data=e.message, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(status=status.HTTP_200_OK)
