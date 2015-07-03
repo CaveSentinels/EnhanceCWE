@@ -387,12 +387,13 @@ class IssueReport(BaseModel):
     name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
     description = models.TextField(null=True, blank=True)
     type = models.CharField(choices=ISSUE_TYPES, max_length=64)
-    status = models.CharField(choices=ISSUE_STATUS, max_length=64, default='open')
+    status = models.CharField(choices=ISSUE_STATUS, max_length=64, db_index=True, default='open')
     usecase = models.ForeignKey(UseCase, on_delete=models.CASCADE, related_name='issue_reports')
     usecase_duplicate = models.ForeignKey(UseCase, on_delete=models.SET_NULL, null=True, blank=True)
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
-    reviewed_at = models.DateField(null=True)
-    resolve_reason = models.TextField(null=True, blank=True)
+    reviewed_at = models.DateTimeField(null=True)
+    resolve_reason = models.TextField(null=True, blank=True, default="/")
+
     class Meta:
         verbose_name = "Issue Report"
         verbose_name_plural = "Issue Reports"

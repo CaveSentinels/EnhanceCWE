@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('muo', '0018_auto_20150628_0356'),
+        ('muo', '0021_auto_20150703_0708'),
     ]
 
     operations = [
@@ -32,6 +32,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='issuereport',
             name='status',
-            field=models.CharField(default=b'open', max_length=64, choices=[(b'open', b'Open'), (b'investigating', b'Investigating'), (b'reopen', b'Re-open'), (b'resolved', b'Resolved')]),
+            field=models.CharField(default=b'open', max_length=64, choices=[(b'open', b'Open'), (b'investigating', b'Investigating'), (b'reopened', b'Re-opened'), (b'resolved', b'Resolved')]),
         ),
     ]

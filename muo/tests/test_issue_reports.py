@@ -14,9 +14,7 @@ class TestIssueReport(TestCase):
         self.reviewer.save()
         misuse_case = MisuseCase()
         misuse_case.save()
-        muo_container = MUOContainer.objects.create(misuse_case = misuse_case)
-        muo_container.save()
-        muo_container.status = 'approved'
+        muo_container = MUOContainer.objects.create(misuse_case=misuse_case, status='approved')
         muo_container.save()
         use_case = UseCase(muo_container=muo_container)
         use_case.save()  # save in the database

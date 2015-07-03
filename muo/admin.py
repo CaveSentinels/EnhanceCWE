@@ -435,12 +435,30 @@ class MUOContainerAdmin(BaseAdmin):
 @admin.register(IssueReport)
 class IssueReportAdmin(BaseAdmin):
     form = autocomplete_light.modelform_factory(IssueReport, fields="__all__")
-    fields = [('name', 'status'), 'type', 'usecase', 'usecase_duplicate', 'description', ('created_by', 'created_at')]
+    fields = [('name', 'status'), 'type', 'usecase', 'usecase_duplicate', 'description',
+              ('created_by', 'created_at'), ('reviewed_by', 'reviewed_at'), 'resolve_reason']
     list_display = ['name', 'type', 'created_by', 'created_at', 'status',]
-    readonly_fields = ['name', 'status', 'created_by', 'created_at']
     search_fields = ['name', 'usecase__id', 'usecase__name', 'created_by__name']
     list_filter = ['type', 'status']
     date_hierarchy = 'created_at'
+
+
+    def get_fields(self, request, obj=None):
+        """ Override to hide the 'usecase_duplicate' if type is not 'duplicate' """
+        fields = super(IssueReportAdmin, self).get_fields(request, obj)
+
+        if obj and obj.type != 'duplicate' and 'usecase_duplicate' in fields:
+            fields.remove('usecase_duplicate')
+
+        return fields
+
+
+    def get_readonly_fields(self, request, obj=None):
+        """ Make all fields readonly"""
+        return list(set(
+                [field.name for field in self.model._meta.local_fields] +
+                [field.name for field in self.model._meta.local_many_to_many]
+            ))
 
 
 
