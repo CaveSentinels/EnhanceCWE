@@ -6,4 +6,5 @@ urlpatterns = [
     url(r'^cwe/all$', views.CWEAllList.as_view(), name="restapi_CWEAll"),
     url(r'^misuse_case/cwe_related$', views.MisuseCaseRelated.as_view(), name="restapi_MisuseCase_CWERelated"),
     url(r'^use_case/misuse_case_related$', views.UseCaseRelated.as_view(), name="restapi_UseCase_MisuseCaseRelated"),
+    url(r'^custom_muo/save$', views.SaveCustomMUO.as_view(), name="restapi_CustomMUO_Create"),
 ]

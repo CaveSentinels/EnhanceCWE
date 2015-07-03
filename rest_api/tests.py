@@ -14,6 +14,7 @@ from rest_api.views import CWERelatedList
 from rest_api.views import CWEAllList
 from rest_api.views import MisuseCaseRelated
 from rest_api.views import UseCaseRelated
+from rest_api.views import SaveCustomMUO
 
 
 class RestAPITestBase(TestCase):
@@ -29,8 +30,8 @@ class RestAPITestBase(TestCase):
         self.set_up_test_data()
 
     def tearDown(self):
-        self.tear_down_users_and_tokens()
         self.tear_down_test_data()
+        self.tear_down_users_and_tokens()
 
     def set_up_users_and_tokens(self):
         test_user_active = User(username='test_user_active', is_active=True)
@@ -62,6 +63,14 @@ class RestAPITestBase(TestCase):
         elif auth_token_type == RestAPITestBase.AUTH_TOKEN_TYPE_NONE:
             auth_token = None
         return self._cli.get(url, data=params, HTTP_AUTHORIZATION='Token '+str(auth_token))
+
+    def http_post(self, url, data, auth_token_type=AUTH_TOKEN_TYPE_ACTIVE_USER):
+        auth_token = self._test_user_active_token
+        if auth_token_type == RestAPITestBase.AUTH_TOKEN_TYPE_INACTIVE_USER:
+            auth_token = self._test_user_inactive_token
+        elif auth_token_type == RestAPITestBase.AUTH_TOKEN_TYPE_NONE:
+            auth_token = None
+        return self._cli.post(url, data, HTTP_AUTHORIZATION='Token '+str(auth_token))
 
 
 class TestCWETextRelated(RestAPITestBase):
@@ -172,12 +181,16 @@ class TestCWEAllList(RestAPITestBase):
     def _get_base_url(self):
         return reverse("restapi_CWEAll")
 
-    def _form_url_params(self, offset=None, limit=None):
+    def _form_url_params(self, offset=None, limit=None, code=None, name_contains=None):
         params = dict()
         if offset is not None:
-            params[CWEAllList.PARAM_OFFSET] = offset
+            params[CWEAllList.PARAM_OFFSET] = str(offset)
         if limit is not None:
-            params[CWEAllList.PARAM_LIMIT] = limit
+            params[CWEAllList.PARAM_LIMIT] = str(limit)
+        if code is not None:
+            params[CWEAllList.PARAM_CODE] = str(code)
+        if name_contains is not None:
+            params[CWEAllList.PARAM_NAME_CONTAINS] = str(name_contains)
         return params
 
     def _cwe_info_found(self, content, code):
@@ -190,10 +203,13 @@ class TestCWEAllList(RestAPITestBase):
     # Positive test cases
 
     def test_positive_get_default_default(self):
+        original_max_return = CWEAllList.DEFAULT_OFFSET
         CWEAllList.DEFAULT_LIMIT = 2  # For test purpose we only return at most two CWEs.
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=None, limit=None))
+        
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
+        CWEAllList.MAX_RETURN = original_max_return
 
     def test_positive_get_2_default(self):
         CWEAllList.DEFAULT_LIMIT = 2  # For test purpose we only return at most two CWEs.
@@ -201,10 +217,12 @@ class TestCWEAllList(RestAPITestBase):
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), True)
 
     def test_positive_get_default_2(self):
+        original_max_return = CWEAllList.DEFAULT_OFFSET
         CWEAllList.DEFAULT_OFFSET = 0  # For test purpose we only return at most two CWEs.
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=None, limit=2))
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
+        CWEAllList.MAX_RETURN = original_max_return
 
     def test_positive_get_0_0(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=0))
@@ -238,14 +256,41 @@ class TestCWEAllList(RestAPITestBase):
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), True)
 
     def test_positive_get_0_1_max_2(self):
+        original_max_return = CWEAllList.MAX_RETURN
         CWEAllList.MAX_RETURN = 2
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=1))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
+        CWEAllList.MAX_RETURN = original_max_return
 
     def test_positive_get_0_10_max_2(self):
+        original_max_return = CWEAllList.MAX_RETURN
         CWEAllList.MAX_RETURN = 2
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=10))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=103), False)
+        CWEAllList.MAX_RETURN = original_max_return
+
+    def test_positive_get_0_3_102_None(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=3, code=102))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=101), False)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=103), False)
+
+    def test_positive_get_0_3_None_CWE(self):
+        response = self.http_get(self._get_base_url(),
+                                 self._form_url_params(offset=0, limit=3, name_contains="CWE"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=103), True)
+
+    def test_positive_get_0_2_None_CWE(self):
+        response = self.http_get(self._get_base_url(),
+                                 self._form_url_params(offset=0, limit=2, name_contains="CWE"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
@@ -303,6 +348,29 @@ class TestCWEAllList(RestAPITestBase):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=2, limit=1),
                                  auth_token_type=RestAPITestBase.AUTH_TOKEN_TYPE_INACTIVE_USER)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_negative_get_0_2_None_name(self):
+        response = self.http_get(self._get_base_url(),
+                                 self._form_url_params(offset=0, limit=2, name_contains="name"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(self._cwe_info_empty(content=response.content))
+
+    def test_negative_get_0_3_code_name_contains_both_present(self):
+        response = self.http_get(self._get_base_url(),
+                                 self._form_url_params(offset=0, limit=3, code=102, name_contains="CWE"))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_negative_get_0_3_abc_None(self):
+        invalid_codes = [
+            "102a",
+            "a102",
+            "abc",
+            "+-*/"
+        ]
+        for invalid_code in invalid_codes:
+            response = self.http_get(self._get_base_url(),
+                                     self._form_url_params(offset=0, limit=3, code=invalid_code))
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 class TestMisuseCaseSuggestion(RestAPITestBase):
@@ -532,7 +600,8 @@ class TestUseCaseSuggestion(RestAPITestBase):
         for misuse_cases_str in misuse_cases_str_list:
             # Note we cannot use the _get_base_url() and _form_url_params() because these two methods
             # will construct a valid Http request, while here we want an invalid one.
-            response = self.http_get(self._get_base_url()+'?'+UseCaseRelated.PARAM_MISUSE_CASES+'='+misuse_cases_str, None)
+            response = self.http_get(self._get_base_url()+'?'+UseCaseRelated.PARAM_MISUSE_CASES+'='+misuse_cases_str,
+                                     None)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
             # Make sure the error message is generated using this method.
             self.assertEqual(response.content,
@@ -550,3 +619,154 @@ class TestUseCaseSuggestion(RestAPITestBase):
         response = self.http_get(self._get_base_url(), self._form_url_params([1]),
                                  auth_token_type=RestAPITestBase.AUTH_TOKEN_TYPE_INACTIVE_USER)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class TestSaveCustomMUO(RestAPITestBase):
+
+    _cli = Client()
+
+    CWE_CODES = [101, 102, 103]     # The CWE codes used in the tests
+    CWE_IDS = []
+    DESCRIPTION_MISUSE_CASE = "Sample Misuse Case Description"
+    DESCRIPTION_USE_CASE = "Sample Use Case Description"
+    DESCRIPTION_OSR = "Sample Overlooked Security Requirement Description"
+
+    def set_up_test_data(self):
+        # Clear the current CWE ID list.
+        self.CWE_IDS = []
+
+        # Create the CWEs
+        cwe101 = CWE(code=self.CWE_CODES[0], name="CWE #"+str(self.CWE_CODES[0]))
+        cwe101.save()
+        self.CWE_IDS.append(cwe101.id)
+
+        cwe102 = CWE(code=self.CWE_CODES[1], name="CWE #"+str(self.CWE_CODES[1]))
+        cwe102.save()
+        self.CWE_IDS.append(cwe102.id)
+
+        cwe103 = CWE(code=self.CWE_CODES[2], name="CWE #"+str(self.CWE_CODES[2]))
+        cwe103.save()
+        self.CWE_IDS.append(cwe103.id)
+
+    def tear_down_test_data(self):
+        # Delete MUO containers.
+        MUOContainer.objects.all().delete()
+        # Delete misuse cases
+        MisuseCase.objects.all().delete()
+        # Delete use cases
+        UseCase.objects.all().delete()
+
+    def _form_base_url(self):
+        return reverse("restapi_CustomMUO_Create")
+
+    def _form_post_data(self, cwe_id_list, muc, uc, osr):
+        cwe_ids_str = ("".join(str(cwe_id)+',' for cwe_id in cwe_id_list)).rstrip(',')
+        return {SaveCustomMUO.PARAM_CWE_IDS: cwe_ids_str,
+                SaveCustomMUO.PARAM_MISUSE_CASE_DESCRIPTION: muc,
+                SaveCustomMUO.PARAM_USE_CASE_DESCRIPTION: uc,
+                SaveCustomMUO.PARAM_OSR_DESCRIPTION: osr
+                }
+
+    def test_positive_all_valid(self):
+        base_url = self._form_base_url()
+        data = self._form_post_data(cwe_id_list=[self.CWE_IDS[0]],      # One CWE ID
+                                    muc="",     # Empty description
+                                    uc="",      # Empty description
+                                    osr=""      # Empty description
+                                    )
+        response = self.http_post(base_url, data)
+        # The POST method returned OK.
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Verify the post-conditions.
+        # One and only one MUO was created.
+        self.assertEqual(MUOContainer.objects.count(), 1)
+        # The CWEs are associated correctly.
+        muo = MUOContainer.objects.all()[0]
+        cwes = CWE.objects.filter(muo_container=muo)
+        associated_cwe_ids = {int(cwe.id) for cwe in cwes}
+        passed_in_cwe_ids = {self.CWE_IDS[0]}
+        self.assertEqual(associated_cwe_ids, passed_in_cwe_ids)
+        # The misuse case was created correctly.
+        self.assertEqual(muo.misuse_case.description, "")
+        # Verify use case & OSR.
+        use_cases = UseCase.objects.filter(muo_container=muo)
+        self.assertEqual(use_cases.count(), 1)
+        uc = use_cases[0]
+        self.assertEqual(uc.description, "")
+        self.assertEqual(uc.osr, "")
+
+    def test_positive_all_valid_2(self):
+        base_url = self._form_base_url()
+        data = self._form_post_data(cwe_id_list=self.CWE_IDS,      # Multiple CWE ID
+                                    muc=self.DESCRIPTION_MISUSE_CASE,   # Non-empty description
+                                    uc=self.DESCRIPTION_USE_CASE,       # Non-empty description
+                                    osr=self.DESCRIPTION_OSR        # Non-empty description
+                                    )
+        response = self.http_post(base_url, data)
+        # The POST method returned OK.
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Verify the post-conditions.
+        # One and only one MUO was created.
+        self.assertEqual(MUOContainer.objects.count(), 1)
+        # The CWEs are associated correctly.
+        muo = MUOContainer.objects.all()[0]
+        cwes = CWE.objects.filter(muo_container=muo)
+        associated_cwe_ids = {int(cwe.id) for cwe in cwes}
+        passed_in_cwe_ids = set(self.CWE_IDS)
+        self.assertEqual(associated_cwe_ids, passed_in_cwe_ids)
+        # The misuse case was created correctly.
+        self.assertEqual(muo.misuse_case.description, self.DESCRIPTION_MISUSE_CASE)
+        # Verify use case & OSR.
+        use_cases = UseCase.objects.filter(muo_container=muo)
+        self.assertEqual(use_cases.count(), 1)
+        uc = use_cases[0]
+        self.assertEqual(uc.description, self.DESCRIPTION_USE_CASE)
+        self.assertEqual(uc.osr, self.DESCRIPTION_OSR)
+
+    def test_negative_invalid_cwe_ids(self):
+        invalid_cwes_str_list = [
+            "",     # Empty code list
+            "101,102,",     # Additional ',' at the end
+            "101|102",  # Not using ',' as separator
+            "101.1,102.2",  # Not using integers
+            "10a",  # Not using numeric values
+            "10a,20b"   # Not using numeric values
+        ]
+        base_url = self._form_base_url()
+        for invalid_cwes_str in invalid_cwes_str_list:
+            data = {SaveCustomMUO.PARAM_CWE_IDS: invalid_cwes_str,
+                    SaveCustomMUO.PARAM_MISUSE_CASE_DESCRIPTION: self.DESCRIPTION_MISUSE_CASE,
+                    SaveCustomMUO.PARAM_USE_CASE_DESCRIPTION: self.DESCRIPTION_USE_CASE,
+                    SaveCustomMUO.PARAM_OSR_DESCRIPTION: self.DESCRIPTION_OSR
+                    }
+            response = self.http_post(base_url, data)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(MUOContainer.objects.count(), 0)   # No MUO was created.
+            self.assertEqual(MisuseCase.objects.count(), 0)     # No misuse cases was created.
+            self.assertEqual(UseCase.objects.count(), 0)     # No use cases was created.
+
+    def test_negative_inactive_user(self):
+        base_url = self._form_base_url()
+        data = self._form_post_data(cwe_id_list=self.CWE_IDS,      # Valid CWE IDs
+                                    muc=self.DESCRIPTION_MISUSE_CASE,   # Non-empty description
+                                    uc=self.DESCRIPTION_USE_CASE,       # Non-empty description
+                                    osr=self.DESCRIPTION_OSR        # Non-empty description
+                                    )
+        response = self.http_post(base_url, data, auth_token_type=self.AUTH_TOKEN_TYPE_INACTIVE_USER)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(MUOContainer.objects.count(), 0)   # No MUO was created.
+        self.assertEqual(MisuseCase.objects.count(), 0)     # No misuse cases was created.
+        self.assertEqual(UseCase.objects.count(), 0)     # No use cases was created.
+
+    def test_negative_no_auth(self):
+        base_url = self._form_base_url()
+        data = self._form_post_data(cwe_id_list=self.CWE_IDS,      # Valid CWE IDs
+                                    muc=self.DESCRIPTION_MISUSE_CASE,   # Non-empty description
+                                    uc=self.DESCRIPTION_USE_CASE,       # Non-empty description
+                                    osr=self.DESCRIPTION_OSR        # Non-empty description
+                                    )
+        response = self.http_post(base_url, data, auth_token_type=self.AUTH_TOKEN_TYPE_NONE)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(MUOContainer.objects.count(), 0)   # No MUO was created.
+        self.assertEqual(MisuseCase.objects.count(), 0)     # No misuse cases was created.
+        self.assertEqual(UseCase.objects.count(), 0)     # No use cases was created.

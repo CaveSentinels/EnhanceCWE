@@ -1,9 +1,11 @@
+from django.contrib.contenttypes.models import ContentType
+from django.core import urlresolvers
 from django.db import models, transaction
 from django.conf import settings
 from cwe.models import CWE
 from base.models import BaseModel
 from django.core.exceptions import ValidationError
-from django.db.models.signals import post_save
+from django.db.models.signals import post_delete, pre_delete, post_save
 from django.dispatch import receiver
 from signals import *
 from django.utils import timezone
@@ -36,11 +38,88 @@ class Tag(BaseModel):
         return self.name
 
 
+class MUOQuerySet(models.QuerySet):
+    """
+    Define custom methods for the MUO QuerySet
+    """
+
+    def approved(self):
+        # Returns the queryset for all the approved MUO Containers
+        if self.model == MUOContainer:
+            return self.filter(status='approved')
+        elif self.model == MisuseCase:
+            return self.filter(muocontainer__status='approved')
+        elif self.model == UseCase:
+            return self.filter(muo_container__status='approved')
+
+    def rejected(self):
+        # Returns the queryset for all the rejected MUO Containers
+        if self.model == MUOContainer:
+            return self.filter(status='rejected')
+        elif self.model == MisuseCase:
+            return self.filter(muocontainer__status='rejected')
+        elif self.model == UseCase:
+            return self.filter(muo_container__status='rejected')
+
+    def draft(self):
+        # Returns the queryset for all the draft MUO Containers
+        if self.model == MUOContainer:
+            return self.filter(status='draft')
+        elif self.model == MisuseCase:
+            return self.filter(muocontainer__status='draft')
+        elif self.model == UseCase:
+            return self.filter(muo_container__status='draft')
+
+    def in_review(self):
+        # Returns the queryset for all the in review MUO Containers
+        if self.model == MUOContainer:
+            return self.filter(status='in_review')
+        elif self.model == MisuseCase:
+            return self.filter(muocontainer__status='in_review')
+        elif self.model == UseCase:
+            return self.filter(muo_container__status='in_review')
+
+    def custom(self):
+        # Returns the queryset for all the custom MUO Containers
+        if self.model == MUOContainer:
+            return self.filter(is_custom=True)
+        elif self.model == MisuseCase:
+            return self.filter(muocontainer__is_custom=True)
+        elif self.model == UseCase:
+            return self.filter(muo_container__status=True)
+
+
+class MUOManager(models.Manager):
+    """
+    Define custom methods that can be called on the MUO Manager
+    """
+
+    def get_queryset(self):
+        return MUOQuerySet(self.model, using=self._db)
+
+    def approved(self):
+        return self.get_queryset().approved()
+
+    def draft(self):
+        return self.get_queryset().draft()
+
+    def rejected(self):
+        return self.get_queryset().rejected()
+
+    def in_review(self):
+        return self.get_queryset().in_review()
+
+    def custom(self):
+        return self.get_queryset().custom()
+
+
 class MisuseCase(BaseModel):
     name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
     description = models.TextField()
     cwes = models.ManyToManyField(CWE, related_name='misuse_cases')
     tags = models.ManyToManyField(Tag, blank=True)
+
+    objects = MUOManager()  # Replace the default manager with the MUOManager
 
     class Meta:
         verbose_name = "Misuse Case"
@@ -61,12 +140,14 @@ def post_save_misusecase(sender, instance, created, using, **kwargs):
 class MUOContainer(BaseModel):
     name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
     cwes = models.ManyToManyField(CWE, related_name='muo_container')
-    misuse_case = models.ForeignKey(MisuseCase, on_delete=models.PROTECT)
+    misuse_case = models.ForeignKey(MisuseCase, on_delete=models.PROTECT, null=True, blank=True)
     new_misuse_case = models.TextField(null=True, blank=True)
     reject_reason = models.TextField(null=True, blank=True)
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
     status = models.CharField(choices=STATUS, max_length=64, default='draft')
     is_custom = models.BooleanField(default=False, db_index=True)
+
+    objects = MUOManager()  # Replace the default manager with the MUOManager
 
     class Meta:
         verbose_name = "MUO Container"
@@ -75,7 +156,8 @@ class MUOContainer(BaseModel):
         permissions = (
             ('can_approve', 'Can approve MUO container'),
             ('can_reject', 'Can reject MUO container'),
-            ('can_view_all', 'Can view all MUO container'),
+            ('can_edit_all', 'Can edit all MUO Containers'),
+            ('can_view_all', 'Can view all MUO containers'),
         )
 
     @staticmethod
@@ -138,11 +220,25 @@ class MUOContainer(BaseModel):
         This method change the status of the MUOContainer object to 'approved' and it creates the
         relationship between the misuse case and all the use cases of the muo container.This change
         is allowed only if the current status is 'in_review'. If the current status is not
-        'in_review', it raises the ValueError with appropriate message.
+        'in_review', it raises the ValueError with appropriate message. In case of a new misuse case
+        is written, it also creates the MisuseCase object and then relate it to the CWEs and the
+        MUOContainer.
         :param reviewer: User object that approved the MUO
         :raise ValueError: if status not in 'in-review'
         """
         if self.status == 'in_review':
+            if self.misuse_case is None:
+                # misuse_case is None that means the author has written a new misuse case.
+                # A new misuse case object needs to be created and related with the current
+                # MUOContainer and CWEs
+                misuse_case = MisuseCase(description=self.new_misuse_case,
+                                         created_by=self.created_by,
+                                         created_at=self.created_at)
+                misuse_case.save()
+                misuse_case.cwes.add(*list(self.cwes.all()))
+                self.misuse_case = misuse_case
+                self.new_misuse_case = None  # Remove the text from the new_misuse_case
+
             # Create the relationship between the misuse case of the muo container with all the
             # use cases of the container
             for usecase in self.usecase_set.all():
@@ -233,26 +329,26 @@ def post_save_muo_container(sender, instance, created, using, **kwargs):
         instance.save()
 
 
+@receiver(pre_delete, sender=MUOContainer, dispatch_uid='muo_container_delete_signal')
+def pre_delete_muo_container(sender, instance, using, **kwargs):
+    """
+    Registering for pre_delete signal, so that we can prevent deletion of MUOContainer if it is not in
+    'draft' or 'review' state.
+    """
+    if instance.status not in ('draft', 'rejected'):
+        raise ValidationError('The MUOContainer can only be deleted if in draft or rejected state')
 
-# TODO: This method is commented now because we need to take care of multiple deletion cases once the muo container is implemented
-# @receiver(pre_delete, sender=MUOContainer, dispatch_uid='muo_container_delete_signal')
-# def pre_delete_muo_container(sender, instance, using, **kwargs):
-#     """
-#     Pre-delete checks for MUO container
-#     """
-#     if instance.status not in ('draft', 'rejected'):
-#         raise ValidationError(_('The %(name)s "%(obj)s" can only be deleted if in draft of rejected state') % {
-#                                     'name': force_text(instance._meta.verbose_name),
-#                                     'obj': force_text(instance.name),
-#                                 })
-#     elif instance.usecase_set.count() == 1:
-#         # what if this muo container contains more than 1 use case?
-#         instance.usecase_set.delete()
-#     else:
-#         raise ValidationError(_('The %(name)s "%(obj)s" can only be deleted because there are other use cases referring to it!') % {
-#                                     'name': force_text(instance._meta.verbose_name),
-#                                     'obj': force_text(instance.name),
-#                                 })
+
+
+@receiver(post_delete, sender=MUOContainer, dispatch_uid='muo_container_post_delete_signal')
+def post_delete_muo_container(sender, instance, using, **kwargs):
+    """
+    Registering for the post_delete signal, so that after MUOContainer deletion, we can delete the related
+    Misuse Case also if it is not related to any other MUOContainer
+    """
+    if instance.misuse_case is not None:
+        if instance.misuse_case.muocontainer_set.count() == 0:
+            instance.misuse_case.delete()
 
 
 class UseCase(BaseModel):
@@ -263,6 +359,8 @@ class UseCase(BaseModel):
     muo_container = models.ForeignKey(MUOContainer)
     tags = models.ManyToManyField(Tag, blank=True)
 
+    objects = MUOManager()  # Replace the default manager with the MUOManager
+
     class Meta:
         verbose_name = "Use Case"
         verbose_name_plural = "Use Cases"
@@ -271,13 +369,18 @@ class UseCase(BaseModel):
         return "%s - %s..." % (self.name, self.description[:70])
 
 
+    def get_absolute_url(self, language=None):
+        content_type = ContentType.objects.get_for_model(MisuseCase)
+        url = urlresolvers.reverse("admin:%s_%s_changelist" % (content_type.app_label, content_type.model))
+        return "%s?mu=%s&uc=%s" % (url, self.misuse_case.id, self.id)
+
+
 @receiver(post_save, sender=UseCase, dispatch_uid='usecase_post_save_signal')
 def post_save_usecase(sender, instance, created, using, **kwargs):
     """ Set the value of the field 'name' after creating the object """
     if created:
         instance.name = "UC/{0:05d}".format(instance.id)
         instance.save()
-
 
 
 class IssueReport(BaseModel):
