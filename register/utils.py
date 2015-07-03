@@ -72,12 +72,18 @@ def check_if_invited(request, user):
         # Here I am checking if there is some token in the query string or not.
         # If there is a token then verify it and set the EmailVerificationMethod = NONE
         params = parse_qs(url.query)
-        if 'token' in params and 'email' in params:
 
-            if EmailInvitation.objects.filter(email=params['email'][0], key=params['token'][0]).exists():
-                email_obj = EmailAddress.objects.get(user=user, email=params['email'][0])
-                email_obj.verified = True
-                email_obj.save()
+        if 'token' in params and 'email' in params:
+            email_local = params['email'][0]
+            token_local = params['token'][0]
+        else:
+            email_local = request.session['email']
+            token_local = request.session['token']
+
+        if EmailInvitation.objects.filter(email=email_local, key=token_local).exists():
+            email_obj = EmailAddress.objects.get(user=user, email=email_local)
+            email_obj.verified = True
+            email_obj.save()
 
 
 from allauth.account import utils
