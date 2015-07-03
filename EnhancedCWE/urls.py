@@ -21,10 +21,10 @@ from django.contrib import admin
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [
     url(r'^$', include('frontpage.urls', namespace='frontpage')),
-    url(r'^accounts/', include('allauth.urls')),
-    url(r'^app/login/', 'allauth.account.views.login'),
-    url(r'^app/logout/', 'allauth.account.views.logout'),
-    url(r'^app/password_change/', 'allauth.account.views.password_change'),
+    url(r'^accounts/', include('register.urls')),
+    url(r'^app/login/', 'register.views.login'),
+    url(r'^app/logout/', 'register.views.logout'),
+    url(r'^app/password_change/', 'register.views.password_change'),
     url(r'^app/', include(admin.site.urls)),
     url(r'^autocomplete/', include('autocomplete_light.urls')),
     url(r'api/v1/', include('rest_api.urls')),   # Add "v1" to indicate the version.

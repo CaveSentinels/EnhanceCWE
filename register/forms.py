@@ -1,9 +1,45 @@
 from django import forms
-from django.utils.translation import ugettext_lazy as _
 from captcha.fields import ReCaptchaField
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Field, Div
-from allauth.account.forms import SignupForm
+from allauth.account.forms import SignupForm, LoginForm
+from allauth.account import app_settings
+from allauth.account.forms import authenticate
+from django.utils.translation import ugettext_lazy as _
+from . import settings
+
+class CaptchaLoginForm(LoginForm):
+    recaptcha = ReCaptchaField(label="I'm a human", required=False)
+
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
+        super(CaptchaLoginForm, self).__init__(*args, **kwargs)
+
+        # Display captcha after N failed attempts
+        if self.request.session.get('invalid_login_attempts', 0) >= settings.NUMBER_OF_FAILED_LOGINS_BEFORE_CAPTCHA:
+            self.fields.update({'recaptcha': self.declared_fields['recaptcha']})
+
+    def clean(self):
+        if self._errors:
+            return
+        user = authenticate(**self.user_credentials())
+        if user:
+            self.user = user
+            if 'invalid_login_attempts' in self.request.session:
+                del self.request.session['invalid_login_attempts']
+        else:
+            # keep track of invalid login attempts
+            invalid_attempts = self.request.session.get('invalid_login_attempts', 0)
+            invalid_attempts += 1
+            self.request.session['invalid_login_attempts'] = invalid_attempts
+
+            raise forms.ValidationError(
+                self.error_messages[
+                    '%s_password_mismatch'
+                    % app_settings.AUTHENTICATION_METHOD])
+        return self.cleaned_data
+
+
 
 
 class CustomSingupForm(SignupForm):
