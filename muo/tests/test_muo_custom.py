@@ -43,8 +43,10 @@ class TestCustomMUO(TestCase):
         '''
         All the clean up happens here after all the test cases are run
         '''
-        UseCase.objects.all().delete()
+
+        MUOContainer.objects.all().update(status='draft')
         MUOContainer.objects.all().delete()
+        UseCase.objects.all().delete()
         MisuseCase.objects.all().delete()
         CWE.objects.all().delete()
 
