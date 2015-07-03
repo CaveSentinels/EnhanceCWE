@@ -334,7 +334,7 @@ def pre_delete_muo_container(sender, instance, using, **kwargs):
     'draft' or 'review' state.
     """
     if instance.status not in ('draft', 'rejected'):
-        raise ValidationError('The MUOContainer can only be deleted if in draft of rejected state')
+        raise ValidationError('The MUOContainer can only be deleted if in draft or rejected state')
 
 
 
