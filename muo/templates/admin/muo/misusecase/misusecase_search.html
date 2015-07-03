@@ -5,6 +5,8 @@
 {% block extrastyle %}
     {{ block.super }}
     <link rel="stylesheet" type="text/css" href="{% static 'muo/misusecase_search_style.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'fluent_comments/css/ajaxcomments.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'comments/comments.css' %}" />
 {% endblock %}
 
 
@@ -13,6 +15,7 @@
     {% url 'admin:jsi18n' as jsi18nurl %}
     <script type="text/javascript" src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>
     <script src="{% static 'muo/misusecase_search_ajax.js' %}"></script>
+    <script type="text/javascript" src="{% static 'comments/comments.js' %}"></script>
     {{ media }}
 {% endblock %}
 

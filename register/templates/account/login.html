@@ -45,6 +45,18 @@
                 </div>
             {% endif %}
 
+            {% if form.non_field_errors %}
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="alert alert-error">
+                        {% for error in form.non_field_errors %}
+                            <p><b>{{ error|escape }}</b></p>
+                        {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
             <div class="login-box-body">
                 <p class="login-box-msg">Sign in to start your session</p>
 
@@ -52,11 +64,20 @@
                     <div class="form-group has-feedback">
                         {{ form.login|add_class:"form-control" }}
                         <span class="glyphicon glyphicon-envelope form-control-feedback"></span>
+                        {% if form.login.errors %}<span class="text-danger">{{ form.login.errors|striptags }}</span>{% endif %}
                     </div>
                     <div class="form-group has-feedback">
                         {{ form.password|add_class:"form-control" }}
                         <span class="glyphicon glyphicon-lock form-control-feedback"></span>
+                        {% if form.password.errors %}<span class="text-danger">{{ form.password.errors|striptags }}</span>{% endif %}
+
                     </div>
+                    {% if 'recaptcha' in form.fields %}
+                    <div class="form-group">
+                        {{ form.recaptcha }}
+                        {% if form.recaptcha.errors %}<span class="text-danger">{{ form.recaptcha.errors|striptags }}</span>{% endif %}
+                    </div>
+                    {% endif %}
                     <div class="row">
                         <div class="col-xs-8">
                             <div class="checkbox icheck">

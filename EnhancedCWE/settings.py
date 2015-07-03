@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
-
+import dj_database_url
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -23,30 +23,33 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '-wt!%_nsos-5nf5$$ojt=88vv&odc@etnuvtg%oa8!m)8veth5'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+# Honor the 'X-Forwarded-Proto' header for request.is_secure()
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+# Allow all host headers
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
 INSTALLED_APPS = (
     'base',
     'invitation',
-
+    'muo',
     'register',
     'admin_lte',
     'django_admin_bootstrapped',
     'autocomplete_light',
     'captcha',
     'frontpage',
-
+    'crispy_forms',
+    'comments',
+    'fluent_comments',
+    'django_comments',
     'django.contrib.sites',
     'allauth',
     'allauth.account',
-    'allauth.socialaccount',
-
-    'crispy_forms',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -57,12 +60,9 @@ INSTALLED_APPS = (
     'rest_framework.authtoken',
     'rest_api',
     'cwe',
-    'muo',
     'user_profile',
     'emailer',
     'widget_tweaks',
-
-
 )
 
 # Email settings
@@ -75,7 +75,9 @@ EMAIL_HOST_PASSWORD = 'enhancedcwe_masre'
 
 # START: allauth settings
 LOGIN_REDIRECT_URL = '/app/'
-ACCOUNT_FORMS = {'signup': 'register.forms.CustomSingupForm'}
+ACCOUNT_FORMS = {'signup': 'register.forms.CustomSingupForm',
+                 'login': 'register.forms.CaptchaLoginForm',
+                 }
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
@@ -142,13 +144,7 @@ WSGI_APPLICATION = 'EnhancedCWE.wsgi.application'
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'EnhancedCWE',
-        'USER': 'django',
-        'PASSWORD': 'django',
-        'HOST': 'localhost',
-    }
+    'default': dj_database_url.config()
 }
 
 
@@ -168,7 +164,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
-
+STATIC_ROOT = 'staticfiles'
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = (
@@ -196,3 +192,6 @@ AUTHENTICATION_BACKENDS = (
 )
 
 SITE_ID = 1
+COMMENTS_APP = 'fluent_comments'
+FLUENT_COMMENTS_EXCLUDE_FIELDS = ('name', 'email', 'url')
+FLUENT_COMMENTS_USE_EMAIL_NOTIFICATION = False
