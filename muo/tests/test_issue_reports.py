@@ -16,25 +16,24 @@ class TestIssueReport(TestCase):
         misuse_case.save()
         muo_container = MUOContainer.objects.create(misuse_case = misuse_case)
         muo_container.save()
-        muo_container.status = 'in_review'
+        muo_container.status = 'approved'
         muo_container.save()
-        muo_container.action_approve()
         use_case = UseCase(muo_container=muo_container)
         use_case.save()  # save in the database
-        issue_report = IssueReport.objects.create(name="issue001", description="this is the issue", type="spam",
-                                                  status="open", usecase=use_case)
-        self.current_id = issue_report.id
+        issue_report = IssueReport.objects.create(description="this is the issue", type="spam",
+                                                 usecase=use_case)
         issue_report.save()
+        self.issue_report = issue_report
+
 
     def get_issue_report(self, status):
         """
         This method sets the status of the Issue Report object with the one
         received in arguments.
         """
-        issue_report = IssueReport.objects.get(pk=self.current_id)
-        issue_report.status = status
-        issue_report.save()
-        return issue_report
+        self.issue_report.status = status
+        self.issue_report.save()
+        return self.issue_report
 
     def test_action_investigate(self):
         """
@@ -43,6 +42,7 @@ class TestIssueReport(TestCase):
         issue_report = self.get_issue_report("open")
         issue_report.action_investigate(reviewer=self.reviewer)
         self.assertEqual(issue_report.status, 'investigating')
+        self.assertEqual(issue_report.reviewed_by, self.reviewer)
 
     def test_action_resolve(self):
         """
@@ -52,24 +52,31 @@ class TestIssueReport(TestCase):
         issue_report = self.get_issue_report("investigating")
         issue_report.action_resolve(reviewer = self.reviewer, resolve_reason=resolve_reason)
         self.assertEqual(issue_report.status,'resolved')
+        self.assertEqual(issue_report.reviewed_by,self.reviewer)
+
+    def test_action_open(self):
+        """
+        This method checks if the state gets changed to open or not
+        """
+        issue_report = self.get_issue_report("investigating")
+        issue_report.action_open(reviewer=self.reviewer)
+        self.assertEqual(issue_report.status,'open')
+        self.assertEqual(issue_report.reviewed_by,self.reviewer)
 
     def test_action_reopen(self):
         """
         This method checks if the state gets changed to re-open or not
         """
-        issue_report = self.get_issue_report("investigating")
-        issue_report.action_open(reviewer=self.reviewer)
-        self.assertEqual(issue_report.status,'open')
         issue_report = self.get_issue_report("resolved")
         issue_report.action_reopen(reviewer=self.reviewer)
-        self.assertEqual(issue_report.status,'reopen')
+        self.assertEqual(issue_report.status,'reopened')
+        self.assertEqual(issue_report.reviewed_by,self.reviewer)
 
     def test_action_investigate_negative(self):
         """
         This is a negative test case which tries to see if action_investigate method is called when the state is investigate
         It should throw an error
         """
-
         issue_report = self.get_issue_report("investigating")
         self.assertRaises(ValueError, issue_report.action_investigate)
 

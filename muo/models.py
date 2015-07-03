@@ -20,7 +20,7 @@ ISSUE_TYPES = [('incorrect', 'Incorrect Content'),
 
 ISSUE_STATUS = [('open', 'Open'),
                  ('investigating', 'Investigating'),
-                ('reopen','Re-open'),
+                ('reopened','Re-opened'),
                  ('resolved', 'Resolved')]
 
 
@@ -302,7 +302,7 @@ class IssueReport(BaseModel):
         This method change the status of the issue report object to 'investigating' and This change
         is allowed only if the current status is either open or re open.
         """
-        if self.status in ('open','reopen'):
+        if self.status in ('open','reopened'):
             self.status = 'investigating'
             self.reviewed_at = timezone.now()
             self.reviewed_by = reviewer
@@ -333,7 +333,7 @@ class IssueReport(BaseModel):
         is allowed only if the current status is 'investigating' or 'resolved'.
         """
         if self.status == 'resolved':
-            self.status = 'reopen'
+            self.status = 'reopened'
             self.reviewed_by = reviewer
             self.reviewed_at = timezone.now()
             self.save()
