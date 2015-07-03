@@ -72,6 +72,8 @@ def check_if_invited(request, user):
         # Here I am checking if there is some token in the query string or not.
         # If there is a token then verify it and set the EmailVerificationMethod = NONE
         params = parse_qs(url.query)
+        email_local = None
+        token_local = None
 
         if 'token' in params and 'email' in params:
             email_local = params['email'][0]
@@ -80,13 +82,16 @@ def check_if_invited(request, user):
             email_local = request.session['invite_email']
             token_local = request.session['invite_token']
 
-        if EmailInvitation.objects.filter(email=email_local, key=token_local).exists():
-            email_obj = EmailAddress.objects.get(user=user, email=email_local)
-            email_obj.verified = True
-            email_obj.save()
+        if email_local and token_local:
+            if EmailInvitation.objects.filter(email=email_local, key=token_local).exists():
+                email_obj = EmailAddress.objects.get(user=user, email=email_local)
+                email_obj.verified = True
+                email_obj.save()
 
-            if 'invite_email' in request.session and 'invite_token' in request.session:
+            if 'invite_email' in request.session:
                 del request.session['invite_email']
+
+            if 'invite_token' in request.session:
                 del request.session['invite_token']
 
 
