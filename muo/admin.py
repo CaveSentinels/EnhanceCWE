@@ -435,12 +435,31 @@ class MUOContainerAdmin(BaseAdmin):
 @admin.register(IssueReport)
 class IssueReportAdmin(BaseAdmin):
     form = autocomplete_light.modelform_factory(IssueReport, fields="__all__")
-    fields = [('name', 'status'), 'type', 'usecase', 'usecase_duplicate', 'description', ('created_by', 'created_at')]
+    fields = [('name', 'status'), 'type', 'usecase', 'usecase_duplicate', 'description',
+              ('created_by', 'created_at'), ('reviewed_by', 'reviewed_at'), 'resolve_reason']
     list_display = ['name', 'type', 'created_by', 'created_at', 'status',]
-    readonly_fields = ['name', 'status', 'created_by', 'created_at']
     search_fields = ['name', 'usecase__id', 'usecase__name', 'created_by__name']
     list_filter = ['type', 'status']
     date_hierarchy = 'created_at'
+
+
+    def get_fields(self, request, obj=None):
+        """ Override to hide the 'usecase_duplicate' if type is not 'duplicate' """
+        fields = super(IssueReportAdmin, self).get_fields(request, obj)
+
+        if obj and obj.type != 'duplicate' and 'usecase_duplicate' in fields:
+            fields.remove('usecase_duplicate')
+
+        return fields
+
+
+    def get_readonly_fields(self, request, obj=None):
+        """ Make all fields readonly"""
+        return list(set(
+                [field.name for field in self.model._meta.local_fields] +
+                [field.name for field in self.model._meta.local_many_to_many]
+            ))
+
 
 
     def get_urls(self):
@@ -511,3 +530,52 @@ class IssueReportAdmin(BaseAdmin):
 
         else:
             raise Http404("Invalid access using GET request!")
+
+
+    def response_change(self, request, obj, *args, **kwargs):
+        '''
+        Override response_change method of admin/options.py to handle the click of
+        newly added buttons
+        '''
+
+        # Get the metadata about self (it tells you app and current model)
+        opts = self.model._meta
+
+        # Get the primary key of the model object i.e. Issue Report
+        pk_value = obj._get_pk_val()
+
+        preserved_filters = self.get_preserved_filters(request)
+
+        redirect_url = reverse('admin:%s_%s_change' %
+                                   (opts.app_label, opts.model_name),
+                                   args=(pk_value,))
+        redirect_url = add_preserved_filters({'preserved_filters': preserved_filters, 'opts': opts}, redirect_url)
+
+        # Check which button is clicked, handle accordingly.
+        try:
+            if "_investigate" in request.POST:
+                obj.action_investigate(request.user)
+                msg = "The issue is now being investigated."
+
+            elif "_resolve" in request.POST:
+                resolve_reason = request.POST.get('resolve_reason_text', '')
+                obj.action_resolve(resolve_reason,request.user)
+                msg = "The issue is now resolved because  " + resolve_reason
+
+            elif "_reopen" in request.POST:
+                obj.action_reopen(request.user)
+                msg = "The issue has been re-opened."
+
+            elif "_open" in request.POST:
+                obj.action_open(request.user)
+                msg = "The issue is now opened."
+
+        except ValueError as e:
+            # In case the state of the object is not suitable for the corresponding action,
+            # model will raise the value exception with the appropriate message. Catch the
+            # exception and show the error message to the user
+            msg = e.message
+            self.message_user(request, msg, messages.ERROR)
+
+        self.message_user(request, msg, messages.SUCCESS)
+        return HttpResponseRedirect(redirect_url)

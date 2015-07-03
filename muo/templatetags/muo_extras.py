@@ -85,7 +85,7 @@ def muo_submit_row(context):
     return ctx
 
 @register.inclusion_tag('admin/muo/issuereport/reportissue_submit_line.html', takes_context=True)
-def report_action_row(context):
+def reportaction_submit_row(context):
     ctx = original_submit_row(context)
 
     model_object = ctx.get('original')
@@ -93,13 +93,20 @@ def report_action_row(context):
     ctx.update({
         # Show investigate button only when the issue is in open state and the user has approve & reject perm
         'show_investigate_issue': model_object and
-                                  model_object.status == 'open' and
+                                  model_object.status in ('open','reopened') and
                                   user_object.has_perm('muo.can_approve', 'muo.can_reject'),
 
         # Show resolve button only when the issue is in open state and the user has approve & reject perm
         'show_resolve_issue': model_object and
                               model_object.status == 'investigating' and
                               user_object.has_perm('muo.can_approve', 'muo.can_reject'),
+        'show_reopen_issue': model_object and
+                             model_object.status == 'resolved' and
+                             user_object.has_perm('muo.can_approve', 'muo.can_reject'),
+        'show_open_issue': model_object and
+                           model_object.status == 'investigating' and
+                           user_object.has_perm('muo.can_approve','muo.can_reject'),
+
     })
 
     return ctx
