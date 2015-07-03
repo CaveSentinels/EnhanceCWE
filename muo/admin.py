@@ -51,7 +51,7 @@ class UseCaseAdminInLine(admin.StackedInline):
         else:
             # This is change form. Only original author or users with 'can_edit_all' permission are allowed
             # to delete the UseCase from the related MUOContainer if it is in 'draft' or 'rejected' state
-            if (request.user == obj.created_by or request.user.has_perm('can_edit_all')) and obj.status in ('draft', 'rejected'):
+            if (request.user == obj.created_by or request.user.has_perm('muo.can_edit_all')) and obj.status in ('draft', 'rejected'):
                 return super(UseCaseAdminInLine, self).has_delete_permission(request, obj=None)
             else:
                 # Set deletion permission to False
@@ -72,7 +72,7 @@ class UseCaseAdminInLine(admin.StackedInline):
         else:
             # This is the change form. Only the original author or users with 'can_edit_all' permission
             # are allowed to edit the UseCase if the related MUOContainer is in the 'draft' state
-            if (request.user == obj.created_by or request.user.has_perm('can_edit_all')) and obj.status == 'draft':
+            if (request.user == obj.created_by or request.user.has_perm('muo.can_edit_all')) and obj.status == 'draft':
                 return super(UseCaseAdminInLine, self).get_readonly_fields(request, obj)
             else:
                 # Set all the fields as read-only
@@ -95,7 +95,7 @@ class UseCaseAdminInLine(admin.StackedInline):
         else:
             # This is change form. Only original author is allowed to add another Use Case in the
             # MUOContainer if it is in 'draft' state
-            if (request.user == obj.created_by or request.user.has_perm('can_edit_all')) and obj.status == 'draft':
+            if (request.user == obj.created_by or request.user.has_perm('muo.can_edit_all')) and obj.status == 'draft':
                 return super(UseCaseAdminInLine, self).get_max_num(request, obj=None, **kwargs)
             else:
                 # No 'Add another Use Case' button
@@ -313,7 +313,7 @@ class MUOContainerAdmin(BaseAdmin):
             or to approved MUOs written by other contributors
         """
         qs = super(MUOContainerAdmin, self).get_queryset(request)
-        if request.user.has_perm('muo.can_view_all'):
+        if request.user.has_perm('muo.can_view_all') or request.user.has_perm('muo.can_edit_all'):
             return qs
         return qs.filter(Q(created_by=request.user) | Q(status='approved'))
 
@@ -331,7 +331,7 @@ class MUOContainerAdmin(BaseAdmin):
         else:
             # This is change form. Only original author or users with 'can_edit_all' permission are allowed
             # to edit the MUOContainer in draft state
-            if (request.user == obj.created_by or request.user.has_perm('can_edit_all')) and obj.status == 'draft':
+            if (request.user == obj.created_by or request.user.has_perm('muo.can_edit_all')) and obj.status == 'draft':
                 return super(MUOContainerAdmin, self).get_readonly_fields(request, obj)
             else:
                 # Set all the fields as read-only
@@ -355,7 +355,7 @@ class MUOContainerAdmin(BaseAdmin):
         else:
             # This is change form. Only original author or users with 'can_edit_all' are allowed
             # to delete the MUOContainer and that too if it is in 'draft' state
-            if (request.user == obj.created_by or request.user.has_perm('can_edit_all')) and obj.status in ('draft', 'rejected'):
+            if (request.user == obj.created_by or request.user.has_perm('muo.can_edit_all')) and obj.status in ('draft', 'rejected'):
                 return super(MUOContainerAdmin, self).has_delete_permission(request, obj=None)
             else:
                 # Set deletion permission to False
