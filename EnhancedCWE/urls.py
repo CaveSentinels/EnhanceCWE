@@ -15,12 +15,13 @@ Including another URLconf
 """
 from django.conf.urls import include, url
 from django.contrib import admin
-
+from django.views.generic import TemplateView
 
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [
     url(r'^$', include('frontpage.urls', namespace='frontpage')),
+    url(r'^robots\.txt/$', TemplateView.as_view(template_name='robots.txt', content_type='text/plain')),
     url(r'^accounts/', include('register.urls')),
     url(r'^app/login/', 'register.views.login'),
     url(r'^app/logout/', 'register.views.logout'),

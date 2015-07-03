@@ -30,6 +30,12 @@ class UseCaseAdmin(BaseAdmin):
     list_display = ['name']
     search_fields = ['name', 'description', 'tags__name']
 
+    def get_model_perms(self, request):
+        """
+        Return empty perms dict thus hiding the model from admin index.
+        """
+        return {}
+
 
 class UseCaseAdminInLine(admin.StackedInline):
     model = UseCase

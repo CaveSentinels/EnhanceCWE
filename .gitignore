@@ -1,5 +1,7 @@
 EnhancedCWE/local_settings.py
 *.sqlite3
+venv
+staticfiles
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
