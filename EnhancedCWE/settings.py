@@ -35,6 +35,7 @@ ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = (
     'base',
+    'invitation',
     'muo',
     'register',
     'admin_lte',
