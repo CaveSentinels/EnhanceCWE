@@ -26,9 +26,9 @@ class MySignupView(SignupView):
 
     def get_form_class(self):
         """ Store the token and email in the session """
-        if 'token' not in self.request.session or 'email' not in self.request.session:
-            self.request.session['email'] = self.request.GET['email']
-            self.request.session['token'] = self.request.GET['token']
+        if 'token' in self.request.GET or 'email' in self.request.GET:
+            self.request.session['invite_email'] = self.request.GET['email']
+            self.request.session['invite_token'] = self.request.GET['token']
         return get_form_class(app_settings.FORMS, 'signup', self.form_class)
 
 
