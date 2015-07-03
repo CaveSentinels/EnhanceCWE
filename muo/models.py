@@ -5,7 +5,7 @@ from django.conf import settings
 from cwe.models import CWE
 from base.models import BaseModel
 from django.core.exceptions import ValidationError
-from django.db.models.signals import post_save
+from django.db.models.signals import post_delete, pre_delete, post_save
 from django.dispatch import receiver
 from signals import *
 from django.utils import timezone
@@ -327,25 +327,26 @@ def post_save_muo_container(sender, instance, created, using, **kwargs):
         instance.save()
 
 
-# TODO: This method is commented now because we need to take care of multiple deletion cases once the muo container is implemented
-# @receiver(pre_delete, sender=MUOContainer, dispatch_uid='muo_container_delete_signal')
-# def pre_delete_muo_container(sender, instance, using, **kwargs):
-#     """
-#     Pre-delete checks for MUO container
-#     """
-#     if instance.status not in ('draft', 'rejected'):
-#         raise ValidationError(_('The %(name)s "%(obj)s" can only be deleted if in draft of rejected state') % {
-#                                     'name': force_text(instance._meta.verbose_name),
-#                                     'obj': force_text(instance.name),
-#                                 })
-#     elif instance.usecase_set.count() == 1:
-#         # what if this muo container contains more than 1 use case?
-#         instance.usecase_set.delete()
-#     else:
-#         raise ValidationError(_('The %(name)s "%(obj)s" can only be deleted because there are other use cases referring to it!') % {
-#                                     'name': force_text(instance._meta.verbose_name),
-#                                     'obj': force_text(instance.name),
-#                                 })
+@receiver(pre_delete, sender=MUOContainer, dispatch_uid='muo_container_delete_signal')
+def pre_delete_muo_container(sender, instance, using, **kwargs):
+    """
+    Registering for pre_delete signal, so that we can prevent deletion of MUOContainer if it is not in
+    'draft' or 'review' state.
+    """
+    if instance.status not in ('draft', 'rejected'):
+        raise ValidationError('The MUOContainer can only be deleted if in draft or rejected state')
+
+
+
+@receiver(post_delete, sender=MUOContainer, dispatch_uid='muo_container_post_delete_signal')
+def post_delete_muo_container(sender, instance, using, **kwargs):
+    """
+    Registering for the post_delete signal, so that after MUOContainer deletion, we can delete the related
+    Misuse Case also if it is not related to any other MUOContainer
+    """
+    if instance.misuse_case is not None:
+        if instance.misuse_case.muocontainer_set.count() == 0:
+            instance.misuse_case.delete()
 
 
 class UseCase(BaseModel):
