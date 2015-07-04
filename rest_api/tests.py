@@ -439,11 +439,15 @@ class TestMisuseCaseSuggestion(RestAPITestBase):
                                          creator=self._user_2)  # By another user
 
     def tear_down_test_data(self):
-        # Delete all the MUO containers first.
+        # Reject all the MUO containers before deleting them.
+        for muo in MUOContainer.objects.all():
+            if muo.status == 'approved':
+                muo.action_reject(reject_reason="In order to delete the test data.")
+        # Delete all the MUO containers.
         MUOContainer.objects.all().delete()
-        # Then delete all the misuse cases.
+        # Delete all the misuse cases.
         MisuseCase.objects.all().delete()
-        # Then delete all the CWEs.
+        # Delete all the CWEs.
         CWE.objects.all().delete()
 
     # Helper methods
@@ -659,8 +663,10 @@ class TestUseCaseSuggestion(RestAPITestBase):
         self._approve_muo_container(muo2)
 
     def tear_down_test_data(self):
-        # Delete all the use cases
-        UseCase.objects.all().delete()
+        # Reject all the MUO containers before deleting them.
+        for muo in MUOContainer.objects.all():
+            if muo.status == 'approved':
+                muo.action_reject(reject_reason="In order to delete the test data.")
         # Delete all the MUO containers.
         MUOContainer.objects.all().delete()
         # Delete all the misuse cases
