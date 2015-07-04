@@ -86,7 +86,7 @@ class MUOQuerySet(models.QuerySet):
         elif self.model == MisuseCase:
             return self.filter(muocontainer__is_custom=True)
         elif self.model == UseCase:
-            return self.filter(muo_container__status=True)
+            return self.filter(muo_container__is_custom=True)
 
 
 class MUOManager(models.Manager):

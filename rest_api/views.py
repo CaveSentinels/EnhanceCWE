@@ -2,8 +2,8 @@ import re
 from django.contrib.auth.models import User
 from cwe.models import CWE
 from cwe.cwe_search import CWESearchLocator
-from muo.models import UseCase
 from muo.models import MUOContainer
+from muo.models import UseCase
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -30,7 +30,8 @@ class CWEAllList(APIView):
     DEFAULT_LIMIT = "10"   # The default value of limit in GET method
     MAX_RETURN = "20"  # 20 CWEs will be returned at most, regardless many is specified in "limit".
 
-    def _validate_parameter(self, value):
+    @staticmethod
+    def _validate_parameter(value):
         # This regular expression matches integers like "1", "101", but not "+1", "-1", "1.2", "1.a", etc.
         # See [here](http://regexr.com/) for test.
         param_pattern_regex = r"^[0-9]+$"
@@ -38,17 +39,19 @@ class CWEAllList(APIView):
 
     def _validate_title_contains(self, title_contains):
         return len(title_contains) <= self.FIELD_LENGTH_CWE_NAME
-
-    def _form_err_msg_not_positive_integer(self, param_name, param_value):
+    
+    @staticmethod
+    def _form_err_msg_not_positive_integer(param_name, param_value):
         return ("Invalid arguments: '" + param_name +
                 "' should be a positive integer like '101', but now '" + param_name +
                 "' = '" + param_value + "'")
-
-    def _form_err_msg_both_present(self, param_name1, param_name2):
+    
+    @staticmethod
+    def _form_err_msg_both_present(param_name1, param_name2):
         return ("Invalid arguments: '" + param_name1 +
                 "' and '" + param_name2 + "' should not be present at the same time."
                 )
-
+    
     def _form_err_msg_too_long(self, param_name, param_value):
         return ("Invalid argument: '" + param_name + "' should not be longer than " +
                 str(self.FIELD_LENGTH_CWE_NAME) + " characters, but now '" +
@@ -168,23 +171,27 @@ class MisuseCaseRelated(APIView):
 
     PARAM_CWES = "cwes"
 
-    def _validate_parameter(self, cwes_str):
+    @staticmethod
+    def _validate_parameter(cwes_str):
         # This regular expression matches strings like "101" or "101,102,103".
         # See [here](http://regexr.com/) for test.
         param_pattern_regex = r"^([0-9]+,)*([0-9]+)$"
         return re.match(param_pattern_regex, cwes_str) is not None
 
-    def _get_distinct_cwe_codes(self, cwes_str):
+    @staticmethod
+    def _get_distinct_cwe_codes(cwes_str):
         return set(cwes_str.split(','))
 
-    def _form_err_msg_malformed_cwes(self, cwes_str):
+    @staticmethod
+    def _form_err_msg_malformed_cwes(cwes_str):
         return ("CWE code list is malformed: '" + cwes_str + "'. " +
                 "It should be one or more positive integers separated by comma."
                 )
 
-    def _form_err_msg_cwes_not_found(self, cwe_codes_not_found):
+    @staticmethod
+    def _form_err_msg_cwes_not_found(cwe_codes_not_found):
         err_msg = ("The CWE of the following codes are not found: " +
-                  ''.join(str(code)+"," for code in cwe_codes_not_found)
+                   ''.join(str(code)+"," for code in cwe_codes_not_found)
                    )
         return err_msg
 
@@ -205,8 +212,11 @@ class MisuseCaseRelated(APIView):
         # Get the CWE codes from the parameter string.
         cwe_code_set = self._get_distinct_cwe_codes(cwes_str=cwes_str)
 
-        # Create the list of returned misuse case.
-        misuse_case_list = list()
+        # Get the current user.
+        curr_user = request.user
+
+        # Create the set of returned unique misuse case.
+        misuse_case_set = set()
 
         # Try to get all the CWE objects.
         cwes = CWE.objects.filter(code__in=cwe_code_set)
@@ -221,11 +231,13 @@ class MisuseCaseRelated(APIView):
 
         # Find the misuse cases that are related to the CWEs.
         for cwe in cwes:
-            misuse_case_list += cwe.misuse_cases.all()
+            # First, find all the MUO containers associated with the CWEs.
+            cwe_misuse_cases_generic = cwe.misuse_cases.approved()
+            cwe_misuse_cases_custom = cwe.misuse_cases.filter(created_by=curr_user).custom().draft()
+            # Join the two sets
+            misuse_case_set |= set(cwe_misuse_cases_generic | cwe_misuse_cases_custom)
 
-        # Remove the duplicated misuse cases, if there are any.
-        misuse_case_list = list(set(misuse_case_list))
-        serializer = MisuseCaseSerializer(misuse_case_list, many=True)
+        serializer = MisuseCaseSerializer(misuse_case_set, many=True)
 
         return Response(data=serializer.data, exception=Exception())
 
@@ -237,16 +249,19 @@ class UseCaseRelated(APIView):
 
     PARAM_MISUSE_CASES = "misuse_cases"
 
-    def _validate_parameter(self, misuse_cases_str):
+    @staticmethod
+    def _validate_parameter(misuse_cases_str):
         # This regular expression matches strings like "1" or "1,2,3".
         # See [here](http://regexr.com/) for test.
         param_pattern_regex = r"^([0-9]+,)*([0-9]+)$"
         return re.match(param_pattern_regex, misuse_cases_str) is not None
 
-    def _get_distinct_misuse_case_ids(self, misuse_cases_str):
+    @staticmethod
+    def _get_distinct_misuse_case_ids(misuse_cases_str):
         return set(misuse_cases_str.split(','))
 
-    def _form_err_msg_malformed_misuse_cases(self, misuse_cases_str):
+    @staticmethod
+    def _form_err_msg_malformed_misuse_cases(misuse_cases_str):
         return ("Misuse case ID list is malformed: '" + misuse_cases_str + "'. " +
                 "It should be one or more positive integers separated by comma."
                 )
@@ -265,17 +280,22 @@ class UseCaseRelated(APIView):
             err_msg = self._form_err_msg_malformed_misuse_cases(misuse_cases_str)
             return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
 
+        # Get the current user.
+        curr_user = request.user
+
         # Get the misuse case IDs from the parameter string.
         misuse_case_id_set = self._get_distinct_misuse_case_ids(misuse_cases_str=misuse_cases_str)
 
-        # Create the list of returned use case.
-        use_case_list = list()
+        # Get all the use cases that refer to these misuse cases.
+        use_cases_related = UseCase.objects.filter(misuse_case_id__in=misuse_case_id_set)
+        use_cases_generic = use_cases_related.approved()
+        use_cases_custom = use_cases_related.filter(created_by=curr_user).custom().draft()
 
-        # Get all the use cases that are associated with the misuse cases.
-        use_cases = UseCase.objects.filter(misuse_case__id__in=misuse_case_id_set)
+        # Get all the use cases to be returned.
+        use_cases = use_cases_generic | use_cases_custom
 
         # Remove the duplicated use cases, if there are any.
-        serializer = UseCaseSerializer(set(use_cases.all()), many=True)
+        serializer = UseCaseSerializer(use_cases, many=True)
 
         return Response(data=serializer.data, exception=Exception())
 

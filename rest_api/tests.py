@@ -34,15 +34,18 @@ class RestAPITestBase(TestCase):
         self.tear_down_users_and_tokens()
 
     def set_up_users_and_tokens(self):
-        test_user_active = User(username='test_user_active', is_active=True)
-        test_user_active.save()
-        test_user_active_id = test_user_active.id
-        self._test_user_active_token = str(Token.objects.get(user__id=test_user_active_id))
+        self._user_1 = User(username='user_1', is_active=True)
+        self._user_1.save()
+        self._user_1_token = str(Token.objects.get(user__id=self._user_1.id))
 
-        test_user_inactive = User(username='test_user_inactive', is_active=False)
-        test_user_inactive.save()
-        test_user_inactive_id = test_user_inactive.id
-        self._test_user_inactive_token = Token.objects.get(user__id=test_user_inactive_id)
+        self._user_2 = User(username='user_2', is_active=True)
+        self._user_2.save()
+        self._user_2_token = str(Token.objects.get(user__id=self._user_2.id))
+
+        self._user_3_inactive = User(username='user_3_inactive', is_active=False)
+        self._user_3_inactive.save()
+        self._user_3_inactive_id = self._user_3_inactive.id
+        self._user_3_inactive_token = Token.objects.get(user__id=self._user_3_inactive_id)
 
     def set_up_test_data(self):
         # To be overridden by the subclass.
@@ -57,17 +60,17 @@ class RestAPITestBase(TestCase):
         pass
 
     def http_get(self, url, params, auth_token_type=AUTH_TOKEN_TYPE_ACTIVE_USER):
-        auth_token = self._test_user_active_token
+        auth_token = self._user_1_token
         if auth_token_type == RestAPITestBase.AUTH_TOKEN_TYPE_INACTIVE_USER:
-            auth_token = self._test_user_inactive_token
+            auth_token = self._user_3_inactive_token
         elif auth_token_type == RestAPITestBase.AUTH_TOKEN_TYPE_NONE:
             auth_token = None
         return self._cli.get(url, data=params, HTTP_AUTHORIZATION='Token '+str(auth_token))
 
     def http_post(self, url, data, auth_token_type=AUTH_TOKEN_TYPE_ACTIVE_USER):
-        auth_token = self._test_user_active_token
+        auth_token = self._user_1_token
         if auth_token_type == RestAPITestBase.AUTH_TOKEN_TYPE_INACTIVE_USER:
-            auth_token = self._test_user_inactive_token
+            auth_token = self._user_3_inactive_token
         elif auth_token_type == RestAPITestBase.AUTH_TOKEN_TYPE_NONE:
             auth_token = None
         return self._cli.post(url, data, HTTP_AUTHORIZATION='Token '+str(auth_token))
@@ -377,6 +380,28 @@ class TestMisuseCaseSuggestion(RestAPITestBase):
 
     CWE_CODES = [101, 102, 103]     # The CWE codes used in the tests
 
+    def _create_muo_and_misuse_case(self, cwes, muc_desc, custom, approved, creator):
+        # Create the MUO container
+        cwe_ids = [cwe.id for cwe in cwes]
+        MUOContainer.create_custom_muo(cwe_ids,
+                                       misusecase=muc_desc,
+                                       usecase="",    # Use Case is not important here.
+                                       osr="",    # OSR is not important here.
+                                       created_by=creator
+                                       )
+        # We can find this MUO container because only one misuse case is associated with it.
+        muo = MUOContainer.objects.get(misuse_case__description=muc_desc)
+
+        if not custom:
+            # This is not a custom MUO. We need to change its is_custom field.
+            muo.is_custom = False
+
+        if approved:
+            # By default, the newly created MUO container is in 'draft' state.
+            # If it should be in 'approved' state, we need to submit and approve it.
+            muo.action_submit()
+            muo.action_approve()
+
     def set_up_test_data(self):
         # Create CWEs.
         cwe101 = CWE(code=self.CWE_CODES[0])
@@ -386,19 +411,37 @@ class TestMisuseCaseSuggestion(RestAPITestBase):
         cwe103 = CWE(code=self.CWE_CODES[2])
         cwe103.save()
 
-        # Create misuse cases that are associated with the CWEs
-        mu1 = MisuseCase(description="Misuse Case 1")
-        mu1.save()
-        mu1.cwes.add(cwe101)
-        mu2 = MisuseCase(description="Misuse Case 2")
-        mu2.save()
-        mu2.cwes.add(cwe102)
-        mu3 = MisuseCase(description="Misuse Case 3")
-        mu3.save()
-        mu3.cwes.add(cwe102, cwe103)
+        # Create the MUO containers and misuse cases.
+        self._create_muo_and_misuse_case(cwes=[cwe101],
+                                         muc_desc="Misuse Case 1",
+                                         custom=False,
+                                         approved=True,     # Approved, so it's generic.
+                                         creator=self._user_1)
+        self._create_muo_and_misuse_case(cwes=[cwe102],
+                                         muc_desc="Misuse Case 2",
+                                         custom=True,
+                                         approved=True,     # Approved, so it's generic but also custom.
+                                         creator=self._user_1)
+        self._create_muo_and_misuse_case(cwes=[cwe102, cwe103],
+                                         muc_desc="Misuse Case 3",
+                                         custom=True,
+                                         approved=False,    # Not approved, so it's custom.
+                                         creator=self._user_1)
+        self._create_muo_and_misuse_case(cwes=[cwe102],
+                                         muc_desc="Misuse Case 4",
+                                         custom=True,
+                                         approved=False,    # Not approved, so it's custom.
+                                         creator=self._user_1)
+        self._create_muo_and_misuse_case(cwes=[cwe103],
+                                         muc_desc="Misuse Case 5",
+                                         custom=True,
+                                         approved=False,    # Not approved, so it's custom.
+                                         creator=self._user_2)  # By another user
 
     def tear_down_test_data(self):
-        # Delete all the misuse cases first.
+        # Delete all the MUO containers first.
+        MUOContainer.objects.all().delete()
+        # Then delete all the misuse cases.
         MisuseCase.objects.all().delete()
         # Then delete all the CWEs.
         CWE.objects.all().delete()
@@ -433,24 +476,44 @@ class TestMisuseCaseSuggestion(RestAPITestBase):
         self.assertEqual(len(json_content), 1)
         # Make sure the first misuse case is returned.
         self.assertEqual(self._misuse_case_info_found(json_content, 1), True)
+        self.assertEqual(self._misuse_case_info_found(json_content, 2), False)
+        self.assertEqual(self._misuse_case_info_found(json_content, 3), False)
+        self.assertEqual(self._misuse_case_info_found(json_content, 4), False)
+        self.assertEqual(self._misuse_case_info_found(json_content, 5), False)
 
     def test_positive_multiple_cwes(self):
         response = self.http_get(self._get_base_url(), self._form_url_params([self.CWE_CODES[0], self.CWE_CODES[2]]))
         json_content = json.loads(response.content)
         # Make sure exactly two misuse cases are returned.
         self.assertEqual(len(json_content), 2)
-        # Make sure the first and third misuse cases are returned.
+        # Make sure the first, and third misuse cases are returned.
         self.assertEqual(self._misuse_case_info_found(json_content, 1), True)
+        self.assertEqual(self._misuse_case_info_found(json_content, 2), False)
         self.assertEqual(self._misuse_case_info_found(json_content, 3), True)
+        self.assertEqual(self._misuse_case_info_found(json_content, 4), False)
+        self.assertEqual(self._misuse_case_info_found(json_content, 5), False)
+
+    def test_positive_all_cwes(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(self.CWE_CODES))
+        json_content = json.loads(response.content)
+        self.assertEqual(len(json_content), 4)
+        self.assertEqual(self._misuse_case_info_found(json_content, 1), True)
+        self.assertEqual(self._misuse_case_info_found(json_content, 2), True)
+        self.assertEqual(self._misuse_case_info_found(json_content, 3), True)
+        self.assertEqual(self._misuse_case_info_found(json_content, 4), True)
+        self.assertEqual(self._misuse_case_info_found(json_content, 5), False)
 
     def test_positive_distinct_misuse_cases(self):
         response = self.http_get(self._get_base_url(), self._form_url_params([self.CWE_CODES[1], self.CWE_CODES[2]]))
         json_content = json.loads(response.content)
         # Both keyword #102 and #103 are associated with both misuse case #3.
         # We want to make sure that the same misuse case is returned only once.
-        self.assertEqual(len(json_content), 2)
+        self.assertEqual(len(json_content), 3)
+        self.assertEqual(self._misuse_case_info_found(json_content, 1), False)
         self.assertEqual(self._misuse_case_info_found(json_content, 2), True)
         self.assertEqual(self._misuse_case_info_found(json_content, 3), True)
+        self.assertEqual(self._misuse_case_info_found(json_content, 4), True)
+        self.assertEqual(self._misuse_case_info_found(json_content, 5), False)
 
     # Negative test cases
 
@@ -498,51 +561,112 @@ class TestMisuseCaseSuggestion(RestAPITestBase):
 
 class TestUseCaseSuggestion(RestAPITestBase):
 
-    cli = Client()  # The Client utility
-
     DESCRIPTION_BASE_MISUSE_CASE = "Misuse Case "     # Don't forget the trailing blank space.
     DESCRIPTION_BASE_USE_CASE = "Use Case "     # Don't forget the trailing blank space.
     DESCRIPTION_BASE_OSR = "Overlooked Security Requirement "   # Don't forget the trailing blank space.
     NAME_BASE_USE_CASE = "UC/"  # No trailing blank space. Must be changed according to UseCase's model.
 
-    def set_up_test_data(self):
-        # Create some misuse cases
-        mu1 = MisuseCase(description=self.DESCRIPTION_BASE_MISUSE_CASE+"1")
-        mu1.save()
-        mu2 = MisuseCase(description=self.DESCRIPTION_BASE_MISUSE_CASE+"2")
-        mu2.save()
+    def _create_muo_and_misuse_case(self, cwes, muc_desc, custom, approved, creator):
+        # Create the misuse case and establish the relationship with the CWEs
+        misuse_case = MisuseCase(description=muc_desc,
+                                 created_by=creator
+                                 )
+        misuse_case.save()
+        misuse_case.cwes.add(*cwes)  # Establish the relationship between the misuse case and CWEs
 
-        # Create an MUO container so we can save the use cases successfully.
-        muo1 = MUOContainer(misuse_case=mu1)
-        muo1.save()
-        muo2 = MUOContainer(misuse_case=mu2)
-        muo2.save()
+        # Create the MUO container for the misuse case and establish the relationship between the
+        # MUO Container and CWEs
+        muo_container = MUOContainer(is_custom=custom,
+                                     status='draft',
+                                     misuse_case=misuse_case,
+                                     created_by=creator
+                                     )
+        muo_container.save()
+        muo_container.cwes.add(*cwes) # Establish the relationship between the muo container and cwes
+
+        return misuse_case, muo_container
+
+    def _create_use_case_and_link_muo(self, index, muc, muo, creator):
+        uc = UseCase(description=self.DESCRIPTION_BASE_USE_CASE+str(index),
+                     osr=self.DESCRIPTION_BASE_OSR+str(index),
+                     created_by=creator
+                     )
+        uc.muo_container = muo
+        uc.misuse_case = muc
+        uc.save()
+
+    def _approve_muo_container(self, muo_container):
+        muo_container.action_submit()
+        muo_container.action_approve()
+
+    def set_up_test_data(self):
+        # Create some CWEs.
+        cwe101 = CWE(code=101)
+        cwe101.save()
+        cwe102 = CWE(code=102)
+        cwe102.save()
+        cwe103 = CWE(code=103)
+        cwe103.save()
+
+        # Create the MUO containers and misuse cases.
+        muc1, muo1 = self._create_muo_and_misuse_case(
+            cwes=[cwe101],
+            muc_desc="Misuse Case 1",
+            custom=False,
+            approved=True,  # Approved, so it's generic.
+            creator=self._user_1
+        )
+        muc2, muo2 = self._create_muo_and_misuse_case(
+            cwes=[cwe102],
+            muc_desc="Misuse Case 2",
+            custom=True,
+            approved=True,  # Approved, so it's generic but also custom.
+            creator=self._user_1
+        )
+        muc3, muo3 = self._create_muo_and_misuse_case(
+            cwes=[cwe102, cwe103],
+            muc_desc="Misuse Case 3",
+            custom=True,
+            approved=False,  # Not approved, so it's custom.
+            creator=self._user_1
+        )
+        muc4, muo4 = self._create_muo_and_misuse_case(
+            cwes=[cwe102],
+            muc_desc="Misuse Case 4",
+            custom=True,
+            approved=False,  # Not approved, so it's custom.
+            creator=self._user_1
+        )
+        muc5, muo5 = self._create_muo_and_misuse_case(
+            cwes=[cwe103],
+            muc_desc="Misuse Case 5",
+            custom=True,
+            approved=False,  # Not approved, so it's custom.
+            creator=self._user_2
+        )  # By another user
 
         # Create some use cases(with OSRs)
-        uc1 = UseCase(description=self.DESCRIPTION_BASE_USE_CASE+"1",
-                      osr=self.DESCRIPTION_BASE_OSR+"1")
-        uc1.muo_container = muo1
-        uc1.save()
-        uc2 = UseCase(description=self.DESCRIPTION_BASE_USE_CASE+"2",
-                      osr=self.DESCRIPTION_BASE_OSR+"2")
-        uc2.muo_container = muo2
-        uc2.save()
-        uc3 = UseCase(description=self.DESCRIPTION_BASE_USE_CASE+"3",
-                      osr=self.DESCRIPTION_BASE_OSR+"3")
-        uc3.muo_container = muo2
-        uc3.save()
+        self._create_use_case_and_link_muo(1, muc1, muo1, self._user_1)
+        self._create_use_case_and_link_muo(2, muc2, muo2, self._user_1)
+        self._create_use_case_and_link_muo(3, muc2, muo2, self._user_1)
+        self._create_use_case_and_link_muo(4, muc3, muo3, self._user_1)
+        self._create_use_case_and_link_muo(5, muc4, muo4, self._user_1)
+        self._create_use_case_and_link_muo(6, muc4, muo4, self._user_1)
+        self._create_use_case_and_link_muo(7, muc5, muo5, self._user_2)
 
-        # Create the foreign key relationships.
-        mu1.usecase_set.add(uc1)
-        mu2.usecase_set.add(uc2, uc3)
+        # Approve some of the MUO containers.
+        self._approve_muo_container(muo1)
+        self._approve_muo_container(muo2)
 
     def tear_down_test_data(self):
-        # Delete all the MUO containers first.
-        MUOContainer.objects.all().delete()
         # Delete all the use cases
         UseCase.objects.all().delete()
+        # Delete all the MUO containers.
+        MUOContainer.objects.all().delete()
         # Delete all the misuse cases
         MisuseCase.objects.all().delete()
+        # Delete all the CWEs.
+        CWE.objects.all().delete()
 
     def _get_base_url(self):
         return reverse("restapi_UseCase_MisuseCaseRelated")
@@ -570,11 +694,16 @@ class TestUseCaseSuggestion(RestAPITestBase):
     def test_positive_single_misuse_case(self):
         response = self.http_get(self._get_base_url(), self._form_url_params([1]))
         json_content = json.loads(response.content)
-
         # Make sure exactly one use case is returned.
         self.assertEqual(len(json_content), 1)
         # Make sure the first use case is returned.
         self.assertEqual(self._use_case_info_found(json_content, 1), True)
+        self.assertEqual(self._use_case_info_found(json_content, 2), False)
+        self.assertEqual(self._use_case_info_found(json_content, 3), False)
+        self.assertEqual(self._use_case_info_found(json_content, 4), False)
+        self.assertEqual(self._use_case_info_found(json_content, 5), False)
+        self.assertEqual(self._use_case_info_found(json_content, 6), False)
+        self.assertEqual(self._use_case_info_found(json_content, 7), False)
 
     def test_positive_multiple_misuse_cases(self):
         response = self.http_get(self._get_base_url(), self._form_url_params([1, 2]))
@@ -585,6 +714,24 @@ class TestUseCaseSuggestion(RestAPITestBase):
         self.assertEqual(self._use_case_info_found(json_content, 1), True)
         self.assertEqual(self._use_case_info_found(json_content, 2), True)
         self.assertEqual(self._use_case_info_found(json_content, 3), True)
+        self.assertEqual(self._use_case_info_found(json_content, 4), False)
+        self.assertEqual(self._use_case_info_found(json_content, 5), False)
+        self.assertEqual(self._use_case_info_found(json_content, 6), False)
+        self.assertEqual(self._use_case_info_found(json_content, 7), False)
+
+    def test_positive_all_misuse_cases(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params([n for n in range(1, 8)]))
+        json_content = json.loads(response.content)
+        # Make sure all the use cases are returned.
+        self.assertEqual(len(json_content), 6)
+        # Make sure all the use cases are returned.
+        self.assertEqual(self._use_case_info_found(json_content, 1), True)
+        self.assertEqual(self._use_case_info_found(json_content, 2), True)
+        self.assertEqual(self._use_case_info_found(json_content, 3), True)
+        self.assertEqual(self._use_case_info_found(json_content, 4), True)
+        self.assertEqual(self._use_case_info_found(json_content, 5), True)
+        self.assertEqual(self._use_case_info_found(json_content, 6), True)
+        self.assertEqual(self._use_case_info_found(json_content, 7), False)
 
     # Negative test cases
 
