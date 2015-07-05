@@ -12,14 +12,17 @@ from rest_api.serializers import MisuseCaseSerializer
 from rest_api.serializers import UseCaseSerializer
 
 
+# Constants
+FIELD_LENGTH_CWE_NAME = 128
+DJANGO_DB_INTEGER_FIELD_SAFE_UPPER_LIMIT = 2147483647
+
+
 class CWEAllList(APIView):
     """
     List all the CWEs that are available in the database.
     """
     queryset = CWE.objects.all()
     serializer_class = CWESerializer
-
-    FIELD_LENGTH_CWE_NAME = 128
 
     PARAM_OFFSET = "offset"
     PARAM_LIMIT = "limit"
@@ -37,8 +40,9 @@ class CWEAllList(APIView):
         param_pattern_regex = r"^[0-9]+$"
         return re.match(param_pattern_regex, value) is not None
 
-    def _validate_title_contains(self, title_contains):
-        return len(title_contains) <= self.FIELD_LENGTH_CWE_NAME
+    @staticmethod
+    def _validate_title_contains(title_contains):
+        return len(title_contains) <= FIELD_LENGTH_CWE_NAME
     
     @staticmethod
     def _form_err_msg_not_positive_integer(param_name, param_value):
@@ -52,9 +56,10 @@ class CWEAllList(APIView):
                 "' and '" + param_name2 + "' should not be present at the same time."
                 )
     
-    def _form_err_msg_too_long(self, param_name, param_value):
+    @staticmethod
+    def _form_err_msg_too_long(param_name, param_value):
         return ("Invalid argument: '" + param_name + "' should not be longer than " +
-                str(self.FIELD_LENGTH_CWE_NAME) + " characters, but now '" +
+                str(FIELD_LENGTH_CWE_NAME) + " characters, but now '" +
                 param_name + "' has " + str(len(param_value)) + " characters.")
 
     def get(self, request):
@@ -179,6 +184,17 @@ class MisuseCaseRelated(APIView):
         return re.match(param_pattern_regex, cwes_str) is not None
 
     @staticmethod
+    def _validate_cwe_code_range(cwe_id_set):
+        # Values from -2147483648 to 2147483647 are safe in all databases supported by Django.
+        # https://docs.djangoproject.com/en/1.8/ref/models/fields/#integerfield
+        # We need to verify if the CWE code is too large to be converted to a database integer field.
+        too_large_cwe_code_set = set()
+        for cwe_code in cwe_id_set:
+            if long(cwe_code) > DJANGO_DB_INTEGER_FIELD_SAFE_UPPER_LIMIT:
+                too_large_cwe_code_set.add(cwe_code)
+        return too_large_cwe_code_set
+
+    @staticmethod
     def _get_distinct_cwe_codes(cwes_str):
         return set(cwes_str.split(','))
 
@@ -186,6 +202,12 @@ class MisuseCaseRelated(APIView):
     def _form_err_msg_malformed_cwes(cwes_str):
         return ("CWE code list is malformed: '" + cwes_str + "'. " +
                 "It should be one or more positive integers separated by comma."
+                )
+
+    @staticmethod
+    def _form_err_msg_too_large_cwe_code(too_large_cwe_codes):
+        return ("The following CWE codes are too large(acceptable range is from 0 to 2147483647): " +
+                ("".join(str(cwe_code)+',' for cwe_code in too_large_cwe_codes)).rstrip(',')
                 )
 
     @staticmethod
@@ -211,6 +233,12 @@ class MisuseCaseRelated(APIView):
 
         # Get the CWE codes from the parameter string.
         cwe_code_set = self._get_distinct_cwe_codes(cwes_str=cwes_str)
+
+        # Check if any CWE code is too large.
+        too_large_cwe_codes = self._validate_cwe_code_range(cwe_code_set)
+        if len(too_large_cwe_codes) > 0:
+            err_msg = self._form_err_msg_too_large_cwe_code(too_large_cwe_codes)
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
 
         # Get the current user.
         curr_user = request.user
@@ -257,6 +285,17 @@ class UseCaseRelated(APIView):
         return re.match(param_pattern_regex, misuse_cases_str) is not None
 
     @staticmethod
+    def _validate_misuse_case_id_range(misuse_case_id_set):
+        # Values from -2147483648 to 2147483647 are safe in all databases supported by Django.
+        # https://docs.djangoproject.com/en/1.8/ref/models/fields/#integerfield
+        # We need to verify if the misuse case ID is too large to be converted to a database integer field.
+        too_large_muc_id_set = set()
+        for muc_id in misuse_case_id_set:
+            if long(muc_id) > DJANGO_DB_INTEGER_FIELD_SAFE_UPPER_LIMIT:
+                too_large_muc_id_set.add(muc_id)
+        return too_large_muc_id_set
+
+    @staticmethod
     def _get_distinct_misuse_case_ids(misuse_cases_str):
         return set(misuse_cases_str.split(','))
 
@@ -264,6 +303,12 @@ class UseCaseRelated(APIView):
     def _form_err_msg_malformed_misuse_cases(misuse_cases_str):
         return ("Misuse case ID list is malformed: '" + misuse_cases_str + "'. " +
                 "It should be one or more positive integers separated by comma."
+                )
+
+    @staticmethod
+    def _form_err_msg_too_large_misuse_case_ids(too_large_misuse_case_ids):
+        return ("The following misuse case IDs are too large(acceptable range is from 0 to 2147483647): " +
+                ("".join(str(muc_id)+',' for muc_id in too_large_misuse_case_ids)).rstrip(',')
                 )
 
     def get(self, request):
@@ -285,6 +330,12 @@ class UseCaseRelated(APIView):
 
         # Get the misuse case IDs from the parameter string.
         misuse_case_id_set = self._get_distinct_misuse_case_ids(misuse_cases_str=misuse_cases_str)
+
+        # Check if any misuse case ID is too large.
+        too_large_muc_ids = self._validate_misuse_case_id_range(misuse_case_id_set)
+        if len(too_large_muc_ids) > 0:
+            err_msg = self._form_err_msg_too_large_misuse_case_ids(too_large_muc_ids)
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
 
         # Get all the use cases that refer to these misuse cases.
         use_cases_related = UseCase.objects.filter(misuse_case_id__in=misuse_case_id_set)

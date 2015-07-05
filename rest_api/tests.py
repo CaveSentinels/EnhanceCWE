@@ -25,6 +25,8 @@ class RestAPITestBase(TestCase):
     AUTH_TOKEN_TYPE_INACTIVE_USER = 1
     AUTH_TOKEN_TYPE_NONE = 2
 
+    VERY_LARGE_NUM = "999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999"
+
     def setUp(self):
         self.set_up_users_and_tokens()
         self.set_up_test_data()
@@ -306,6 +308,11 @@ class TestCWEAllList(RestAPITestBase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(self._cwe_info_empty(content=response.content))
 
+    def test_negative_get_very_large_offset(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=self.VERY_LARGE_NUM, limit=None))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(self._cwe_info_empty(content=response.content))
+
     def test_negative_get_3_0(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=3, limit=0))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -320,6 +327,16 @@ class TestCWEAllList(RestAPITestBase):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=3, limit=10))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(self._cwe_info_empty(content=response.content))
+
+    def test_negative_get_0_very_large_limit(self):
+        original_max_return = CWEAllList.MAX_RETURN
+        CWEAllList.MAX_RETURN = 2
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=self.VERY_LARGE_NUM))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=103), False)
+        CWEAllList.MAX_RETURN = original_max_return
 
     def test_negative_get_n1_1(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=-1, limit=1))
@@ -520,6 +537,10 @@ class TestMisuseCaseSuggestion(RestAPITestBase):
         self.assertEqual(self._misuse_case_info_found(json_content, 5), False)
 
     # Negative test cases
+
+    def test_negative_very_large_cwe_id(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params([self.VERY_LARGE_NUM]))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_negative_malformed_cwes(self):
         cwes_str_list = [
@@ -740,6 +761,10 @@ class TestUseCaseSuggestion(RestAPITestBase):
         self.assertEqual(self._use_case_info_found(json_content, 7), False)
 
     # Negative test cases
+
+    def test_negative_very_large_misuse_case_id(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params([self.VERY_LARGE_NUM]))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_negative_malformed_misuse_cases(self):
         misuse_cases_str_list = [
