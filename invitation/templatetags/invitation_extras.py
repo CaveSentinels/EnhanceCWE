@@ -18,7 +18,7 @@ def invitation_submit_row(context):
     user_object = context.get('user')
     ctx.update({
         # Show investigate button only when the issue is in open state and the user has approve & reject perm
-        'show_send_invitation': True,
+        'save': True,
 
     })
 
