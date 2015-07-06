@@ -437,6 +437,7 @@ class IssueReportAdmin(BaseAdmin):
     form = autocomplete_light.modelform_factory(IssueReport, fields="__all__")
     fields = [('name', 'status'), 'type', 'usecase', 'usecase_duplicate', 'description',
               ('created_by', 'created_at'), ('reviewed_by', 'reviewed_at'), 'resolve_reason']
+    readonly_fields = ['name', 'status', 'created_by', 'created_at', 'reviewed_by', 'reviewed_at', 'resolve_reason']
     list_display = ['name', 'type', 'created_by', 'created_at', 'status',]
     search_fields = ['name', 'usecase__id', 'usecase__name', 'created_by__name']
     list_filter = ['type', 'status']
@@ -451,15 +452,6 @@ class IssueReportAdmin(BaseAdmin):
             fields.remove('usecase_duplicate')
 
         return fields
-
-
-    def get_readonly_fields(self, request, obj=None):
-        """ Make all fields readonly"""
-        return list(set(
-                [field.name for field in self.model._meta.local_fields] +
-                [field.name for field in self.model._meta.local_many_to_many]
-            ))
-
 
 
     def get_urls(self):
