@@ -23,7 +23,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '-wt!%_nsos-5nf5$$ojt=88vv&odc@etnuvtg%oa8!m)8veth5'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+
 
 # Honor the 'X-Forwarded-Proto' header for request.is_secure()
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -160,7 +160,7 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
-
+DEBUG = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
