@@ -35,32 +35,32 @@ def muo_submit_row(context):
                                   (model_object is None or
                                   (model_object and
                                   model_object.status == 'draft' and
-                                  user_object == model_object.created_by)),
+                                  (user_object == model_object.created_by or user_object.has_perm('muo.can_edit_all')))),
         'show_save_as_new': show_save_as_new and
                             (model_object is None or
                             (model_object and
                             model_object.status == 'draft' and
-                            user_object == model_object.created_by)),
+                            (user_object == model_object.created_by or user_object.has_perm('muo.can_edit_all')))),
         'show_save': show_save and
                      (model_object is None or
                      (model_object and
                      model_object.status == 'draft' and
-                     user_object == model_object.created_by)),
+                     (user_object == model_object.created_by or user_object.has_perm('muo.can_edit_all')))),
         'show_delete_link': show_delete_link and
                             (model_object is None or
                             (model_object and
                             model_object.status in ('draft', 'rejected') and
-                            user_object == model_object.created_by)),
+                            (user_object == model_object.created_by or user_object.has_perm('muo.can_edit_all')))),
 
         # Show submit for review button only to the creator of the muo and if its in draft state
         'show_submit_for_review': model_object and
                                   model_object.status == 'draft' and
-                                  user_object == model_object.created_by,
+                                  (user_object == model_object.created_by or user_object.has_perm('muo.can_edit_all')),
 
         # Show edit button only to the creator of the muo and if its either in in_review or rejected state
         'show_edit': model_object and
                      model_object.status in ('in_review', 'rejected') and
-                     user_object == model_object.created_by,
+                     (user_object == model_object.created_by or user_object.has_perm('muo.can_edit_all')),
 
         # Show approve button only to the user if he/she has the can_approve permission and the state of
         # muo is in in_review
@@ -85,7 +85,7 @@ def muo_submit_row(context):
     return ctx
 
 @register.inclusion_tag('admin/muo/issuereport/reportissue_submit_line.html', takes_context=True)
-def report_action_row(context):
+def reportaction_submit_row(context):
     ctx = original_submit_row(context)
 
     model_object = ctx.get('original')
@@ -93,13 +93,20 @@ def report_action_row(context):
     ctx.update({
         # Show investigate button only when the issue is in open state and the user has approve & reject perm
         'show_investigate_issue': model_object and
-                                  model_object.status == 'open' and
+                                  model_object.status in ('open','reopened') and
                                   user_object.has_perm('muo.can_approve', 'muo.can_reject'),
 
         # Show resolve button only when the issue is in open state and the user has approve & reject perm
         'show_resolve_issue': model_object and
                               model_object.status == 'investigating' and
                               user_object.has_perm('muo.can_approve', 'muo.can_reject'),
+        'show_reopen_issue': model_object and
+                             model_object.status == 'resolved' and
+                             user_object.has_perm('muo.can_approve', 'muo.can_reject'),
+        'show_open_issue': model_object and
+                           model_object.status == 'investigating' and
+                           user_object.has_perm('muo.can_approve','muo.can_reject'),
+
     })
 
     return ctx

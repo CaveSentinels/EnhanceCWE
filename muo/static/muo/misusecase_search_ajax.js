@@ -6,7 +6,7 @@ jQuery(function() {
     };
 
 
-    $(".misuse-case-container").off().on('click', function(){
+    $("body").on('click', '.misuse-case-container', function(){
         // get the misuse case id of the clicked misuse case
         var misuse_case_id = $(this).attr("data-value");
 
@@ -29,7 +29,7 @@ jQuery(function() {
     });
 
 
-    $("#refresh_button").off().on('click', function(){
+    $("body").on('click', '#refresh_button', function(){
         // Prevent the default django action on button click. Otherwise it'll reload the whole page
         event.preventDefault();
 

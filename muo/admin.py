@@ -10,6 +10,7 @@ from django.template.response import TemplateResponse
 from django.conf.urls import url
 import autocomplete_light
 from models import *
+from django import forms
 from django.utils.safestring import mark_safe
 
 from django.http import HttpResponseRedirect
@@ -29,6 +30,12 @@ class UseCaseAdmin(BaseAdmin):
     list_display = ['name']
     search_fields = ['name', 'description', 'tags__name']
 
+    def get_model_perms(self, request):
+        """
+        Return empty perms dict thus hiding the model from admin index.
+        """
+        return {}
+
 
 class UseCaseAdminInLine(admin.StackedInline):
     model = UseCase
@@ -39,17 +46,18 @@ class UseCaseAdminInLine(admin.StackedInline):
     def has_delete_permission(self, request, obj=None):
         """
         Overriding the method such that the delete option on the UseCaseAdminInline form on change form
-        is not available for the users except the original author. The delete option is only available
-        to the original author if the related MUOContainer is in draft state
+        is not available for the users except the original author or users with 'can_edit_all' permission.
+        The delete option is only available to the original author or users with 'can_edit_all' permission
+        if the related MUOContainer is in draft or rejected state
         """
 
         if obj is None:
             # This is add form, let super handle this
             return super(UseCaseAdminInLine, self).has_delete_permission(request, obj=None)
         else:
-            # This is change form. Only original author is allowed to delete the UseCase from the related
-            # MUOContainer if it is in 'draft' state
-            if request.user == obj.created_by and obj.status in ('draft', 'rejected'):
+            # This is change form. Only original author or users with 'can_edit_all' permission are allowed
+            # to delete the UseCase from the related MUOContainer if it is in 'draft' or 'rejected' state
+            if (request.user == obj.created_by or request.user.has_perm('muo.can_edit_all')) and obj.status in ('draft', 'rejected'):
                 return super(UseCaseAdminInLine, self).has_delete_permission(request, obj=None)
             else:
                 # Set deletion permission to False
@@ -59,17 +67,18 @@ class UseCaseAdminInLine(admin.StackedInline):
     def get_readonly_fields(self, request, obj=None):
         """
         Overriding the method such that all the fields on the UseCaseAdminInline form on change form
-        are read-only for all the users except the original author. Only the original author can edit
-        the fields that too when the related MUOContainer is in the 'draft' state
+        are read-only for all the users except the original author or users with 'can_edit_all' permission.
+        Only the original author or users with 'can_edit_all' permission can edit the fields that too
+        when the related MUOContainer is in the 'draft' state
         """
 
         if obj is None:
             # This is add form, let super handle this
             return super(UseCaseAdminInLine, self).get_readonly_fields(request, obj)
         else:
-            # This is the change form. Only the original author is allowed to edit the UseCase if the
-            # related MUOContainer is in the 'draft' state
-            if request.user == obj.created_by and obj.status == 'draft':
+            # This is the change form. Only the original author or users with 'can_edit_all' permission
+            # are allowed to edit the UseCase if the related MUOContainer is in the 'draft' state
+            if (request.user == obj.created_by or request.user.has_perm('muo.can_edit_all')) and obj.status == 'draft':
                 return super(UseCaseAdminInLine, self).get_readonly_fields(request, obj)
             else:
                 # Set all the fields as read-only
@@ -81,8 +90,9 @@ class UseCaseAdminInLine(admin.StackedInline):
     def get_max_num(self, request, obj=None, **kwargs):
         """
         Overriding the method such that the 'Add another Use Case' option on the UseCaseAdminInline form
-        on change form is not available for the users except the original author. The 'Add another UseCase'
-        option is only available to the original author if the related MUOContainer is in draft state
+        on change form is not available for the users except the original author or users with 'can_edit_all'
+        permission. The 'Add another UseCase' option is only available to the original author or users
+        with 'can_edit_all' permission if the related MUOContainer is in draft state
         """
 
         if obj is None:
@@ -91,12 +101,11 @@ class UseCaseAdminInLine(admin.StackedInline):
         else:
             # This is change form. Only original author is allowed to add another Use Case in the
             # MUOContainer if it is in 'draft' state
-            if request.user == obj.created_by and obj.status == 'draft':
+            if (request.user == obj.created_by or request.user.has_perm('muo.can_edit_all')) and obj.status == 'draft':
                 return super(UseCaseAdminInLine, self).get_max_num(request, obj=None, **kwargs)
             else:
                 # No 'Add another Use Case' button
                 return 0
-
 
 
 @admin.register(MisuseCase)
@@ -129,7 +138,7 @@ class MisuseCaseAdmin(BaseAdmin):
 
         if len(selected_cwe_ids) == 0:
             # If list of CWE ids is empty return all the misuse cases
-            misuse_cases = MisuseCase.objects.all()
+            misuse_cases = MisuseCase.objects.approved()
         else:
             #  Get the use cases for the selected CWE ids
             misuse_cases = MisuseCase.objects.filter(cwes__in=selected_cwe_ids)
@@ -171,15 +180,126 @@ class MisuseCaseAdmin(BaseAdmin):
         return render(request, 'admin/muo/misusecase/misusecase_search.html', context)
 
 
+class MUOContainerAdminForm(autocomplete_light.ModelForm):
+    # Create a radio button type choice field for selecting the existing/new misuse case
+    choice = forms.TypedChoiceField(required=False, choices=(('existing', 'Existing Misuse Case'), ('new', 'New Misuse Case')),
+                                    widget=forms.RadioSelect, initial='existing',
+                                    label='Select from the options below')
+
+    def __init__(self, *args, **kwargs):
+        # Overriding the init method so that the initial value for the 'choice' can be set. Also
+        # the required/optional fields are set here
+
+        super(MUOContainerAdminForm, self).__init__(*args, **kwargs)
+
+        if self.instance.pk is None:
+            # This is an 'add' form because no MUOContainer database object exists.
+            # Make both the fields (misuse case and new misuse case) required, so that
+            # they show up as required on the form.
+            # 'choice' is also True because we want validator for choice field to be enabled
+            self.fields['choice'].required = True
+            self.fields['misuse_case'].required = True
+            self.fields['new_misuse_case'].required = True
+        else:
+            # This is the 'change' form
+            if self.instance.status == 'draft':
+                # Both the fields should be required because the user can change the selection
+                # 'choice' is also True because we want validator for choice field to be enabled
+                self.fields['choice'].required = True
+                self.fields['misuse_case'].required = True
+                self.fields['new_misuse_case'].required = True
+
+                # If no misuse case is related, this means the user originally selected the
+                # New Misuse Case option, so default selection should be new misuse case
+                # otherwise the default selection should be the Existing Misuse Case
+                if self.instance.misuse_case is None:
+                    # Custom misuse case was created, default selection should be new misuse case
+                    self.fields['choice'].initial = 'new'
+                else:
+                    # An existing misuse case was selected, default selection should be existing misuse case
+                    self.fields['choice'].initial = 'existing'
+            else:
+                # If the status is not 'draft', the choice field won't be shown on the form
+                # and the validator should also be turned off for it.
+                self.fields['choice'].required = False
+
+
+    def clean(self):
+        cleaned_data = self.cleaned_data
+
+        if cleaned_data['choice'] == 'existing':
+            # If the selection for the choice field is existing misuse case, new_misuse_case
+            # needs to be removed from the _errors because we have set it as a required field
+            # in __init__ but since no value is entered for it, the validation would fail
+            # and it would be present in the _errors. We need to remove it otherwise form
+            # will keep complaining about it.
+            if 'new_misuse_case' in self._errors:
+                del self._errors['new_misuse_case']
+                self.cleaned_data['new_misuse_case'] = None
+        elif cleaned_data['choice'] == 'new':
+            # If the selection for the choice field is new misuse case, misuse_case
+            # needs to be removed from the _errors because we have set it as a required field
+            # in __init__ but since no value is entered for it, the validation would fail
+            # and it would be present in the _errors. We need to remove it otherwise form
+            # will keep complaining about it.
+            if 'misuse_case' in self._errors:
+                del self._errors['misuse_case']
+                self.cleaned_data['misuse_case'] = None
+
+        return cleaned_data
+
+
+    def save(self, commit=True):
+        # Overriding the save method because we want to capture either value of misuse_case
+        # field or the new_misuse_case field but not both. So, based on the choice field selection
+        # by the user, we would either capture value of misuse_case or new_misuse_case and set
+        # the other one to None
+        model = super(MUOContainerAdminForm, self).save(commit=False)
+
+        if model.status == 'draft':
+            # If the status of the MUOContainer object is 'draft', check the user selection
+            # for 'choice' option and accordingly set either misuse_case or the new_use_case to None
+            if 'choice' in self.fields:
+                if self.cleaned_data['choice'] == 'existing':
+                    model.new_misuse_case = None
+                else:
+                    model.misuse_case = None
+            model.save()
+        return model
+
+
 @admin.register(MUOContainer)
 class MUOContainerAdmin(BaseAdmin):
-    form = autocomplete_light.modelform_factory(CWE, fields="__all__")
-    fields = ['name', 'cwes', 'misuse_case', 'new_misuse_case', 'status']
+    form = MUOContainerAdminForm
+    fields = ['name', 'cwes', 'choice', 'misuse_case', 'new_misuse_case', 'status']
     list_display = ['name', 'status']
     readonly_fields = ['name', 'status']
     search_fields = ['name', 'status']
     date_hierarchy = 'created_at'
     inlines = [UseCaseAdminInLine]
+
+    def get_form(self, request, obj=None, **kwargs):
+        # Overriding this method so that the 'choice' field can be added or removed
+        # from the form based on the type i.e. add or change. Also, if it is change
+        # form, 'choice' field can be added/removed based on the status of the MUOContainer
+
+        # get base form object
+        form = super(MUOContainerAdmin,self).get_form(request, obj, **kwargs)
+        if obj is not None:
+            # It's a change form. Only show choice field if the status is draft.
+            if obj.status == 'draft':
+                # show choice field at 2nd position
+                if 'choice' not in self.fields:
+                    self.fields.insert(2, 'choice')
+            else:
+                # If status is not draft, do not show the choice field on the form
+                if 'choice' in self.fields:
+                    self.fields.remove('choice')
+        else:
+            # If add form, show choice field at 2nd position
+            if 'choice' not in self.fields:
+                self.fields.insert(2, 'choice')
+        return form
 
 
     def get_actions(self, request):
@@ -199,23 +319,25 @@ class MUOContainerAdmin(BaseAdmin):
             or to approved MUOs written by other contributors
         """
         qs = super(MUOContainerAdmin, self).get_queryset(request)
-        if request.user.has_perm('muo.can_view_all'):
+        if request.user.has_perm('muo.can_view_all') or request.user.has_perm('muo.can_edit_all'):
             return qs
         return qs.filter(Q(created_by=request.user) | Q(status='approved'))
 
 
     def get_readonly_fields(self, request, obj=None):
         """
-        Overriding the method such that the change form is read-only for all the user. Only the original
-        author of the MUOContainer can edit it that too only when MUOContainer is in 'draft' state
+        Overriding the method such that the change form is read-only for all the users. Only the original
+        author of the MUOContainer or the users with 'can_edit_all' permission can edit it that too only
+        when MUOContainer is in 'draft' state
         """
 
         if obj is None:
             # This is add form, let super handle this
             return super(MUOContainerAdmin, self).get_readonly_fields(request, obj)
         else:
-            # This is change form. Only original author is allowed to edit the MUOContainer in draft state
-            if request.user == obj.created_by and obj.status == 'draft':
+            # This is change form. Only original author or users with 'can_edit_all' permission are allowed
+            # to edit the MUOContainer in draft state
+            if (request.user == obj.created_by or request.user.has_perm('muo.can_edit_all')) and obj.status == 'draft':
                 return super(MUOContainerAdmin, self).get_readonly_fields(request, obj)
             else:
                 # Set all the fields as read-only
@@ -228,22 +350,22 @@ class MUOContainerAdmin(BaseAdmin):
     def has_delete_permission(self, request, obj=None):
         """
         Overriding the method such that the delete option on the change form is not available
-        for the users except the original author. The delete option is only available to the
-        original author if the related MUOContainer is in draft state
+        for the users except the original author or users with permission 'can_edit_all'.
+        The delete option is only available to the original author or users with permission 'can_edit_all'
+        if the related MUOContainer is in draft or rejected state
         """
 
         if obj is None:
             # This is add form, let super handle this
             return super(MUOContainerAdmin, self).has_delete_permission(request, obj=None)
         else:
-            # This is change form. Only original author is allowed to delete the MUOContainer
-            # and that too if it is in 'draft' state
-            if request.user == obj.created_by and obj.status in ('draft', 'rejected'):
+            # This is change form. Only original author or users with 'can_edit_all' are allowed
+            # to delete the MUOContainer and that too if it is in 'draft' state
+            if (request.user == obj.created_by or request.user.has_perm('muo.can_edit_all')) and obj.status in ('draft', 'rejected'):
                 return super(MUOContainerAdmin, self).has_delete_permission(request, obj=None)
             else:
                 # Set deletion permission to False
                 return False
-
 
 
     def response_change(self, request, obj, *args, **kwargs):
@@ -287,7 +409,7 @@ class MUOContainerAdmin(BaseAdmin):
             elif "_promote" in request.POST:
                 obj.action_promote(request.user)
                 msg = "This MUO has been promoted and now everyone will have access to it."
-                
+
             else:
                 # Let super class 'ModelAdmin' handle rest of the button clicks i.e. 'save' 'save and continue' etc.
                 return super(MUOContainerAdmin, self).response_change(request, obj, *args, **kwargs)
@@ -309,15 +431,27 @@ class MUOContainerAdmin(BaseAdmin):
         return HttpResponseRedirect(redirect_url)
 
 
+
 @admin.register(IssueReport)
 class IssueReportAdmin(BaseAdmin):
     form = autocomplete_light.modelform_factory(IssueReport, fields="__all__")
-    fields = [('name', 'status'), 'type', 'usecase', 'usecase_duplicate', 'description', ('created_by', 'created_at')]
+    fields = [('name', 'status'), 'type', 'usecase', 'usecase_duplicate', 'description',
+              ('created_by', 'created_at'), ('reviewed_by', 'reviewed_at'), 'resolve_reason']
+    readonly_fields = ['name', 'status', 'created_by', 'created_at', 'reviewed_by', 'reviewed_at', 'resolve_reason']
     list_display = ['name', 'type', 'created_by', 'created_at', 'status',]
-    readonly_fields = ['name', 'status', 'created_by', 'created_at']
     search_fields = ['name', 'usecase__id', 'usecase__name', 'created_by__name']
     list_filter = ['type', 'status']
     date_hierarchy = 'created_at'
+
+
+    def get_fields(self, request, obj=None):
+        """ Override to hide the 'usecase_duplicate' if type is not 'duplicate' """
+        fields = super(IssueReportAdmin, self).get_fields(request, obj)
+
+        if obj and obj.type != 'duplicate' and 'usecase_duplicate' in fields:
+            fields.remove('usecase_duplicate')
+
+        return fields
 
 
     def get_urls(self):
@@ -388,3 +522,52 @@ class IssueReportAdmin(BaseAdmin):
 
         else:
             raise Http404("Invalid access using GET request!")
+
+
+    def response_change(self, request, obj, *args, **kwargs):
+        '''
+        Override response_change method of admin/options.py to handle the click of
+        newly added buttons
+        '''
+
+        # Get the metadata about self (it tells you app and current model)
+        opts = self.model._meta
+
+        # Get the primary key of the model object i.e. Issue Report
+        pk_value = obj._get_pk_val()
+
+        preserved_filters = self.get_preserved_filters(request)
+
+        redirect_url = reverse('admin:%s_%s_change' %
+                                   (opts.app_label, opts.model_name),
+                                   args=(pk_value,))
+        redirect_url = add_preserved_filters({'preserved_filters': preserved_filters, 'opts': opts}, redirect_url)
+
+        # Check which button is clicked, handle accordingly.
+        try:
+            if "_investigate" in request.POST:
+                obj.action_investigate(request.user)
+                msg = "The issue is now being investigated."
+
+            elif "_resolve" in request.POST:
+                resolve_reason = request.POST.get('resolve_reason_text', '')
+                obj.action_resolve(resolve_reason,request.user)
+                msg = "The issue is now resolved because  " + resolve_reason
+
+            elif "_reopen" in request.POST:
+                obj.action_reopen(request.user)
+                msg = "The issue has been re-opened."
+
+            elif "_open" in request.POST:
+                obj.action_open(request.user)
+                msg = "The issue is now opened."
+
+        except ValueError as e:
+            # In case the state of the object is not suitable for the corresponding action,
+            # model will raise the value exception with the appropriate message. Catch the
+            # exception and show the error message to the user
+            msg = e.message
+            self.message_user(request, msg, messages.ERROR)
+
+        self.message_user(request, msg, messages.SUCCESS)
+        return HttpResponseRedirect(redirect_url)
