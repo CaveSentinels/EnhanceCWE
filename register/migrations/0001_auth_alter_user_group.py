@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='group',
             name='is_auto_assign',
-            field=models.BooleanField(default=False, verbose_name='Auto Assign:'),
+            field=models.BooleanField(default=False, verbose_name='Auto Assign'),
         ),
 
         migrations.AlterField(
