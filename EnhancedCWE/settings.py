@@ -33,6 +33,9 @@ ALLOWED_HOSTS = ['*']
 
 # Application definition
 
+SITE_TITLE = 'EnhancedCWE'
+SENDER_EMAIL = 'EnhancedCWE'
+
 INSTALLED_APPS = (
     'base',
     'invitation',

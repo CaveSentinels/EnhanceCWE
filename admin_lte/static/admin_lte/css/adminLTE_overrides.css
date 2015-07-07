@@ -336,3 +336,12 @@ fieldset .field-box{
     margin-left: -20px;
     margin-right: 0px;
 }
+
+label.radio {
+  min-height: 20px;
+  padding-left: 20px;
+  margin-bottom: 0;
+  font-weight: 400;
+  cursor: pointer;
+    display: table;
+}
