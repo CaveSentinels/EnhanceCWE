@@ -1,10 +1,10 @@
 from django.conf import settings
 from django.utils import importlib
 import six
-import allauth
+from allauth.account.utils import perform_login as allauth_perform_login
 
 # Keep reference of original perform login before it gets monkey patched
-original_perform_login = allauth.account.utils.perform_login
+original_perform_login = allauth_perform_login
 
 def perform_login(request, user, email_verification, redirect_url=None, signal_kwargs=None, signup=False):
     """
