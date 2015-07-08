@@ -86,10 +86,15 @@ ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
 # END
 
+# START: register settings
+ACCOUNT_EXTRA_PRE_LOGIN_STEPS = ['invitation.utils.check_if_invited']
+# END
+
 # START: Capcha settings
 RECAPTCHA_PUBLIC_KEY = '6LeuwggTAAAAAGXDRJ0uFgVGPJZLhZdBRdUK1O87'
 RECAPTCHA_PRIVATE_KEY = '6LeuwggTAAAAAFssdSpwuDFw-V3-W64Pn9OM-mXs'
 NOCAPTCHA=False
+RECAPTCHA_USE_SSL = True
 # END
 
 
