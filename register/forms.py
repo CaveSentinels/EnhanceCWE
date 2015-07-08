@@ -7,6 +7,9 @@ from allauth.account import app_settings
 from allauth.account.forms import authenticate
 from django.utils.translation import ugettext_lazy as _
 from .settings import NUMBER_OF_FAILED_LOGINS_BEFORE_CAPTCHA
+from allauth.account.adapter import get_adapter
+from allauth.account.utils import setup_user_email
+from register.models import CustomUserModel
 
 class CaptchaLoginForm(LoginForm):
     recaptcha = ReCaptchaField(label="I'm a human", required=False)
@@ -51,7 +54,14 @@ class CustomSingupForm(SignupForm):
     first_name = forms.CharField(label=_('First name'), max_length=30, required=True)
     last_name = forms.CharField(label=_('Last name'), max_length=30, required=True)
     recaptcha = ReCaptchaField(label="I'm a human")
-
+    role = forms.ChoiceField(label=_('Role'),
+        choices = (
+            ('Contributor', "Contributor"),
+            ('Client', "Client")
+        ),
+        widget = forms.RadioSelect(),
+        initial = 'Contributor',
+    )
 
     def __init__(self, *args, **kwargs):
         super(CustomSingupForm, self).__init__(*args, **kwargs)
@@ -77,8 +87,32 @@ class CustomSingupForm(SignupForm):
                 Field('email', placeholder=self.fields['email'].label, wrapper_class='col-sm-12'),
                 css_class='col-sm-12',
             ),
+
+            Div(
+                Field('role', placeholder=self.fields['role'].label, wrapper_class='col-sm-12'),
+                css_class='col-sm-12',
+            ),
+
             Div(
                 Field('recaptcha', placeholder=self.fields['recaptcha'].label, wrapper_class='col-sm-6'),
                 css_class='col-sm-12',
             ),
         )
+
+    def save(self, request):
+        """
+        We are overriding this method to save the extra information related to the user.
+        In this case, this extra information is his role.
+        """
+        adapter = get_adapter()
+        user = adapter.new_user(request)
+        adapter.save_user(request, user, self)
+        self.custom_signup(request, user)
+
+        # START: Add the role to the user in the model
+        cum = CustomUserModel(role=request.POST['role'], user_id = user.id)
+        cum.save()
+        # END
+
+        setup_user_email(request, user, [])
+        return user
