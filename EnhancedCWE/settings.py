@@ -53,6 +53,7 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'allauth',
     'allauth.account',
+    'register_approval',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -87,7 +88,8 @@ ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
 # END
 
 # START: register settings
-ACCOUNT_EXTRA_PRE_LOGIN_STEPS = ['invitation.utils.check_if_invited']
+ACCOUNT_EXTRA_PRE_LOGIN_STEPS = ['invitation.utils.check_if_invited',
+                                 'register_approval.utils.check_admin_approval']
 # END
 
 # START: Capcha settings
