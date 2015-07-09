@@ -29,6 +29,11 @@ def check_if_invited(request, user, *args, **kwargs):
             if EmailInvitation.objects.filter(email=email_local, key=token_local).exists():
                 email_obj = EmailAddress.objects.get(user=user, email=email_local)
                 email_obj.verified = True
+
+                # if register_approval is installed, then we mark the registration as approved
+                if hasattr(email_obj, 'admin_approval'):
+                    email_obj.admin_approval = 'approved'
+
                 email_obj.save()
 
             if 'invite_email' in request.session:
