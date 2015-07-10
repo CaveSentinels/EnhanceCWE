@@ -22,7 +22,6 @@ from django.views.generic import TemplateView
 urlpatterns = [
     url(r'^$', include('frontpage.urls', namespace='frontpage')),
     url(r'^robots\.txt/$', TemplateView.as_view(template_name='robots.txt', content_type='text/plain')),
-    url(r'^accounts/pending/', include('register_approval.urls')),
     url(r'^accounts/', include('register.urls')),
     url(r'^app/login/', 'register.views.login'),
     url(r'^app/logout/', 'register.views.logout'),
