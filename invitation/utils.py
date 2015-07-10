@@ -6,8 +6,11 @@ from allauth.account.models import EmailAddress
 from invitation.models import EmailInvitation
 
 
-def check_if_invited(request, user, *args, **kwargs):
-    """ This method should be registered in ACCOUNT_EXTRA_PRE_LOGIN_STEPS to check if user came from invitation link """
+def verify_email_if_invited(request, user, *args, **kwargs):
+    """
+    This method should be registered in ACCOUNT_EXTRA_PRE_LOGIN_STEPS to verify the email address of the user
+    if the user came from invitation link
+     """
     url = urlparse(str(request.META['HTTP_REFERER']))
 
     # check if coming from registration page

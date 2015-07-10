@@ -66,10 +66,9 @@ if not hasattr(EmailAddress, 'action_reject'):
     EmailAddress.action_reject = action_reject
 
 
-
-# This method will send an email when registration gets approved
 @receiver(register_approved)
 def email_on_approve(sender, instance, **kwargs):
+    """ This method will send an email when registration gets approved """
 
     site_url = _current_site_url()
     login_url = site_url + reverse('account_login')
@@ -83,9 +82,9 @@ def email_on_approve(sender, instance, **kwargs):
     ), SENDER_EMAIL, [instance.email], fail_silently=True)
 
 
-# This method will send an email when registration gets approved
 @receiver(register_rejected)
 def email_on_reject(sender, instance, **kwargs):
+    """ This method will send an email when registration gets rejected """
 
     send_mail(_('Registration Request Rejected'), get_template('register/email/email_registration_rejected.txt').render(
         Context({
