@@ -3,6 +3,7 @@ from django.core import mail
 from django.test import LiveServerTestCase
 from django.core.urlresolvers import reverse
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.test.utils import override_settings
 from allauth.account.models import EmailAddress, EmailConfirmation
 from selenium import webdriver
@@ -17,19 +18,33 @@ class RegisterTest(LiveServerTestCase):
                    'last_name': 'mylastname',
                    'password': 'mypassword',
                    'email': 'wdbaruni@yahoo.com',
-                   'recaptcha_response_field': 'PASSED'
+                   'recaptcha_response_field': 'PASSED',
+                   'admin_username': 'admin',
+                   'admin_email': 'admin@example.com',
                    }
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        super(RegisterTest, cls).setUpClass()
         os.environ['RECAPTCHA_TESTING'] = 'True'
+
+    @classmethod
+    def tearDownClass(cls):
+        super(RegisterTest, cls).tearDownClass()
+        os.environ['RECAPTCHA_TESTING'] = 'False'
+
+    def setUp(self):
         self.signup_url = '%s%s' % (self.live_server_url, reverse('account_signup'))
         self.email_verify_sent_url = '%s%s' % (self.live_server_url, reverse('account_email_verification_sent'))
+
+        # Groups to test if they were assigned to users after registration or not
+        Group.objects.create(name='assigned', is_auto_assign=True)
+        Group.objects.create(name='unassigned', is_auto_assign=False)
 
         self.selenium = webdriver.Firefox()
         super(RegisterTest, self).setUp()
 
     def tearDown(self):
-        os.environ['RECAPTCHA_TESTING'] = 'False'
         self.selenium.quit()
         super(RegisterTest, self).tearDown()
 
@@ -48,9 +63,13 @@ class RegisterTest(LiveServerTestCase):
         user_filter = get_user_model().objects.filter(username=self.form_params.get('username'))
         self.assertTrue(user_filter.exists(), 'User was not created')
 
-        # Verify user is staff
+        # Verify user is staff and groups assigned correctly
         user = user_filter[0]
         self.assertTrue(user.is_staff, 'User was not assigned as staff')
+        self.assertTrue(user.groups.filter(name='assigned').exists(),
+                        'Failed to assigned a group to a user that has is_auto_assign checked')
+        self.assertFalse(user.groups.filter(name='unassigned').exists(),
+                         'Assigned a group to a user that has is_auto_assign unchecked')
 
         # Verify email object was created
         email_filter = EmailAddress.objects.filter(user=user, email=self.form_params.get('email'))
@@ -75,17 +94,22 @@ class RegisterTest(LiveServerTestCase):
 
 
     @classmethod
-    def fill_register_form(cls, selenium, signup_url):
+    def fill_register_form(cls, selenium, signup_url, admin=False):
         # Open the signup page.
         selenium.get(signup_url)
 
         # Fill signup information
-        selenium.find_element_by_id("id_username").send_keys(cls.form_params.get('username'))
+        if admin:
+            selenium.find_element_by_id("id_username").send_keys(cls.form_params.get('admin_username'))
+            selenium.find_element_by_id("id_email").send_keys(cls.form_params.get('admin_email'))
+        else:
+            selenium.find_element_by_id("id_username").send_keys(cls.form_params.get('username'))
+            selenium.find_element_by_id("id_email").send_keys(cls.form_params.get('email'))
+
         selenium.find_element_by_id("id_password1").send_keys(cls.form_params.get('password'))
         selenium.find_element_by_id("id_password2").send_keys(cls.form_params.get('password'))
         selenium.find_element_by_id("id_first_name").send_keys(cls.form_params.get('first_name'))
         selenium.find_element_by_id("id_last_name").send_keys(cls.form_params.get('last_name'))
-        selenium.find_element_by_id("id_email").send_keys(cls.form_params.get('email'))
         selenium.find_element_by_id("recaptcha_response_field").send_keys(cls.form_params.get('recaptcha_response_field'))
 
 
@@ -125,36 +149,31 @@ class LoginTest(LiveServerTestCase):
     form_params = {'username': 'myusername',
                    'password': 'mypassword',
                    'email': 'wdbaruni@yahoo.com',
-                   'recaptcha_response_field': 'PASSED'
+                   'recaptcha_response_field': 'PASSED',
+                   'admin_username': 'admin',
+                   'admin_email': 'admin@example.com',
                    }
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        super(LoginTest, cls).setUpClass()
         os.environ['RECAPTCHA_TESTING'] = 'True'
+
+    @classmethod
+    def tearDownClass(cls):
+        super(LoginTest, cls).tearDownClass()
+        os.environ['RECAPTCHA_TESTING'] = 'False'
+
+
+    def setUp(self):
         self.login_url = '%s%s' % (self.live_server_url, reverse('account_login'))
-
-        user = get_user_model().objects.create(username=self.form_params['username'],
-                                               email=self.form_params['email'],
-                                               is_staff=True,
-                                               is_active=True)
-        user.set_password(self.form_params['password'])
-        user.save()
-
-        email_obj = EmailAddress.objects.create(user=user,
-                                                email=self.form_params['email'],
-                                                primary=True,
-                                                verified=True)
-
-        if 'register_approval' in settings.INSTALLED_APPS:
-            email_obj.admin_approval = 'approved'
-        email_obj.save()
-
-        self.user = user
         self.login_redirect_url = '%s%s' % (self.live_server_url, settings.LOGIN_REDIRECT_URL)
+
+        self.user = LoginTest.create_user()
         self.selenium = webdriver.Firefox()
         super(LoginTest, self).setUp()
 
     def tearDown(self):
-        os.environ['RECAPTCHA_TESTING'] = 'False'
         self.selenium.quit()
         super(LoginTest, self).tearDown()
 
@@ -197,12 +216,15 @@ class LoginTest(LiveServerTestCase):
 
 
     @classmethod
-    def fill_login_form(cls, selenium, login_url):
+    def fill_login_form(cls, selenium, login_url, admin=False):
         # Open the signup page.
         selenium.get(login_url)
 
         # Fill signup information
-        selenium.find_element_by_id("id_login").send_keys(cls.form_params.get('username'))
+        if admin:
+            selenium.find_element_by_id("id_login").send_keys(cls.form_params.get('admin_username'))
+        else:
+            selenium.find_element_by_id("id_login").send_keys(cls.form_params.get('username'))
         selenium.find_element_by_id("id_password").send_keys(cls.form_params.get('password'))
 
 
@@ -212,4 +234,45 @@ class LoginTest(LiveServerTestCase):
         selenium.find_element_by_xpath('//button[@type="submit"][contains(text(), "Sign In")]').click()
 
 
+    @classmethod
+    def create_user(cls, verified=True, approved=True):
+        user = get_user_model().objects.create(username=cls.form_params['username'],
+                                               email=cls.form_params['email'],
+                                               is_staff=True,
+                                               is_active=True)
+        user.set_password(cls.form_params['password'])
+        user.save()
 
+        if verified:
+            email_obj = EmailAddress.objects.create(user=user,
+                                                    email=cls.form_params['email'],
+                                                    primary=True,
+                                                    verified=True)
+            if approved:
+                if 'register_approval' in settings.INSTALLED_APPS:
+                    email_obj.admin_approval = 'approved'
+                email_obj.save()
+
+        return user
+
+
+    @classmethod
+    def create_superuser(cls):
+        user = get_user_model().objects.create(username=cls.form_params['admin_username'],
+                                               email=cls.form_params['admin_email'],
+                                               is_staff=True,
+                                               is_active=True,
+                                               is_superuser=True)
+        user.set_password(cls.form_params['password'])
+        user.save()
+
+        email_obj = EmailAddress.objects.create(user=user,
+                                                email=cls.form_params['admin_email'],
+                                                primary=True,
+                                                verified=True)
+
+        if 'register_approval' in settings.INSTALLED_APPS:
+            email_obj.admin_approval = 'approved'
+        email_obj.save()
+
+        return user
