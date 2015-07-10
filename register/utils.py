@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.http.response import HttpResponseBase
 from django.utils import importlib
 import six
 from allauth.account.utils import perform_login as allauth_perform_login
@@ -14,17 +15,21 @@ def perform_login(request, user, email_verification, redirect_url=None, signal_k
     extra_pre_login_steps = getattr(settings, 'ACCOUNT_EXTRA_PRE_LOGIN_STEPS', [])
     for step in extra_pre_login_steps:
         method = import_attribute(step)
-        method(**locals())
+        step_res = method(**locals())
+        if isinstance(step_res, HttpResponseBase):
+            return step_res
 
     # Original Result
-    res = original_perform_login(request, user, email_verification, redirect_url=redirect_url, signal_kwargs=signal_kwargs, signup=signup)
+    original_res = original_perform_login(request, user, email_verification, redirect_url=redirect_url, signal_kwargs=signal_kwargs, signup=signup)
 
     extra_post_login_steps = getattr(settings, 'ACCOUNT_EXTRA_POST_LOGIN_STEPS', [])
     for step in extra_post_login_steps:
         method = import_attribute(step)
-        method(**locals())
+        step_res = method(**locals())
+        if isinstance(step_res, HttpResponseBase):
+            return step_res
 
-    return res
+    return original_res
 
 
 def import_attribute(path):
