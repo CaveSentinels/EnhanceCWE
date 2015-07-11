@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+
 from django.db import models, migrations
 from base.migrations import DifferentAppMigration
 
@@ -9,17 +10,18 @@ class Migration(DifferentAppMigration):
     Note the usage of DifferentAppMigration instead of default migration class
     """
 
-    migrated_app = 'auth'
+    migrated_app = 'account'
 
     dependencies = [
-        ('auth', '0005_alter_user_last_login_null'),
+        ('account', '0004_remove_emailaddress_applied_for_role'),
+        ('register_clients', '0001_initial'),
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='group',
-            name='is_auto_assign',
-            field=models.BooleanField(default=False, verbose_name='Auto Assign'),
-        ),
 
+        migrations.AddField(
+            model_name='emailaddress',
+            name='requested_role',
+            field=models.CharField(max_length=20, choices=[(b'contributor', b'Contributor'), (b'client', b'Client')]),
+        ),
     ]

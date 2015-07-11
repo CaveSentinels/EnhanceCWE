@@ -40,7 +40,8 @@ INSTALLED_APPS = (
     'base',
     'invitation',
     'muo',
-    'register',
+
+
     'admin_lte',
     'django_admin_bootstrapped',
     'autocomplete_light',
@@ -53,6 +54,8 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'allauth',
     'allauth.account',
+    'register',
+    'register_clients',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -78,7 +81,7 @@ EMAIL_HOST_PASSWORD = 'enhancedcwe_masre'
 
 # START: allauth settings
 LOGIN_REDIRECT_URL = '/app/'
-ACCOUNT_FORMS = {'signup': 'register.forms.CustomSingupForm',
+ACCOUNT_FORMS = {'signup': 'register_clients.forms.CustomSignupFormClient',
                  'login': 'register.forms.CaptchaLoginForm',
                  }
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'

@@ -7,6 +7,9 @@ from allauth.account import app_settings
 from allauth.account.forms import authenticate
 from django.utils.translation import ugettext_lazy as _
 from .settings import NUMBER_OF_FAILED_LOGINS_BEFORE_CAPTCHA
+from allauth.account.adapter import get_adapter
+from allauth.account.utils import setup_user_email
+from .settings import NUMBER_OF_FAILED_LOGINS_BEFORE_CAPTCHA
 
 class CaptchaLoginForm(LoginForm):
     recaptcha = ReCaptchaField(label="I'm a human", required=False)
@@ -82,3 +85,15 @@ class CustomSingupForm(SignupForm):
                 css_class='col-sm-12',
             ),
         )
+
+    def save(self, request):
+        """
+        We are overriding this method in case we need to save some extra fields.
+        """
+        adapter = get_adapter()
+        user = adapter.new_user(request)
+        adapter.save_user(request, user, self)
+        self.custom_signup(request, user)
+        setup_user_email(request, user, [])
+        return user
+
