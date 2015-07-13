@@ -10,10 +10,13 @@ from emailer import constants
 from EnhancedCWE import settings
 from django.core.urlresolvers import reverse
 
+STATUS = [('accepted', 'Accepted'),
+          ('pending', 'Pending')]
 
 class EmailInvitation(BaseModel):
     email = models.EmailField(max_length=100, db_index=True)
     key = models.CharField(verbose_name='key', max_length=64, db_index=True)
+    status = models.CharField(choices=STATUS, max_length=64, default='Pending')
 
     def __unicode__(self):
         return "to %s" % self.email
@@ -48,6 +51,7 @@ def post_save_send_email(sender, instance, created, using, **kwargs):
             'site_url': site_url
         })
     ), constants.SENDER_EMAIL, [email], fail_silently=True)
+
 
 
 def current_site_url():
