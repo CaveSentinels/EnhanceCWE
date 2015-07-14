@@ -9,10 +9,10 @@ class DifferentAppMigration(migrations.Migration):
     """
     migrated_app = None
 
-    def __init__(self, name, migrated_app):
-        super(DifferentAppMigration, self).__init__(name, migrated_app)
+    def __init__(self, name, app_label):
+        super(DifferentAppMigration, self).__init__(name, app_label)
         if self.migrated_app is None:
-            self.migrated_app = self.migrated_app
+            self.migrated_app = self.app_label
 
     def mutate_state(self, project_state, preserve=True):
         """

@@ -41,7 +41,6 @@ INSTALLED_APPS = (
     'invitation',
     'muo',
 
-
     'admin_lte',
     'django_admin_bootstrapped',
     'autocomplete_light',
@@ -55,6 +54,7 @@ INSTALLED_APPS = (
     'allauth',
     'allauth.account',
     'register',
+    'register_approval',
     'register_clients',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -90,7 +90,8 @@ ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
 # END
 
 # START: register settings
-ACCOUNT_EXTRA_PRE_LOGIN_STEPS = ['invitation.utils.check_if_invited']
+ACCOUNT_EXTRA_PRE_LOGIN_STEPS = ['invitation.utils.verify_email_if_invited',
+                                 'register_approval.utils.check_admin_approval']
 # END
 
 # START: Capcha settings
