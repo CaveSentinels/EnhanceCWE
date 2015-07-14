@@ -173,7 +173,7 @@ class MUOContainer(BaseModel):
         :param created_by: (USER)
         :return: Void
         '''
-        cwe_objects = list(CWE.objects.filter(pk__in=cwe_ids))
+        cwe_objects = list(CWE.objects.filter(code__in=cwe_ids))
 
         if len(cwe_objects) != len(cwe_ids):
             # The count of objects returned from the database for the CWE ids passed didn't match the
