@@ -45,7 +45,7 @@ class CaptchaLoginForm(LoginForm):
 
 
 
-class CustomSingupForm(SignupForm):
+class CustomSignupForm(SignupForm):
     """
     It is a Custom Registration Form class which overrides the default registration form class.
     Its purpose is to add two new fields to the registration form
@@ -57,7 +57,7 @@ class CustomSingupForm(SignupForm):
 
 
     def __init__(self, *args, **kwargs):
-        super(CustomSingupForm, self).__init__(*args, **kwargs)
+        super(CustomSignupForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_tag = False
         self.helper.disable_csrf = True
@@ -85,15 +85,4 @@ class CustomSingupForm(SignupForm):
                 css_class='col-sm-12',
             ),
         )
-
-    def save(self, request):
-        """
-        We are overriding this method in case we need to save some extra fields.
-        """
-        adapter = get_adapter()
-        user = adapter.new_user(request)
-        adapter.save_user(request, user, self)
-        self.custom_signup(request, user)
-        setup_user_email(request, user, [])
-        return user
 

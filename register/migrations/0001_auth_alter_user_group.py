@@ -22,4 +22,10 @@ class Migration(DifferentAppMigration):
             field=models.BooleanField(default=False, verbose_name='Auto Assign'),
         ),
 
+        migrations.AlterField(
+            model_name='user',
+            name='email',
+            field=models.EmailField(max_length=254, verbose_name='email address'),
+        ),
+
     ]
