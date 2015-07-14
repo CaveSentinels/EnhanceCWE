@@ -6,9 +6,10 @@ from django.core.mail import send_mail
 from django.template.loader import get_template
 from django.template import Context
 from django.db.models.signals import post_save, pre_save
-from emailer import constants
-from EnhancedCWE import settings
+from django.conf import settings
 from django.core.urlresolvers import reverse
+
+SENDER_EMAIL = getattr(settings, 'SENDER_EMAIL', '')
 
 STATUS = [('accepted', 'Accepted'),
           ('pending', 'Pending')]
@@ -50,7 +51,7 @@ def post_save_send_email(sender, instance, created, using, **kwargs):
             'site_path': site_path,
             'site_url': site_url
         })
-    ), constants.SENDER_EMAIL, [email], fail_silently=True)
+    ), SENDER_EMAIL, [email], fail_silently=True)
 
 
 

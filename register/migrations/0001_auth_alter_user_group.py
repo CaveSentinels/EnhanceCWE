@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from django.db import models, migrations
+from base.migrations import DifferentAppMigration
 
-TARGET_APP = 'auth'
 
-class Migration(migrations.Migration):
+class Migration(DifferentAppMigration):
     """
-    Overriding constructor to use 'auth' instead of current app
+    Note the usage of DifferentAppMigration instead of default migration class
     """
-    def __init__(self, name, app_label):
-        super(Migration, self).__init__(name, TARGET_APP)
 
+    migrated_app = 'auth'
 
     dependencies = [
         ('auth', '0005_alter_user_last_login_null'),
@@ -20,7 +19,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='group',
             name='is_auto_assign',
-            field=models.BooleanField(default=False, verbose_name='Auto Assign:'),
+            field=models.BooleanField(default=False, verbose_name='Auto Assign'),
         ),
 
         migrations.AlterField(

@@ -5,8 +5,8 @@
     {{ block.super }}
     <script type="text/javascript">
     jQuery(function ($) {
-        if (document.getElementById('id_choice')) {
-            if ($('#id_choice_0').is(':checked')) {
+        if (document.getElementById('div_id_choice')) {
+            if ($('#id_choice_1').is(':checked')) {
                 // Misuse case field should be shown
                 show_misuse_case()
             }
@@ -16,11 +16,11 @@
             }
         }
 
-        $('#id_choice_0').click(function(e) {
+        $('#id_choice_1').click(function(e) {
             show_misuse_case()
         });
 
-        $('#id_choice_1').click(function(e) {
+        $('#id_choice_2').click(function(e) {
             show_new_misuse_case()
         });
 
