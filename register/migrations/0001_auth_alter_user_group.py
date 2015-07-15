@@ -27,4 +27,5 @@ class Migration(DifferentAppMigration):
             name='email',
             field=models.EmailField(max_length=254, verbose_name='email address'),
         ),
+
     ]
