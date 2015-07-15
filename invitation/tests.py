@@ -40,12 +40,14 @@ class RegisterInvitationTest(LiveServerTestCase):
         super(RegisterInvitationTest, self).tearDown()
 
     def test_create_invitation(self):
-        email_count = len(mail.outbox)
 
         invitation = EmailInvitation.objects.create(email=RegisterTest.form_params['email'])
+        self.assertEqual(invitation.status, 'pending', 'Default invitation status is not equal to pending')
         self.assertIsNotNone(invitation.key, 'Failed to create an invitation key')
 
         # Verify invitation email was sent
+        email_count = len(mail.outbox)
+        invitation.send_invitation()
         self.assertEqual(len(mail.outbox), email_count + 1, 'Invitation email failed to send')
 
     def test_register_invited(self):
@@ -54,6 +56,9 @@ class RegisterInvitationTest(LiveServerTestCase):
 
         RegisterTest.fill_register_form(self.selenium, signup_url)
         RegisterTest.submit_register_form(self.selenium)
+
+        invitation = EmailInvitation.objects.get(pk=invitation.pk) # reload invitation object
+        self.assertEqual(invitation.status, 'accepted', 'Invitation status was not updated to accepted after registration')
 
         email_obj = EmailAddress.objects.filter(email=invitation.email)[0]
         self.assertTrue(email_obj.verified, 'Email was not verified after signup with invitation token')

@@ -11,12 +11,36 @@ from django.core.urlresolvers import reverse
 
 SENDER_EMAIL = getattr(settings, 'SENDER_EMAIL', '')
 
+STATUS = [('accepted', 'Accepted'),
+          ('pending', 'Pending')]
+
 class EmailInvitation(BaseModel):
-    email = models.EmailField(max_length=100, db_index=True)
+    email = models.EmailField(max_length=256, unique=True)
     key = models.CharField(verbose_name='key', max_length=64, db_index=True)
+    status = models.CharField(choices=STATUS, max_length=64, default='pending')
 
     def __unicode__(self):
         return "to %s" % self.email
+
+
+    def send_invitation(self):
+        """
+        This method is used to invoke send_email() to send the invitation email to the new user after he is saved in the db
+        """
+        key = self.key
+        email = self.email
+        subject = 'Enhanced CWE Invitation'
+        site_path = reverse("account_signup")
+        site_url = current_site_url()
+
+        send_mail(subject, get_template('invitation/invitation_invite_email.html').render(
+            Context({
+                'key': key,
+                'email': email,
+                'site_path': site_path,
+                'site_url': site_url
+            })
+        ), SENDER_EMAIL, [email], fail_silently=True)
 
 
 @receiver(pre_save, sender=EmailInvitation, dispatch_uid='emailinvite_pre_save_signal')
@@ -25,29 +49,9 @@ def pre_save_update_key(sender, instance, *args, **kwargs):
     Since the key is generated randomly at runtime, this class method is called for attaching
     the key to the current invitation instance.
     """
-    random_key = get_random_string(64).lower()
-    instance.key = random_key
-
-
-@receiver(post_save, sender=EmailInvitation, dispatch_uid='emailinvite_post_save_signal')
-def post_save_send_email(sender, instance, created, using, **kwargs):
-    """
-    This method is used to invoke send_email() to send the invitation email to the new user after he is saved in the db
-    """
-    key = instance.key
-    email = instance.email
-    subject = 'Enhanced CWE Invitation'
-    site_path = reverse("account_signup")
-    site_url = current_site_url()
-
-    send_mail(subject, get_template('invitation/invitation_invite_email.html').render(
-        Context({
-            'key': key,
-            'email': email,
-            'site_path': site_path,
-            'site_url': site_url
-        })
-    ), SENDER_EMAIL, [email], fail_silently=True)
+    if not instance.key:
+        random_key = get_random_string(64).lower()
+        instance.key = random_key
 
 
 def current_site_url():

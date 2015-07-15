@@ -39,6 +39,11 @@ def verify_email_if_invited(request, user, *args, **kwargs):
 
                 email_obj.save()
 
+                # change status of invitation
+                invitation = EmailInvitation.objects.filter(email=email_local, key=token_local)[0]
+                invitation.status = 'accepted'
+                invitation.save()
+
             if 'invite_email' in request.session:
                 del request.session['invite_email']
 
