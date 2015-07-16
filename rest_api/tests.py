@@ -12,6 +12,7 @@ from muo.models import MUOContainer
 from muo.models import UseCase
 from rest_api.views import CWERelatedList
 from rest_api.views import CWEAllList
+from rest_api.views import CWESearchSingleString
 from rest_api.views import MisuseCaseRelated
 from rest_api.views import UseCaseRelated
 from rest_api.views import SaveCustomMUO
@@ -198,20 +199,32 @@ class TestCWEAllList(RestAPITestBase):
             params[CWEAllList.PARAM_NAME_CONTAINS] = str(name_contains)
         return params
 
+    def _cwe_total_count(self, content):
+        result = json.loads(content)
+        return result[CWEAllList.RESPONSE_KEY_TOTAL_COUNT]
+
     def _cwe_info_found(self, content, code):
-        cwe_repr = "{\"id\":" + str(code-100) + ",\"code\":" + str(code) + ",\"name\":\"CWE #" + str(code) + "\"}"
-        return cwe_repr in content
+        result = json.loads(content)
+        found = False
+        for cwe_object in result[CWEAllList.RESPONSE_KEY_CWE_OBJECTS]:
+            if (cwe_object['id'] == code-100 and
+                    cwe_object['code'] == code and
+                    cwe_object['name'] == "CWE #"+str(code)):
+                found = True
+                break
+        return found
 
     def _cwe_info_empty(self, content):
-        return content == '[]'
+        result = json.loads(content)
+        return len(result[CWEAllList.RESPONSE_KEY_CWE_OBJECTS]) == 0
 
     # Positive test cases
 
     def test_positive_get_default_default(self):
-        original_max_return = CWEAllList.DEFAULT_OFFSET
+        original_max_return = CWEAllList.MAX_RETURN
         CWEAllList.DEFAULT_LIMIT = 2  # For test purpose we only return at most two CWEs.
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=None, limit=None))
-        
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
         CWEAllList.MAX_RETURN = original_max_return
@@ -219,45 +232,54 @@ class TestCWEAllList(RestAPITestBase):
     def test_positive_get_2_default(self):
         CWEAllList.DEFAULT_LIMIT = 2  # For test purpose we only return at most two CWEs.
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=2, limit=None))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), True)
 
     def test_positive_get_default_2(self):
-        original_max_return = CWEAllList.DEFAULT_OFFSET
+        original_max_return = CWEAllList.MAX_RETURN
         CWEAllList.DEFAULT_OFFSET = 0  # For test purpose we only return at most two CWEs.
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=None, limit=2))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
         CWEAllList.MAX_RETURN = original_max_return
 
     def test_positive_get_0_0(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=0))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertTrue(self._cwe_info_empty(content=response.content))
 
     def test_positive_get_0_1(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=1))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
 
     def test_positive_get_0_2(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=2))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
 
     def test_positive_get_0_10(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=10))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), True)
 
     def test_positive_get_2_0(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=2, limit=0))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertTrue(self._cwe_info_empty(content=response.content))
 
     def test_positive_get_2_1(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=2, limit=1))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), True)
 
     def test_positive_get_2_10(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=2, limit=10))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), True)
 
     def test_positive_get_0_1_max_2(self):
@@ -265,6 +287,7 @@ class TestCWEAllList(RestAPITestBase):
         CWEAllList.MAX_RETURN = 2
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=1))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         CWEAllList.MAX_RETURN = original_max_return
 
@@ -273,6 +296,7 @@ class TestCWEAllList(RestAPITestBase):
         CWEAllList.MAX_RETURN = 2
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=10))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), False)
@@ -281,6 +305,7 @@ class TestCWEAllList(RestAPITestBase):
     def test_positive_get_0_3_102_None(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=3, code=102))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 1)
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), False)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), False)
@@ -289,6 +314,7 @@ class TestCWEAllList(RestAPITestBase):
         response = self.http_get(self._get_base_url(),
                                  self._form_url_params(offset=0, limit=3, name_contains="CWE"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), True)
@@ -297,6 +323,7 @@ class TestCWEAllList(RestAPITestBase):
         response = self.http_get(self._get_base_url(),
                                  self._form_url_params(offset=0, limit=2, name_contains="CWE"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), False)
@@ -306,26 +333,31 @@ class TestCWEAllList(RestAPITestBase):
     def test_negative_get_3_default(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=3, limit=None))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertTrue(self._cwe_info_empty(content=response.content))
 
     def test_negative_get_very_large_offset(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=self.VERY_LARGE_NUM, limit=None))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertTrue(self._cwe_info_empty(content=response.content))
 
     def test_negative_get_3_0(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=3, limit=0))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertTrue(self._cwe_info_empty(content=response.content))
 
     def test_negative_get_3_1(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=3, limit=1))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertTrue(self._cwe_info_empty(content=response.content))
 
     def test_negative_get_3_10(self):
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=3, limit=10))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertTrue(self._cwe_info_empty(content=response.content))
 
     def test_negative_get_0_very_large_limit(self):
@@ -333,6 +365,7 @@ class TestCWEAllList(RestAPITestBase):
         CWEAllList.MAX_RETURN = 2
         response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=self.VERY_LARGE_NUM))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), False)
@@ -373,6 +406,7 @@ class TestCWEAllList(RestAPITestBase):
         response = self.http_get(self._get_base_url(),
                                  self._form_url_params(offset=0, limit=2, name_contains="name"))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 0)
         self.assertTrue(self._cwe_info_empty(content=response.content))
 
     def test_negative_get_0_3_code_name_contains_both_present(self):
@@ -393,14 +427,284 @@ class TestCWEAllList(RestAPITestBase):
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
+class TestCWESearchSingleString(RestAPITestBase):
+
+    CWE_CODES = [0, 1, 11]     # The CWE codes used in the tests
+    CWE_ID_MAP = {0: 1, 1: 2, 11: 3}     # The CWE's IDs.
+
+    def set_up_test_data(self):
+        # Construct the test database
+        for code in self.CWE_CODES:
+            cwe = CWE(code=code, name="CWE #"+str(code))
+            cwe.save()
+
+    def tear_down_test_data(self):
+        # Destruct the test database
+        for code in self.CWE_CODES:
+            cwe = CWE.objects.get(code=code)
+            cwe.delete()
+
+    # Helper methods
+
+    def _get_base_url(self):
+        return reverse("restapi_CWESearchSingleString")
+
+    def _form_url_params(self, offset=None, limit=None, search_str=None):
+        params = dict()
+        if offset is not None:
+            params[CWESearchSingleString.PARAM_OFFSET] = str(offset)
+        if limit is not None:
+            params[CWESearchSingleString.PARAM_LIMIT] = str(limit)
+        if search_str is not None:
+            params[CWESearchSingleString.PARAM_SEARCH_STR] = str(search_str)
+        return params
+
+    def _cwe_total_count(self, content):
+        result = json.loads(content)
+        return result[CWESearchSingleString.RESPONSE_KEY_TOTAL_COUNT]
+
+    def _cwe_info_found(self, content, code):
+        result = json.loads(content)
+        found = False
+        for cwe_object in result[CWESearchSingleString.RESPONSE_KEY_CWE_OBJECTS]:
+            if (cwe_object['id'] == self.CWE_ID_MAP[code] and
+                    cwe_object['code'] == code and
+                    cwe_object['name'] == "CWE #"+str(code)):
+                found = True
+                break
+        return found
+
+    def _cwe_info_empty(self, content):
+        result = json.loads(content)
+        return len(result[CWESearchSingleString.RESPONSE_KEY_CWE_OBJECTS]) == 0
+
+    # Positive test cases
+
+    def test_positive_get_default_default(self):
+        original_max_return = CWESearchSingleString.MAX_RETURN
+        CWESearchSingleString.DEFAULT_LIMIT = 2  # For test purpose we only return at most two CWEs.
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=None, limit=None))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=0), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=1), True)
+        CWESearchSingleString.MAX_RETURN = original_max_return
+
+    def test_positive_get_2_default(self):
+        original_max_return = CWESearchSingleString.MAX_RETURN
+        CWESearchSingleString.MAX_RETURN = 2  # For test purpose we only return at most two CWEs.
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=2, limit=None))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=0), False)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=1), False)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=11), True)
+        CWESearchSingleString.MAX_RETURN = original_max_return
+
+    def test_positive_get_default_2(self):
+        original_max_return = CWESearchSingleString.MAX_RETURN
+        CWESearchSingleString.DEFAULT_OFFSET = 0  # For test purpose we only return at most two CWEs.
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=None, limit=2))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=0), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=1), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=11), False)
+        CWESearchSingleString.MAX_RETURN = original_max_return
+
+    def test_positive_get_0_0(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=0))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertTrue(self._cwe_info_empty(content=response.content))
+
+    def test_positive_get_0_1(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=1))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=0), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=1), False)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=11), False)
+
+    def test_positive_get_0_2(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=2))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=0), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=1), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=11), False)
+
+    def test_positive_get_0_10(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=10))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=0), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=1), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=11), True)
+
+    def test_positive_get_2_0(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=2, limit=0))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertTrue(self._cwe_info_empty(content=response.content))
+
+    def test_positive_get_2_1(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=2, limit=1))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=0), False)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=1), False)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=11), True)
+
+    def test_positive_get_2_10(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=2, limit=10))
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=0), False)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=1), False)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=11), True)
+
+    def test_positive_get_0_1_max_2(self):
+        original_max_return = CWESearchSingleString.MAX_RETURN
+        CWESearchSingleString.MAX_RETURN = 2
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=1))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=0), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=1), False)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=11), False)
+        CWESearchSingleString.MAX_RETURN = original_max_return
+
+    def test_positive_get_0_10_max_2(self):
+        original_max_return = CWESearchSingleString.MAX_RETURN
+        CWESearchSingleString.MAX_RETURN = 2
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=10))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=0), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=1), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=11), False)
+        CWESearchSingleString.MAX_RETURN = original_max_return
+
+    def test_positive_get_0_3_1_None(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=3, search_str="1"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 2)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=0), False)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=1), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=11), True)
+
+    def test_positive_get_0_3_None_CWE(self):
+        response = self.http_get(self._get_base_url(),
+                                 self._form_url_params(offset=0, limit=3, search_str="CWE"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=0), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=1), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=11), True)
+
+    def test_positive_get_0_2_None_CWE(self):
+        response = self.http_get(self._get_base_url(),
+                                 self._form_url_params(offset=0, limit=2, search_str="CWE"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=0), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=1), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=11), False)
+
+    def test_negative_get_0_3_abc_None(self):
+        search_strings = [
+            "102a",
+            "a102",
+            "abc",
+            "+-*/"
+        ]
+        for search_string in search_strings:
+            response = self.http_get(self._get_base_url(),
+                                     self._form_url_params(offset=0, limit=3, search_str=search_string))
+            self.assertEqual(self._cwe_total_count(content=response.content), 0)
+            self.assertTrue(self._cwe_info_empty(content=response.content))
+
+    # Negative test cases
+
+    def test_negative_get_3_default(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=3, limit=None))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertTrue(self._cwe_info_empty(content=response.content))
+
+    def test_negative_get_very_large_offset(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=self.VERY_LARGE_NUM, limit=None))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertTrue(self._cwe_info_empty(content=response.content))
+
+    def test_negative_get_3_0(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=3, limit=0))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertTrue(self._cwe_info_empty(content=response.content))
+
+    def test_negative_get_3_1(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=3, limit=1))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertTrue(self._cwe_info_empty(content=response.content))
+
+    def test_negative_get_3_10(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=3, limit=10))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertTrue(self._cwe_info_empty(content=response.content))
+
+    def test_negative_get_0_very_large_limit(self):
+        original_max_return = CWESearchSingleString.MAX_RETURN
+        CWESearchSingleString.MAX_RETURN = 2
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=0, limit=self.VERY_LARGE_NUM))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 3)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=0), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=1), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=11), False)
+        CWESearchSingleString.MAX_RETURN = original_max_return
+
+    def test_negative_get_n1_1(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=-1, limit=1))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_negative_get_1_n1(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=1, limit=-1))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_negative_invalid_inputs(self):
+        invalid_inputs = [
+            ("0", "a"),     # 'limit' is not integer.
+            ("0", "1a"),    # 'limit' is not integer.
+            ("0", "a1"),    # 'limit' is not integer.
+            ("a", "1"),     # 'offset' is not integer.
+            ("1a", "1"),    # 'offset' is not integer.
+            ("a1", "1"),    # 'offset' is not integer.
+        ]
+        for input_pair in invalid_inputs:
+            response = self.http_get(self._get_base_url(), self._form_url_params(input_pair[0], input_pair[1]))
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_negative_no_authentication_token(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=2, limit=1),
+                                 auth_token_type=RestAPITestBase.AUTH_TOKEN_TYPE_NONE)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_negative_inactive_authentication_token(self):
+        response = self.http_get(self._get_base_url(), self._form_url_params(offset=2, limit=1),
+                                 auth_token_type=RestAPITestBase.AUTH_TOKEN_TYPE_INACTIVE_USER)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_negative_get_0_2_None_name(self):
+        response = self.http_get(self._get_base_url(),
+                                 self._form_url_params(offset=0, limit=2, search_str="name"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self._cwe_total_count(content=response.content), 0)
+        self.assertTrue(self._cwe_info_empty(content=response.content))
+
+
 class TestMisuseCaseSuggestion(RestAPITestBase):
 
     CWE_CODES = [101, 102, 103]     # The CWE codes used in the tests
 
     def _create_muo_and_misuse_case(self, cwes, muc_desc, custom, approved, creator):
         # Create the MUO container
-        cwe_ids = [cwe.id for cwe in cwes]
-        MUOContainer.create_custom_muo(cwe_ids,
+        cwe_code_list = [cwe.code for cwe in cwes]
+        MUOContainer.create_custom_muo(cwe_code_list,
                                        misusecase=muc_desc,
                                        usecase="",    # Use Case is not important here.
                                        osr="",    # OSR is not important here.
@@ -607,7 +911,7 @@ class TestUseCaseSuggestion(RestAPITestBase):
                                      created_by=creator
                                      )
         muo_container.save()
-        muo_container.cwes.add(*cwes) # Establish the relationship between the muo container and cwes
+        muo_container.cwes.add(*cwes)   # Establish the relationship between the muo container and cwes
 
         return misuse_case, muo_container
 
@@ -847,7 +1151,7 @@ class TestSaveCustomMUO(RestAPITestBase):
 
     def test_positive_all_valid(self):
         base_url = self._form_base_url()
-        data = self._form_post_data(cwe_id_list=[self.CWE_IDS[0]],      # One CWE ID
+        data = self._form_post_data(cwe_id_list=[self.CWE_CODES[0]],      # One CWE code
                                     muc="",     # Empty description
                                     uc="",      # Empty description
                                     osr=""      # Empty description
@@ -875,7 +1179,7 @@ class TestSaveCustomMUO(RestAPITestBase):
 
     def test_positive_all_valid_2(self):
         base_url = self._form_base_url()
-        data = self._form_post_data(cwe_id_list=self.CWE_IDS,      # Multiple CWE ID
+        data = self._form_post_data(cwe_id_list=self.CWE_CODES,      # Multiple CWE codes
                                     muc=self.DESCRIPTION_MISUSE_CASE,   # Non-empty description
                                     uc=self.DESCRIPTION_USE_CASE,       # Non-empty description
                                     osr=self.DESCRIPTION_OSR        # Non-empty description
@@ -925,7 +1229,7 @@ class TestSaveCustomMUO(RestAPITestBase):
 
     def test_negative_inactive_user(self):
         base_url = self._form_base_url()
-        data = self._form_post_data(cwe_id_list=self.CWE_IDS,      # Valid CWE IDs
+        data = self._form_post_data(cwe_id_list=self.CWE_CODES,      # Valid CWE codes
                                     muc=self.DESCRIPTION_MISUSE_CASE,   # Non-empty description
                                     uc=self.DESCRIPTION_USE_CASE,       # Non-empty description
                                     osr=self.DESCRIPTION_OSR        # Non-empty description
@@ -938,7 +1242,7 @@ class TestSaveCustomMUO(RestAPITestBase):
 
     def test_negative_no_auth(self):
         base_url = self._form_base_url()
-        data = self._form_post_data(cwe_id_list=self.CWE_IDS,      # Valid CWE IDs
+        data = self._form_post_data(cwe_id_list=self.CWE_CODES,      # Valid CWE codes
                                     muc=self.DESCRIPTION_MISUSE_CASE,   # Non-empty description
                                     uc=self.DESCRIPTION_USE_CASE,       # Non-empty description
                                     osr=self.DESCRIPTION_OSR        # Non-empty description

@@ -1,5 +1,6 @@
 import re
 from django.contrib.auth.models import User
+from django.db.models import Q
 from cwe.models import CWE
 from cwe.cwe_search import CWESearchLocator
 from muo.models import MUOContainer
@@ -32,6 +33,9 @@ class CWEAllList(APIView):
     DEFAULT_OFFSET = "0"  # The default value of offset in GET method
     DEFAULT_LIMIT = "10"   # The default value of limit in GET method
     MAX_RETURN = "20"  # 20 CWEs will be returned at most, regardless many is specified in "limit".
+
+    RESPONSE_KEY_CWE_OBJECTS = "cwe_objects"
+    RESPONSE_KEY_TOTAL_COUNT = "total_count"
 
     @staticmethod
     def _validate_parameter(value):
@@ -134,6 +138,11 @@ class CWEAllList(APIView):
         elif name_contains_str is not None:
             cwe_objects = cwe_objects.filter(name__icontains=name_contains_str)
 
+        # Now we have all the CWE objects that meet the search criteria.
+        # Count how many CWE objects there are totally before applying the offset and limit.
+        # This total count is helpful for pagination.
+        cwe_objects_total_count = cwe_objects.count()
+
         if offset < cwe_objects.count():
             cwe_returned = cwe_objects[offset:offset+limit]
         else:
@@ -142,7 +151,107 @@ class CWEAllList(APIView):
         
         serializer = CWESerializer(cwe_returned, many=True)
         
-        return Response(data=serializer.data)
+        # Return both the CWE objects and the total count.
+        returned_data = {
+            self.RESPONSE_KEY_CWE_OBJECTS: serializer.data,
+            self.RESPONSE_KEY_TOTAL_COUNT: cwe_objects_total_count
+        }
+
+        return Response(data=returned_data)
+
+
+class CWESearchSingleString(APIView):
+    """
+    @brief: Search the CWE with three parameters: offset, limit, and a single search string.
+    """
+
+    PARAM_OFFSET = "offset"
+    PARAM_LIMIT = "limit"
+    PARAM_SEARCH_STR = "search_str"
+
+    DEFAULT_OFFSET = "0"  # The default value of offset in GET method
+    DEFAULT_LIMIT = "10"   # The default value of limit in GET method
+    MAX_RETURN = "20"  # 20 CWEs will be returned at most, regardless many is specified in "limit".
+
+    RESPONSE_KEY_CWE_OBJECTS = "cwe_objects"
+    RESPONSE_KEY_TOTAL_COUNT = "total_count"
+
+    @staticmethod
+    def _form_err_msg_not_positive_integer(param_name, param_value):
+        return ("Invalid arguments: '" + param_name +
+                "' should be a positive integer like '101', but now '" + param_name +
+                "' = '" + param_value + "'")
+
+    def get(self, request):
+        """
+        @brief: Return the CWE objects in the database.
+        @param: [in] request: The HTTP request.
+        @return: rest_framework.response.Response
+        """
+
+        # Get the value of 'offset' and validate it.
+        offset_str = request.GET.get(self.PARAM_OFFSET)
+        if offset_str is None:
+            # No 'offset' is passed in.
+            offset_str = self.DEFAULT_OFFSET
+        else:
+            # 'offset' is provided. Check if it is in the correct format.
+            if not offset_str.isdigit():
+                err_msg = self._form_err_msg_not_positive_integer(self.PARAM_OFFSET, offset_str)
+                return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get the value of 'limit' and validate it.
+        limit_str = request.GET.get(self.PARAM_LIMIT)
+        if limit_str is None:
+            # No 'limit' is passed in.
+            limit_str = self.DEFAULT_LIMIT
+        else:
+            # 'limit' is provided. Check if it is in the correct format.
+            if not limit_str.isdigit():
+                err_msg = self._form_err_msg_not_positive_integer(self.PARAM_LIMIT, limit_str)
+                return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+
+        # 'offset' and 'limit' should be integers so we convert the offset_str and limit_str.
+        offset = int(offset_str)
+        limit = int(limit_str)
+        limit = (limit if limit < self.MAX_RETURN else self.MAX_RETURN)
+
+        # Get the value of 'search_str'.
+        # Because the search_str could be either the CWE code OR part of the CWE title,
+        # we can only treat it as an arbitrary string.
+        search_str = request.GET.get(self.PARAM_SEARCH_STR)
+
+        # Now the arguments should be valid.
+        cwe_objects = CWE.objects.all()
+        # Filter the CWE objects according to search_str. We search this string in code and name.
+        if search_str is not None:
+            if search_str.isdigit():
+                # If search_str is in the form of an integer, then we search in 'code' or 'name'.
+                cwe_objects = cwe_objects.filter(Q(code=search_str) | Q(name__icontains=search_str))
+            else:
+                # Otherwise, we only search in 'name'.
+                cwe_objects = cwe_objects.filter(name__icontains=search_str)
+
+        # Now we have all the CWE objects that meet the search criteria.
+        # Count how many CWE objects there are totally before applying the offset and limit.
+        # This total count is helpful for pagination.
+        cwe_objects_total_count = cwe_objects.count()
+
+        if offset < cwe_objects.count():
+            cwe_returned = cwe_objects[offset:offset+limit]
+        else:
+            # If offset is too large and exceeds the size of CWE objects, we return an empty list.
+            cwe_returned = list()
+
+        serializer = CWESerializer(cwe_returned, many=True)
+
+        # Return both the CWE objects and the total count.
+        returned_data = {
+            self.RESPONSE_KEY_CWE_OBJECTS: serializer.data,
+            self.RESPONSE_KEY_TOTAL_COUNT: cwe_objects_total_count
+        }
+
+        return Response(data=returned_data)
 
 
 class CWERelatedList(APIView):
