@@ -104,48 +104,44 @@ class TestCustomMUO(TestCase):
         all the required arguments
         '''
         cwes = [1, 2]
-        misuse_case_description = 'This is a misuse case'
-        use_case_description = 'This is a use case'
-        osr = 'This is a osr'
+        misuse_case = {'misuse_case_description': 'This is a misuse case'}
+        use_case = {'use_case_description': 'This is an use case'}
 
-        MUOContainer.create_custom_muo(cwes, misuse_case_description, use_case_description, osr, self.user)
+        MUOContainer.create_custom_muo(cwes, misuse_case, use_case, self.user)
 
         self.assertIsNotNone(MUOContainer.objects.get(created_by=self.user))
         self.assertEqual(MUOContainer.objects.get(created_by=self.user).status, 'draft')
         self.assertEqual(MUOContainer.objects.get(created_by=self.user).is_custom, True)
         self.assertEqual(MUOContainer.objects.get(created_by=self.user).cwes.count(), len(cwes))
-        self.assertEqual(MUOContainer.objects.get(created_by=self.user).misuse_case.misuse_case_description, misuse_case_description)
-        self.assertEqual(MUOContainer.objects.get(created_by=self.user).usecase_set.first().use_case_description, use_case_description)
+        self.assertEqual(MUOContainer.objects.get(created_by=self.user).misuse_case.misuse_case_description, misuse_case['misuse_case_description'])
+        self.assertEqual(MUOContainer.objects.get(created_by=self.user).usecase_set.first().use_case_description, use_case['use_case_description'])
 
     def test_create_custom_muo_with_no_cwes(self):
         '''
         create_custom_muo should raise IntegrityError when trying to create a custom MUOContainer without any CWE
         '''
         cwes = []
-        misuse_case_description = 'This is a misuse case'
-        use_case_description = 'This is a use case'
-        osr = 'This is a osr'
+        misuse_case = {'misuse_case_description': 'This is a misuse case'}
+        use_case = {'use_case_description': 'This is an use case'}
 
-        self.assertRaises(IntegrityError, MUOContainer.create_custom_muo(cwes, misuse_case_description, use_case_description, osr, self.user))
+        self.assertRaises(IntegrityError, MUOContainer.create_custom_muo(cwes, misuse_case, use_case, self.user))
 
     def test_create_custom_muo_with_invalid_cwes(self):
         '''
         create_custom_muo should raise IntegrityError when CWE ID passed as an argument is/are not integer
         '''
         cwes = ['1']
-        misuse_case_description = 'This is a misuse case'
-        use_case_description = 'This is a use case'
-        osr = 'This is a osr'
+        misuse_case = {'misuse_case_description': 'This is a misuse case'}
+        use_case = {'use_case_description': 'This is an use case'}
 
-        self.assertRaises(IntegrityError, MUOContainer.create_custom_muo(cwes, misuse_case_description, use_case_description, osr, self.user))
+        self.assertRaises(IntegrityError, MUOContainer.create_custom_muo(cwes, misuse_case, use_case, self.user))
 
     def test_create_custom_muo_with_non_existent_cwe(self):
         '''
         create_custom_muo should raise ValueError when CWE ID doesn't exist in the database
         '''
         cwes = [1, 100]
-        misuse_case_description = 'This is a misuse case'
-        use_case_description = 'This is a use case'
-        osr = 'This is a osr'
+        misuse_case = {'misuse_case_description': 'This is a misuse case'}
+        use_case = {'use_case_description': 'This is an use case'}
 
-        self.assertRaises(ValueError, MUOContainer.create_custom_muo, cwes, misuse_case_description, use_case_description, osr, self.user)
+        self.assertRaises(ValueError, MUOContainer.create_custom_muo, cwes, misuse_case, use_case, self.user)

@@ -192,15 +192,21 @@ class MUOContainer(BaseModel):
         )
 
     @staticmethod
-    def create_custom_muo(cwe_ids, misusecase, usecase, osr, created_by):
+    def get_value_for_key_in_dict(dict, key):
+        if key in dict:
+            return dict[key]
+        else:
+            return ''
+
+    @staticmethod
+    def create_custom_muo(cwe_ids, misusecase, usecase, created_by):
         '''
         This is a static method that creates a custom MUO. It also established the relationship between the
         objects that has to be related on MUO creation i.e. relationship between cwes and misuse case, cwes
         and muo container, misuse case and muo container, misuse cae and use case.
         :param cwe_ids: (LIST of Integers) List of CWE IDs
-        :param misusecase: (TEXT) Description of the misuse case
-        :param usecase: (TEXT) Description of the use case
-        :param osr: (TEXT) Description of the osr
+        :param misusecase: (Dictionary) Dictionary contaning all the fields of the misuse case
+        :param usecase: (Dictionary) Dictionary containing all the fields of the use case
         :param created_by: (USER)
         :return: Void
         '''
@@ -216,8 +222,25 @@ class MUOContainer(BaseModel):
             # This block should be inside the atmoic context manager because if any of the database transaction
             # fails, all the previous database transaction must be rolled back
 
+            # Get all the fields from the misuse case dictionary
+            misuse_case_description = MUOContainer.get_value_for_key_in_dict(misusecase, 'misuse_case_description')
+            misuse_case_primary_actor = MUOContainer.get_value_for_key_in_dict(misusecase, 'misuse_case_primary_actor')
+            misuse_case_secondary_actor = MUOContainer.get_value_for_key_in_dict(misusecase, 'misuse_case_secondary_actor')
+            misuse_case_precondition = MUOContainer.get_value_for_key_in_dict(misusecase, 'misuse_case_precondition')
+            misuse_case_flow_of_events = MUOContainer.get_value_for_key_in_dict(misusecase, 'misuse_case_flow_of_events')
+            misuse_case_postcondition = MUOContainer.get_value_for_key_in_dict(misusecase, 'misuse_case_postcondition')
+            misuse_case_assumption = MUOContainer.get_value_for_key_in_dict(misusecase, 'misuse_case_assumption')
+            misuse_case_source = MUOContainer.get_value_for_key_in_dict(misusecase, 'misuse_case_source')
+
             # Create the misuse case and establish the relationship with the CWEs
-            misuse_case = MisuseCase(misuse_case_description=misusecase,
+            misuse_case = MisuseCase(misuse_case_description=misuse_case_description,
+                                     misuse_case_primary_actor = misuse_case_primary_actor,
+                                     misuse_case_secondary_actor = misuse_case_secondary_actor,
+                                     misuse_case_precondition = misuse_case_precondition,
+                                     misuse_case_flow_of_events = misuse_case_flow_of_events,
+                                     misuse_case_postcondition = misuse_case_postcondition,
+                                     misuse_case_assumption = misuse_case_assumption,
+                                     misuse_case_source = misuse_case_source,
                                      created_by=created_by,
                                      created_at=timezone.now())
             misuse_case.save()
@@ -233,8 +256,28 @@ class MUOContainer(BaseModel):
             muo_container.save()
             muo_container.cwes.add(*cwe_objects) # Establish the relationship between the muo container and cwes
 
+            # Get all the values from the use case dictionary
+            use_case_description = MUOContainer.get_value_for_key_in_dict(usecase, 'use_case_description')
+            use_case_primary_actor = MUOContainer.get_value_for_key_in_dict(usecase, 'use_case_primary_actor')
+            use_case_secondary_actor = MUOContainer.get_value_for_key_in_dict(usecase, 'use_case_secondary_actor')
+            use_case_precondition = MUOContainer.get_value_for_key_in_dict(usecase, 'use_case_precondition')
+            use_case_flow_of_events = MUOContainer.get_value_for_key_in_dict(usecase, 'use_case_flow_of_events')
+            use_case_postcondition = MUOContainer.get_value_for_key_in_dict(usecase, 'use_case_postcondition')
+            use_case_assumption = MUOContainer.get_value_for_key_in_dict(usecase, 'use_case_assumption')
+            use_case_source = MUOContainer.get_value_for_key_in_dict(usecase, 'use_case_source')
+            osr_pattern_type = MUOContainer.get_value_for_key_in_dict(usecase, 'osr_pattern_type')
+            osr = MUOContainer.get_value_for_key_in_dict(usecase, 'osr')
+
             # Create the Use case for the Misuse Case and MUO Container
-            use_case = UseCase(use_case_description=usecase,
+            use_case = UseCase(use_case_description=use_case_description,
+                               use_case_primary_actor=use_case_primary_actor,
+                               use_case_secondary_actor=use_case_secondary_actor,
+                               use_case_precondition=use_case_precondition,
+                               use_case_flow_of_events=use_case_flow_of_events,
+                               use_case_postcondition=use_case_postcondition,
+                               use_case_assumption=use_case_assumption,
+                               use_case_source=use_case_source,
+                               osr_pattern_type=osr_pattern_type,
                                osr=osr,
                                muo_container=muo_container,
                                misuse_case=misuse_case,
