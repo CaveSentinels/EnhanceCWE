@@ -114,8 +114,8 @@ class TestCustomMUO(TestCase):
         self.assertEqual(MUOContainer.objects.get(created_by=self.user).status, 'draft')
         self.assertEqual(MUOContainer.objects.get(created_by=self.user).is_custom, True)
         self.assertEqual(MUOContainer.objects.get(created_by=self.user).cwes.count(), len(cwes))
-        self.assertEqual(MUOContainer.objects.get(created_by=self.user).misuse_case.description, misuse_case_description)
-        self.assertEqual(MUOContainer.objects.get(created_by=self.user).usecase_set.first().description, use_case_description)
+        self.assertEqual(MUOContainer.objects.get(created_by=self.user).misuse_case.misuse_case_description, misuse_case_description)
+        self.assertEqual(MUOContainer.objects.get(created_by=self.user).usecase_set.first().use_case_description, use_case_description)
 
     def test_create_custom_muo_with_no_cwes(self):
         '''

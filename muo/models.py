@@ -5,11 +5,10 @@ from django.conf import settings
 from cwe.models import CWE
 from base.models import BaseModel
 from django.core.exceptions import ValidationError
-from django.db.models.signals import post_delete, pre_delete, post_save
+from django.db.models.signals import post_delete, pre_delete, pre_save, post_save
 from django.dispatch import receiver
 from signals import *
 from django.utils import timezone
-
 
 STATUS = [('draft', 'Draft'),
           ('in_review', 'In Review'),
@@ -24,6 +23,13 @@ ISSUE_STATUS = [('open', 'Open'),
                  ('investigating', 'Investigating'),
                 ('reopened','Re-opened'),
                  ('resolved', 'Resolved')]
+
+MISUSE_CASE_TYPE_CHOICES = [('existing', 'Existing'), ('new', 'New')]
+
+OSR_PATTERN_CHOICES = [('ubiquitous', 'Ubiquitous'),
+                       ('event-driven', 'Event-Driven'),
+                       ('unwanted behavior', 'Unwanted Behavior'),
+                       ('state-driven', 'State-Driven')]
 
 
 class Tag(BaseModel):
@@ -114,10 +120,17 @@ class MUOManager(models.Manager):
 
 
 class MisuseCase(BaseModel):
-    name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
-    description = models.TextField()
     cwes = models.ManyToManyField(CWE, related_name='misuse_cases')
     tags = models.ManyToManyField(Tag, blank=True)
+    name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
+    misuse_case_description = models.TextField(null=True, blank=True, verbose_name="Brief Description")
+    misuse_case_primary_actor = models.CharField(max_length=256, null=True, blank=True, verbose_name="Primary actor")
+    misuse_case_secondary_actor = models.CharField(max_length=256, null=True, blank=True, verbose_name="Secondary actor")
+    misuse_case_precondition = models.TextField(null=True, blank=True, verbose_name="Pre-condition")
+    misuse_case_flow_of_events = models.TextField(null=True, blank=True, verbose_name="Flow of events")
+    misuse_case_postcondition = models.TextField(null=True, blank=True, verbose_name="Post-condition")
+    misuse_case_assumption = models.TextField(null=True, blank=True, verbose_name="Assumption")
+    misuse_case_source = models.TextField(null=True, blank=True, verbose_name="Source")
 
     objects = MUOManager()  # Replace the default manager with the MUOManager
 
@@ -126,7 +139,7 @@ class MisuseCase(BaseModel):
         verbose_name_plural = "Misuse Cases"
 
     def __unicode__(self):
-        return "%s - %s..." % (self.name, self.description[:70])
+        return "%s - %s..." % (self.name, self.misuse_case_description[:70])
 
 
 @receiver(post_save, sender=MisuseCase, dispatch_uid='misusecase_post_save_signal')
@@ -140,8 +153,26 @@ def post_save_misusecase(sender, instance, created, using, **kwargs):
 class MUOContainer(BaseModel):
     name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
     cwes = models.ManyToManyField(CWE, related_name='muo_container')
+
+    misuse_case_type = models.CharField(max_length=16,
+                                        null=True,
+                                        blank=False,
+                                        choices=MISUSE_CASE_TYPE_CHOICES,
+                                        default='new',
+                                        verbose_name='Misuse Case Type')
+
     misuse_case = models.ForeignKey(MisuseCase, on_delete=models.PROTECT, null=True, blank=True)
-    new_misuse_case = models.TextField(null=True, blank=True)
+
+    misuse_case_name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
+    misuse_case_description = models.TextField(null=True, blank=True, verbose_name="Brief Description")
+    misuse_case_primary_actor = models.CharField(max_length=256, null=True, blank=True, verbose_name="Primary actor")
+    misuse_case_secondary_actor = models.CharField(max_length=256, null=True, blank=True, verbose_name="Secondary actor")
+    misuse_case_precondition = models.TextField(null=True, blank=True, verbose_name="Pre-condition")
+    misuse_case_flow_of_events = models.TextField(null=True, blank=True, verbose_name="Flow of events")
+    misuse_case_postcondition = models.TextField(null=True, blank=True, verbose_name="Post-condition")
+    misuse_case_assumption = models.TextField(null=True, blank=True, verbose_name="Assumption")
+    misuse_case_source = models.TextField(null=True, blank=True, verbose_name="Source")
+
     reject_reason = models.TextField(null=True, blank=True)
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
     status = models.CharField(choices=STATUS, max_length=64, default='draft')
@@ -186,7 +217,7 @@ class MUOContainer(BaseModel):
             # fails, all the previous database transaction must be rolled back
 
             # Create the misuse case and establish the relationship with the CWEs
-            misuse_case = MisuseCase(description=misusecase,
+            misuse_case = MisuseCase(misuse_case_description=misusecase,
                                      created_by=created_by,
                                      created_at=timezone.now())
             misuse_case.save()
@@ -203,7 +234,7 @@ class MUOContainer(BaseModel):
             muo_container.cwes.add(*cwe_objects) # Establish the relationship between the muo container and cwes
 
             # Create the Use case for the Misuse Case and MUO Container
-            use_case = UseCase(description=usecase,
+            use_case = UseCase(use_case_description=usecase,
                                osr=osr,
                                muo_container=muo_container,
                                misuse_case=misuse_case,
@@ -231,13 +262,20 @@ class MUOContainer(BaseModel):
                 # misuse_case is None that means the author has written a new misuse case.
                 # A new misuse case object needs to be created and related with the current
                 # MUOContainer and CWEs
-                misuse_case = MisuseCase(description=self.new_misuse_case,
+                misuse_case = MisuseCase(misuse_case_description=self.misuse_case_description,
+                                         misuse_case_primary_actor=self.misuse_case_primary_actor,
+                                         misuse_case_secondary_actor=self.misuse_case_secondary_actor,
+                                         misuse_case_precondition=self.misuse_case_precondition,
+                                         misuse_case_flow_of_events=self.misuse_case_flow_of_events,
+                                         misuse_case_postcondition=self.misuse_case_postcondition,
+                                         misuse_case_assumption=self.misuse_case_assumption,
+                                         misuse_case_source=self.misuse_case_source,
                                          created_by=self.created_by,
                                          created_at=self.created_at)
                 misuse_case.save()
                 misuse_case.cwes.add(*list(self.cwes.all()))
                 self.misuse_case = misuse_case
-                self.new_misuse_case = None  # Remove the text from the new_misuse_case
+                self.misuse_case_type = 'existing'
 
             # Create the relationship between the misuse case of the muo container with all the
             # use cases of the container
@@ -283,8 +321,11 @@ class MUOContainer(BaseModel):
     def action_submit(self):
         # This method change the status of the MUOContainer object to 'in_review'. This change
         # is allowed only if the current status is 'draft'. If the current status is not
-        # 'draft', it raises the ValueError with appropriate message.
+        # 'draft', it raises the ValidationError with appropriate message. It also perform
+        # extra validations required before submitting the MUO for review
         if self.status == 'draft':
+            if self.misuse_case_type == 'existing' and self.misuse_case is None:
+                raise ValidationError('An misuse case must be selected')
             if (self.usecase_set.count() == 0):
                 raise ValidationError('A MUO Container must have at least one use case')
 
@@ -320,6 +361,21 @@ class MUOContainer(BaseModel):
         else:
             raise ValueError("MUO can only be promoted if it is in draft state and custom.")
 
+@receiver(pre_save, sender=MUOContainer, dispatch_uid='muo_container_pre_save_signal')
+def pre_save_muo_container(sender, instance, *args, **kwargs):
+    if instance.misuse_case_type == 'existing' and instance.misuse_case is not None:
+        # If it's an existing misuse case, set the details of the muocontainer object from the selected misuse case
+        selected_misuse_case_id = instance.misuse_case.id
+        misuse_case = MisuseCase.objects.get(pk=selected_misuse_case_id)
+        instance.misuse_case_description = misuse_case.misuse_case_description
+        instance.misuse_case_primary_actor = misuse_case.misuse_case_primary_actor
+        instance.misuse_case_secondary_actor = misuse_case.misuse_case_secondary_actor
+        instance.misuse_case_precondition = misuse_case.misuse_case_precondition
+        instance.misuse_case_flow_of_events = misuse_case.misuse_case_flow_of_events
+        instance.misuse_case_postcondition = misuse_case.misuse_case_postcondition
+        instance.misuse_case_assumption = misuse_case.misuse_case_assumption
+        instance.misuse_case_source = misuse_case.misuse_case_source
+
 
 @receiver(post_save, sender=MUOContainer, dispatch_uid='muo_container_post_save_signal')
 def post_save_muo_container(sender, instance, created, using, **kwargs):
@@ -353,11 +409,25 @@ def post_delete_muo_container(sender, instance, using, **kwargs):
 
 class UseCase(BaseModel):
     name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
-    description = models.TextField()
-    osr = models.TextField()
     misuse_case = models.ForeignKey(MisuseCase, null=True, blank=True)
     muo_container = models.ForeignKey(MUOContainer)
     tags = models.ManyToManyField(Tag, blank=True)
+
+    use_case_description = models.TextField(null=True, blank=True, verbose_name="Brief description")
+    use_case_primary_actor = models.CharField(max_length=256, null=True, blank=True, verbose_name="Primary actor")
+    use_case_secondary_actor = models.CharField(max_length=256, null=True, blank=True, verbose_name="Secondary actor")
+    use_case_precondition = models.TextField(null=True, blank=True, verbose_name="Pre-condition")
+    use_case_flow_of_events = models.TextField(null=True, blank=True, verbose_name="Flow of events")
+    use_case_postcondition = models.TextField(null=True, blank=True, verbose_name="Post-condition")
+    use_case_assumption = models.TextField(null=True, blank=True, verbose_name="Assumption")
+    use_case_source = models.TextField(null=True, blank=True, verbose_name="Source")
+    osr_pattern_type = models.CharField(max_length=32,
+                                        null=True,
+                                        blank=False,
+                                        choices=OSR_PATTERN_CHOICES,
+                                        default='ubiquitous',
+                                        verbose_name='Overlooked security requirements pattern type')
+    osr = models.TextField(null=True, blank=True, verbose_name="Overlooked security requirements")
 
     objects = MUOManager()  # Replace the default manager with the MUOManager
 
@@ -366,7 +436,7 @@ class UseCase(BaseModel):
         verbose_name_plural = "Use Cases"
 
     def __unicode__(self):
-        return "%s - %s..." % (self.name, self.description[:70])
+        return "%s - %s..." % (self.name, self.use_case_description[:70])
 
 
     def get_absolute_url(self, language=None):

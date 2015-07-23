@@ -10,12 +10,10 @@ from django.template.response import TemplateResponse
 from django.conf.urls import url
 import autocomplete_light
 from models import *
-from django import forms
 from django.utils.safestring import mark_safe
 
 from django.http import HttpResponseRedirect
 from base.admin import BaseAdmin
-
 
 @admin.register(Tag)
 class TagAdmin(BaseAdmin):
@@ -25,10 +23,10 @@ class TagAdmin(BaseAdmin):
 
 @admin.register(UseCase)
 class UseCaseAdmin(BaseAdmin):
-    fields = ['name', 'misuse_case', 'description', 'osr', 'tags']
+    fields = ['name', 'misuse_case', 'use_case_description', 'osr', 'tags']
     readonly_fields = ['name']
     list_display = ['name']
-    search_fields = ['name', 'description', 'tags__name']
+    search_fields = ['name', 'use_case_description', 'tags__name']
 
     def get_model_perms(self, request):
         """
@@ -36,11 +34,13 @@ class UseCaseAdmin(BaseAdmin):
         """
         return {}
 
-
 class UseCaseAdminInLine(admin.StackedInline):
     model = UseCase
     extra = 0
-    fields = ['name', 'description', 'osr']
+    fields = ['name', 'use_case_description', 'use_case_primary_actor',
+              'use_case_secondary_actor', 'use_case_precondition', 'use_case_flow_of_events',
+              'use_case_postcondition', 'use_case_assumption', 'use_case_source',
+              'osr_pattern_type', 'osr']
     readonly_fields = ['name']
 
     def has_delete_permission(self, request, obj=None):
@@ -110,10 +110,10 @@ class UseCaseAdminInLine(admin.StackedInline):
 
 @admin.register(MisuseCase)
 class MisuseCaseAdmin(BaseAdmin):
-    fields = ['name', 'cwes', ('description', 'tags')]
+    fields = ['name', 'cwes', ('misuse_case_description', 'tags')]
     readonly_fields = ['name']
     list_display = ['name']
-    search_fields = ['name', 'description', 'tags__name']
+    search_fields = ['name', 'misuse_case_description', 'tags__name']
     inlines = [UseCaseAdminInLine]
 
     def get_urls(self):
@@ -179,128 +179,18 @@ class MisuseCaseAdmin(BaseAdmin):
 
         return render(request, 'admin/muo/misusecase/misusecase_search.html', context)
 
-
-class MUOContainerAdminForm(autocomplete_light.ModelForm):
-    # Create a radio button type choice field for selecting the existing/new misuse case
-    choice = forms.TypedChoiceField(required=False, choices=(('existing', 'Existing Misuse Case'), ('new', 'New Misuse Case')),
-                                    widget=forms.RadioSelect, initial='existing',
-                                    label='Select from the options below')
-
-    def __init__(self, *args, **kwargs):
-        # Overriding the init method so that the initial value for the 'choice' can be set. Also
-        # the required/optional fields are set here
-
-        super(MUOContainerAdminForm, self).__init__(*args, **kwargs)
-
-        if self.instance.pk is None:
-            # This is an 'add' form because no MUOContainer database object exists.
-            # Make both the fields (misuse case and new misuse case) required, so that
-            # they show up as required on the form.
-            # 'choice' is also True because we want validator for choice field to be enabled
-            self.fields['choice'].required = True
-            self.fields['misuse_case'].required = True
-            self.fields['new_misuse_case'].required = True
-        else:
-            # This is the 'change' form
-            if self.instance.status == 'draft':
-                # Both the fields should be required because the user can change the selection
-                # 'choice' is also True because we want validator for choice field to be enabled
-                self.fields['choice'].required = True
-                self.fields['misuse_case'].required = True
-                self.fields['new_misuse_case'].required = True
-
-                # If no misuse case is related, this means the user originally selected the
-                # New Misuse Case option, so default selection should be new misuse case
-                # otherwise the default selection should be the Existing Misuse Case
-                if self.instance.misuse_case is None:
-                    # Custom misuse case was created, default selection should be new misuse case
-                    self.fields['choice'].initial = 'new'
-                else:
-                    # An existing misuse case was selected, default selection should be existing misuse case
-                    self.fields['choice'].initial = 'existing'
-            else:
-                # If the status is not 'draft', the choice field won't be shown on the form
-                # and the validator should also be turned off for it.
-                self.fields['choice'].required = False
-
-
-    def clean(self):
-        cleaned_data = self.cleaned_data
-
-        if cleaned_data['choice'] == 'existing':
-            # If the selection for the choice field is existing misuse case, new_misuse_case
-            # needs to be removed from the _errors because we have set it as a required field
-            # in __init__ but since no value is entered for it, the validation would fail
-            # and it would be present in the _errors. We need to remove it otherwise form
-            # will keep complaining about it.
-            if 'new_misuse_case' in self._errors:
-                del self._errors['new_misuse_case']
-                self.cleaned_data['new_misuse_case'] = None
-        elif cleaned_data['choice'] == 'new':
-            # If the selection for the choice field is new misuse case, misuse_case
-            # needs to be removed from the _errors because we have set it as a required field
-            # in __init__ but since no value is entered for it, the validation would fail
-            # and it would be present in the _errors. We need to remove it otherwise form
-            # will keep complaining about it.
-            if 'misuse_case' in self._errors:
-                del self._errors['misuse_case']
-                self.cleaned_data['misuse_case'] = None
-
-        return cleaned_data
-
-
-    def save(self, commit=True):
-        # Overriding the save method because we want to capture either value of misuse_case
-        # field or the new_misuse_case field but not both. So, based on the choice field selection
-        # by the user, we would either capture value of misuse_case or new_misuse_case and set
-        # the other one to None
-        model = super(MUOContainerAdminForm, self).save(commit=False)
-
-        if model.status == 'draft':
-            # If the status of the MUOContainer object is 'draft', check the user selection
-            # for 'choice' option and accordingly set either misuse_case or the new_use_case to None
-            if 'choice' in self.fields:
-                if self.cleaned_data['choice'] == 'existing':
-                    model.new_misuse_case = None
-                else:
-                    model.misuse_case = None
-            model.save()
-        return model
-
-
 @admin.register(MUOContainer)
 class MUOContainerAdmin(BaseAdmin):
-    form = MUOContainerAdminForm
-    fields = ['name', 'cwes', 'choice', 'misuse_case', 'new_misuse_case', 'status']
+    form = autocomplete_light.modelform_factory(MUOContainer, fields="__all__")
+    fields = ['name', 'cwes', 'misuse_case_type', 'misuse_case', 'misuse_case_description',
+              'misuse_case_primary_actor', 'misuse_case_secondary_actor', 'misuse_case_precondition',
+              'misuse_case_flow_of_events', 'misuse_case_postcondition', 'misuse_case_assumption',
+              'misuse_case_source', 'status']
     list_display = ['name', 'status']
     readonly_fields = ['name', 'status']
     search_fields = ['name', 'status']
     date_hierarchy = 'created_at'
     inlines = [UseCaseAdminInLine]
-
-    def get_form(self, request, obj=None, **kwargs):
-        # Overriding this method so that the 'choice' field can be added or removed
-        # from the form based on the type i.e. add or change. Also, if it is change
-        # form, 'choice' field can be added/removed based on the status of the MUOContainer
-
-        # get base form object
-        form = super(MUOContainerAdmin,self).get_form(request, obj, **kwargs)
-        if obj is not None:
-            # It's a change form. Only show choice field if the status is draft.
-            if obj.status == 'draft':
-                # show choice field at 2nd position
-                if 'choice' not in self.fields:
-                    self.fields.insert(2, 'choice')
-            else:
-                # If status is not draft, do not show the choice field on the form
-                if 'choice' in self.fields:
-                    self.fields.remove('choice')
-        else:
-            # If add form, show choice field at 2nd position
-            if 'choice' not in self.fields:
-                self.fields.insert(2, 'choice')
-        return form
-
 
     def get_actions(self, request):
         """
@@ -311,7 +201,6 @@ class MUOContainerAdmin(BaseAdmin):
         if 'delete_selected' in actions:
             del actions['delete_selected']
         return actions
-
 
     def get_queryset(self, request):
         """
@@ -429,7 +318,6 @@ class MUOContainerAdmin(BaseAdmin):
 
         self.message_user(request, msg, messages.SUCCESS)
         return HttpResponseRedirect(redirect_url)
-
 
 
 @admin.register(IssueReport)
