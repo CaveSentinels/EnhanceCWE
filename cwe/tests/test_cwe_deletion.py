@@ -52,6 +52,6 @@ class TestCWEDeletion(TestCase):
         """
 
         cwe = CWE.objects.create(code=123, name='CWE1')
-        misuse_case = MisuseCase.objects.create(description='misuse_case')
+        misuse_case = MisuseCase.objects.create(misuse_case_description='misuse_case')
         misuse_case.cwes.add(cwe)
         self.assertRaises(IntegrityError, cwe.delete)
