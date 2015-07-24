@@ -41,7 +41,9 @@
 }
 
 .muo-search-container .misuse-case-container {
-
+    border-right: thin double;
+    border-bottom: thin double;
+    border-color: #e7eaec;
 }
 
 .muo-search-container .misuse-case-container:hover,
@@ -51,8 +53,8 @@
 }
 
 .muo-search-container .misuse-case-header {
-    border-right: thin double;
-    border-color: #e7eaec;
+    /*border-right: thin double;*/
+    /*border-color: #e7eaec;*/
     padding: 15px;
 }
 
@@ -63,8 +65,7 @@
 .muo-search-container .misuse-case-div {
     width: 100%;
     padding: 15px;
-    border-right: thin double;
-    border-bottom: thin double;
+    padding-bottom: 0px;
     border-color: #e7eaec;
     background-color: transparent;
     margin-top: 0px;
@@ -84,16 +85,13 @@
 .muo-search-container .use-case-container .use-case-div {
     width: 100%;
     padding: 15px;
-    border-bottom: thin double;
+    padding-bottom: 0px;
     border-color: #e7eaec;
+    background-color: transparent;
+    margin-top: 0px;
 }
 
 .muo-search-container .use-case-container .use-case-header {
-
-}
-
-.muo-search-container .use-case-container .osr-div {
-    width: 100%;
     padding: 15px;
 }
 
@@ -101,4 +99,18 @@
     float: right;
     color: #888888;
     font-size: 85%
+}
+
+.misuse-case-div .heading, .use-case-div .heading {
+    margin-bottom: 0px;
+    font-weight: 400;
+}
+
+.misuse-case-div .text, .use-case-div .text {
+    font-weight: 300;
+}
+
+.use-case-div .osr-heading {
+    margin-bottom: 0px;
+    font-weight: 700;
 }
