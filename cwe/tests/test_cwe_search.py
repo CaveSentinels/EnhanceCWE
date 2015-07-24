@@ -9,54 +9,6 @@ class CWESearchTest(TestCase):
     This class is the test suite to test the methods of the CWESearchLocator class
     """
 
-    def test_registration_with_service_locator(self):
-        """
-        Note: Here we are combining several test cases in a single method (or test case)
-        because django treats each method as a separate test case and it seems that
-        it runs test cases in parallel. In this case, the CWEServiceLocator only registers
-        a CWESearchBase object if its priority is higher than that of the already registered
-        one. So, registering a CWESearchBase object with some priority might fail if a
-        CWESearchBase object with the higher priority has already been registered through
-        some different test case.
-        """
-
-        # Note: Do not register with priority '1' because a default object of CWEKeywordSearch
-        # is already registered in the init module (Refer __init__.py).
-
-        # 'register' should successfully register an object of a concrete class of
-        # the CWESearchBase and return 'True'
-        cwe_keyword_search = CWEKeywordSearch()
-        self.assertEqual(CWESearchLocator.register(cwe_keyword_search, 2), True)
-
-        # 'get_cwe_search' should return the object registered with highest priority
-        self.assertEqual(CWESearchLocator.get_instance(), cwe_keyword_search)
-
-        # 'register' should successfully register an object of a concrete class of
-        # the CWESearchBase with the priority higher than that of the already registered
-        # object and return 'True'
-        cwe_keyword_search2 = CWEKeywordSearch()
-        self.assertEqual(CWESearchLocator.register(cwe_keyword_search2, 3), True)
-
-        # 'register' should not register an object of a concrete class of
-        # the CWESearchBase with the priority equal to the priority of the already
-        # registered object and return 'False'
-        cwe_keyword_search3 = CWEKeywordSearch()
-        self.assertEqual(CWESearchLocator.register(cwe_keyword_search3, 3), False)
-
-        # 'register' should not register an object of a concrete class of
-        # the CWESearchBase with the priority lower than the priority of the already
-        # registered object and return 'False'
-        cwe_keyword_search2 = CWEKeywordSearch()
-        self.assertEqual(CWESearchLocator.register(cwe_keyword_search2, 1), False)
-
-
-    def test_registration_with_service_locator_with_instance_not_of_type_CWESearchBase(self):
-        """
-        'register' should raise a value error when an object that doesn't inherits from
-        CWESearchBase tries to register itself.
-        """
-        self.assertRaises(ValueError, CWESearchLocator.register, 'String Object', 100)
-
     def setUp(self):
         """ Predefined database to set up database
         :param text: None
@@ -84,7 +36,7 @@ class CWESearchTest(TestCase):
         scripting = Keyword(name='scripting') # 4
         scripting.save()
 
-        cross = Keyword(name='cross-sit') # 5
+        cross = Keyword(name='cross') # 5
         cross.save()
 
         upload = Keyword(name='upload') # 6
@@ -170,6 +122,57 @@ class CWESearchTest(TestCase):
         cwe.keywords.add(inject)
         cwe.keywords.add(sql)
         cwe.save()
+
+
+
+    def test_registration_with_service_locator(self):
+        """
+        Note: Here we are combining several test cases in a single method (or test case)
+        because django treats each method as a separate test case and it seems that
+        it runs test cases in parallel. In this case, the CWEServiceLocator only registers
+        a CWESearchBase object if its priority is higher than that of the already registered
+        one. So, registering a CWESearchBase object with some priority might fail if a
+        CWESearchBase object with the higher priority has already been registered through
+        some different test case.
+        """
+
+        # Note: Do not register with priority '1' because a default object of CWEKeywordSearch
+        # is already registered in the init module (Refer __init__.py).
+
+        # 'register' should successfully register an object of a concrete class of
+        # the CWESearchBase and return 'True'
+        cwe_keyword_search = CWEKeywordSearch()
+        self.assertEqual(CWESearchLocator.register(cwe_keyword_search, 2), True)
+
+        # 'get_cwe_search' should return the object registered with highest priority
+        self.assertEqual(CWESearchLocator.get_instance(), cwe_keyword_search)
+
+        # 'register' should successfully register an object of a concrete class of
+        # the CWESearchBase with the priority higher than that of the already registered
+        # object and return 'True'
+        cwe_keyword_search2 = CWEKeywordSearch()
+        self.assertEqual(CWESearchLocator.register(cwe_keyword_search2, 3), True)
+
+        # 'register' should not register an object of a concrete class of
+        # the CWESearchBase with the priority equal to the priority of the already
+        # registered object and return 'False'
+        cwe_keyword_search3 = CWEKeywordSearch()
+        self.assertEqual(CWESearchLocator.register(cwe_keyword_search3, 3), False)
+
+        # 'register' should not register an object of a concrete class of
+        # the CWESearchBase with the priority lower than the priority of the already
+        # registered object and return 'False'
+        cwe_keyword_search2 = CWEKeywordSearch()
+        self.assertEqual(CWESearchLocator.register(cwe_keyword_search2, 1), False)
+
+
+    def test_registration_with_service_locator_with_instance_not_of_type_CWESearchBase(self):
+        """
+        'register' should raise a value error when an object that doesn't inherits from
+        CWESearchBase tries to register itself.
+        """
+        self.assertRaises(ValueError, CWESearchLocator.register, 'String Object', 100)
+
 
 
     def test_check_suggestion_sqlinjection(self):
@@ -300,3 +303,33 @@ class CWESearchTest(TestCase):
 
 
 
+    def test_remove_non_alphanumeric_characters(self):
+        """ This test case tests the algorithm that it removes non-alphanumeric characters except underscores
+        :param text: None
+        :return: None
+        """
+        text = "underscores_are allowed. However, hyphen-are not allowed!"
+        expected = ['underscores_are', 'allowed', 'however', 'hyphen', 'allowed']
+        result = self.cwe_keyword_search_obj.remove_stopwords(text)
+        self.assertEqual(result, expected)
+
+
+        text = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+        expected = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz0123456789_"
+        result = self.cwe_keyword_search_obj.remove_stopwords(text)[0]
+        self.assertEqual(result, expected)
+
+
+
+    def test_suggested_keywords_sorted_by_frequency(self):
+        """ This test case tests the algorithm that it returns suggested keywords sorted by the frequency in the text
+        :param text: None
+        :return: None
+        """
+        text = "client client bypass authentication authent authentication"
+        expected = ['authent', 'client', 'bypass']
+
+        filtered_words = self.cwe_keyword_search_obj.remove_stopwords(text)
+        keywords = self.cwe_keyword_search_obj.stem_text(filtered_words)
+
+        self.assertEqual(keywords, expected)

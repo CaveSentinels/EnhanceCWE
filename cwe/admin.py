@@ -9,6 +9,7 @@ import autocomplete_light
 from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.contrib.admin.templatetags.admin_urls import add_preserved_filters
+import re
 
 @admin.register(Category)
 class CategoryAdmin(BaseAdmin):
@@ -23,6 +24,9 @@ class KeywordAdminForm(forms.ModelForm):
     def clean_name(self):
         if len(self.cleaned_data["name"].split()) > 1:
             raise forms.ValidationError("Keyword name should only have a single word")
+
+        if not re.match(r'^[\w]+$', self.cleaned_data["name"]):
+            raise forms.ValidationError("Keyword name can only have alphanumeric characters or underscore")
 
         """ Check the keyword stemmed format doesn't already exist in the database """
         cwe_search = CWESearchLocator.get_instance()
@@ -50,7 +54,7 @@ class CWEAdmin(BaseAdmin):
     model = CWE
     form = autocomplete_light.modelform_factory(CWE, fields="__all__")
     fieldsets = [
-        ('CWE', {'fields': ['code', 'name'],
+        ('CWE', {'fields': ['code', 'name', 'description'],
                  'classes': ['box-col-md-12']}),
 
         ('Categories', {'fields': ['categories'],
@@ -80,10 +84,9 @@ class CWEAdmin(BaseAdmin):
             suggested_text = request.POST.get('suggest_textarea', '')
             suggested_text = suggested_text.lower()
 
-            # TODO: remove set() after implementing this feature in the CWE algorithm
             cwe_search = CWESearchLocator.get_instance()
-            filtered_words = set(cwe_search.remove_stopwords(suggested_text))
-            stemmed_words = set(cwe_search.stem_text(filtered_words))
+            filtered_words = cwe_search.remove_stopwords(suggested_text)
+            stemmed_words = cwe_search.stem_text(filtered_words)
 
             context = dict(
                # Include common variables for rendering the admin template.

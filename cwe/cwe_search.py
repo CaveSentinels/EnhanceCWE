@@ -1,6 +1,8 @@
 from abc import ABCMeta, abstractmethod
+import collections
+from collections import OrderedDict
 from nltk.stem.porter import *
-
+import re
 
 class CWESearchLocator:
     """
@@ -120,8 +122,6 @@ class CWEKeywordSearch(CWESearchBase):
         if not isinstance(text, basestring):
             raise ValueError('Please pass a string in the text description.')
 
-        text = text.lower()
-
         # Call Stop Word method here
         filtered_words = self.remove_stopwords(text)
 
@@ -144,10 +144,14 @@ class CWEKeywordSearch(CWESearchBase):
         """
         This is the concrete implementation of the super class' abstract method
         """
+
+        # make lower case and remove non-alphanumeric characters except for underscore
+        text = text.lower()
+        text = re.sub(r'\W+', ' ', text)
+
         words_in_text = text.split()  # Tokenize the words
 
         # Remove Stop words
-        filtered_words = words_in_text[:]  # make a copy of the word_list
         filtered_words = [word for word in words_in_text if word not in self.stop_words]
         return filtered_words
 
@@ -162,6 +166,12 @@ class CWEKeywordSearch(CWESearchBase):
         # Build stemmed list
         stemmed = [st.stem(word) for word in filtered_words]
 
+        # Sort by frequency
+        counts = collections.Counter(stemmed)
+        stemmed = sorted(stemmed, key=counts.get, reverse=True)
+
+        # Remove duplicates while preserving the order
+        stemmed = list(OrderedDict.fromkeys(stemmed))
         return stemmed
 
 
