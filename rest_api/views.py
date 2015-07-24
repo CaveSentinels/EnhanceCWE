@@ -1,4 +1,5 @@
 import re
+import json
 from django.contrib.auth.models import User
 from django.db.models import Q
 from cwe.models import CWE
@@ -462,46 +463,163 @@ class UseCaseRelated(APIView):
 
 class SaveCustomMUO(APIView):
 
-    PARAM_CWE_IDS = "cwes"
-    PARAM_MISUSE_CASE_DESCRIPTION = "muc"
-    PARAM_USE_CASE_DESCRIPTION = "uc"
-    PARAM_OSR_DESCRIPTION = "osr"
+    PARAM_CWE_CODES = "cwes"
+    PARAM_MISUSE_CASE = "muc"
+    PARAM_USE_CASE = "uc"
+
+    TEMPLATE_MISUSE_CASE = {
+        "misuse_case_description": "",
+        "misuse_case_primary_actor": "",
+        "misuse_case_secondary_actor": "",
+        "misuse_case_precondition": "",
+        "misuse_case_flow_of_events": "",
+        "misuse_case_postcondition": "",
+        "misuse_case_assumption": "",
+        "misuse_case_source": "",
+    }
+    TEMPLATE_USE_CASE = {
+        "use_case_description": "",
+        "use_case_primary_actor": "",
+        "use_case_secondary_actor": "",
+        "use_case_precondition": "",
+        "use_case_flow_of_events": "",
+        "use_case_postcondition": "",
+        "use_case_assumption": "",
+        "use_case_source": "",
+        "osr_pattern_type": "",
+        "osr": "",
+    }
 
     @staticmethod
-    def _get_arg_or_empty(data, param_name):
-        try:
-            return data[param_name]
-        except KeyError:
-            return str()
+    def _check_all_sections_present(data_dict):
+        sections_missing = []
+        if SaveCustomMUO.PARAM_CWE_CODES not in data_dict:
+            sections_missing.append(SaveCustomMUO.PARAM_CWE_CODES)
+        if SaveCustomMUO.PARAM_MISUSE_CASE not in data_dict:
+            sections_missing.append(SaveCustomMUO.PARAM_MISUSE_CASE)
+        if SaveCustomMUO.PARAM_USE_CASE not in data_dict:
+            sections_missing.append(SaveCustomMUO.PARAM_USE_CASE)
+
+        return sections_missing
 
     @staticmethod
-    def _validate_cwe_ids(cwe_ids_str):
-        param_pattern_regex = r"^([0-9]+,)*([0-9]+)$"
-        return re.match(param_pattern_regex, cwe_ids_str) is not None
+    def _check_all_sections_mapping(data_dict):
+        sections_wrong_type = []
+
+        for key, value in data_dict.iteritems():
+            if not isinstance(key, unicode) or not isinstance(value, unicode):
+                sections_wrong_type.append(key)
+
+        return sections_wrong_type
 
     @staticmethod
-    def _form_err_msg_invalid_cwe_ids(cwe_ids_str):
-        return ("CWE ID list is malformed: \"" + cwe_ids_str + "\". " +
-                "It should be one or more positive integers separated by comma."
-                )
+    def _validate_object_format_dict(obj):
+        # The obj should be a dict.
+        if not isinstance(obj, dict):
+            return False
+        # Now make sure the dict is a string -> string mapping.
+        for item in obj.iteritems():
+            if not isinstance(item[0], unicode) or not isinstance(item[1], unicode):
+                return False
+        return True
+
+    @staticmethod
+    def _validate_object_fields(object_template, object_dict):
+        # Find the fields that are missing in the provided object.
+        # It is OK even the field has an empty value, but it should not be missing.
+        fields_missing = []
+        for key in object_template.keys():
+            if key not in object_dict:
+                # If a field is not provided or its name is incorrectly spelled...
+                fields_missing.append(key)
+
+        return fields_missing
+
+    @staticmethod
+    def _form_err_msg_section_missing(sections_missing):
+        return ("The following sections should be provided but missing: " +
+                ("".join(section+", " for section in sections_missing)).rstrip(", "))
+
+    @staticmethod
+    def _form_err_msg_section_wrong_mapping(sections_wrong_mapping):
+        return ("The following sections should be a mapping from string to string: " +
+                ("".join(section+", " for section in sections_wrong_mapping)).rstrip(", "))
+
+    @staticmethod
+    def _form_err_msg_invalid_cwe_codes(cwe_codes_str):
+        return ("CWE code list is malformed: \"" + cwe_codes_str + "\". " +
+                "It should be a JSON string of a list of positive integers.")
+
+    @staticmethod
+    def _form_err_msg_wrong_format(object_name):
+        return ("Incorrect format: " + object_name +
+                " should be a JSON string of a dictionary that maps from string to string.")
+
+    @staticmethod
+    def _form_err_msg_fields_missing(object_name, fields_missing):
+        return ("The following fields are missing from " + object_name + ": " +
+                ("".join(field+", " for field in fields_missing).rstrip(", ")))
 
     def post(self, request):
-        # Get and validate the CWE IDs.
-        cwe_ids_str = self._get_arg_or_empty(request.data, self.PARAM_CWE_IDS)
-        if self._validate_cwe_ids(cwe_ids_str) is False:
-            err_msg = self._form_err_msg_invalid_cwe_ids(cwe_ids_str)
+        # Validation: Check if all the sections have the (string -> string) mapping.
+        sections_wrong_mapping = self._check_all_sections_mapping(request.data)
+        if len(sections_wrong_mapping) > 0:
+            err_msg = self._form_err_msg_section_wrong_mapping(sections_wrong_mapping)
             return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
 
-        cwe_id_list = cwe_ids_str.split(',')
+        # Validation: Check if all the CWE codes, misuse case and use case(including
+        # overlooked security requirement) are provided.
+        # request.data is a dictionary.
+        sections_missing = self._check_all_sections_present(request.data)
+        # Now if sections_missing is not empty, we return the error.
+        if len(sections_missing) > 0:
+            err_msg = self._form_err_msg_section_missing(sections_missing)
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
 
-        # Get and validate the misuse case.
-        misuse_case = self._get_arg_or_empty(request.data, self.PARAM_MISUSE_CASE_DESCRIPTION)
+        # Validation: Check if CWE codes are correct.
+        cwe_codes_str = request.data[self.PARAM_CWE_CODES]
+        try:
+            cwe_code_list = json.loads(cwe_codes_str)
+            if not isinstance(cwe_code_list, list):
+                raise ValueError
+        except ValueError:
+            err_msg = self._form_err_msg_invalid_cwe_codes(cwe_codes_str)
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
 
-        # Get and validate the use case.
-        use_case = self._get_arg_or_empty(request.data, self.PARAM_USE_CASE_DESCRIPTION)
+        # Validation of misuse case.
+        # 1). Check if it is in the correct format.
+        misuse_case_str = request.data[self.PARAM_MISUSE_CASE]
+        try:
+            muc_dict = json.loads(misuse_case_str)
+            if self._validate_object_format_dict(muc_dict) is False:
+                raise ValueError
+        except ValueError:
+            err_msg = self._form_err_msg_wrong_format("misuse case")
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+        # 2). Check if all required fields are present in misuse case.
+        fields_missing = self._validate_object_fields(SaveCustomMUO.TEMPLATE_MISUSE_CASE, misuse_case_str)
+        if len(fields_missing) > 0:
+            err_msg = self._form_err_msg_fields_missing("misuse case", fields_missing)
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
 
-        # Get and validate the OSR.
-        osr = self._get_arg_or_empty(request.data, self.PARAM_OSR_DESCRIPTION)
+        # Validation of use case.
+        # 1). Check if it is in the correct format.
+        use_case_str = request.data[self.PARAM_USE_CASE]
+        try:
+            uc_dict = json.loads(use_case_str)
+            if self._validate_object_format_dict(uc_dict) is False:
+                raise ValueError
+        except ValueError:
+            err_msg = self._form_err_msg_wrong_format("use case")
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+        # 2). Check if all required fields are present in use case.
+        fields_missing = self._validate_object_fields(SaveCustomMUO.TEMPLATE_USE_CASE, use_case_str)
+        if len(fields_missing) > 0:
+            err_msg = self._form_err_msg_fields_missing("use case", fields_missing)
+            return Response(data=err_msg, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get the CWE code list.
+        cwe_code_list = json.loads(cwe_codes_str)
 
         # Get the user.
         # Because by the time that this 'post' method is executed, the
@@ -511,10 +629,9 @@ class SaveCustomMUO(APIView):
 
         # Save the custom MUO.
         try:
-            MUOContainer.create_custom_muo(cwe_ids=cwe_id_list,
-                                           misusecase=misuse_case,
-                                           usecase=use_case,
-                                           osr=osr,
+            MUOContainer.create_custom_muo(cwe_ids=cwe_code_list,
+                                           misusecase=muc_dict,
+                                           usecase=uc_dict,
                                            created_by=creator)
         except Exception as e:
             return Response(data=e.message, status=status.HTTP_400_BAD_REQUEST)

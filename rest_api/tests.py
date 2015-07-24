@@ -1,4 +1,5 @@
 import json
+import copy
 from django.test import TestCase
 from django.test import Client
 from django.core.urlresolvers import reverse
@@ -704,14 +705,18 @@ class TestMisuseCaseSuggestion(RestAPITestBase):
     def _create_muo_and_misuse_case(self, cwes, muc_desc, custom, approved, creator):
         # Create the MUO container
         cwe_code_list = [cwe.code for cwe in cwes]
+        muc_dict = copy.deepcopy(SaveCustomMUO.TEMPLATE_MISUSE_CASE)
+        muc_dict["misuse_case_description"] = muc_desc
+        uc_dict = copy.deepcopy(SaveCustomMUO.TEMPLATE_USE_CASE)
+        uc_dict["use_case_description"] = ""
+        uc_dict["osr"] = ""
         MUOContainer.create_custom_muo(cwe_code_list,
-                                       misusecase=muc_desc,
-                                       usecase="",    # Use Case is not important here.
-                                       osr="",    # OSR is not important here.
+                                       misusecase=muc_dict,
+                                       usecase=uc_dict,    # Use Case is not important here.
                                        created_by=creator
                                        )
         # We can find this MUO container because only one misuse case is associated with it.
-        muo = MUOContainer.objects.get(misuse_case__description=muc_desc)
+        muo = MUOContainer.objects.get(misuse_case__misuse_case_description=muc_desc)
 
         if not custom:
             # This is not a custom MUO. We need to change its is_custom field.
@@ -787,7 +792,7 @@ class TestMisuseCaseSuggestion(RestAPITestBase):
         for json_mu in json_content:
             if (json_mu['id'] == mu_index
                     and json_mu['name'] == mu_name
-                    and json_mu['description'] == mu_description):
+                    and json_mu['misuse_case_description'] == mu_description):
                 found = True
                 break
         return found
@@ -895,9 +900,9 @@ class TestUseCaseSuggestion(RestAPITestBase):
     DESCRIPTION_BASE_OSR = "Overlooked Security Requirement "   # Don't forget the trailing blank space.
     NAME_BASE_USE_CASE = "UC/"  # No trailing blank space. Must be changed according to UseCase's model.
 
-    def _create_muo_and_misuse_case(self, cwes, muc_desc, custom, approved, creator):
+    def _create_muo_and_misuse_case(self, cwes, muc_desc, custom, creator):
         # Create the misuse case and establish the relationship with the CWEs
-        misuse_case = MisuseCase(description=muc_desc,
+        misuse_case = MisuseCase(misuse_case_description=muc_desc,
                                  created_by=creator
                                  )
         misuse_case.save()
@@ -916,7 +921,7 @@ class TestUseCaseSuggestion(RestAPITestBase):
         return misuse_case, muo_container
 
     def _create_use_case_and_link_muo(self, index, muc, muo, creator):
-        uc = UseCase(description=self.DESCRIPTION_BASE_USE_CASE+str(index),
+        uc = UseCase(use_case_description=self.DESCRIPTION_BASE_USE_CASE+str(index),
                      osr=self.DESCRIPTION_BASE_OSR+str(index),
                      created_by=creator
                      )
@@ -942,35 +947,30 @@ class TestUseCaseSuggestion(RestAPITestBase):
             cwes=[cwe101],
             muc_desc="Misuse Case 1",
             custom=False,
-            approved=True,  # Approved, so it's generic.
             creator=self._user_1
         )
         muc2, muo2 = self._create_muo_and_misuse_case(
             cwes=[cwe102],
             muc_desc="Misuse Case 2",
             custom=True,
-            approved=True,  # Approved, so it's generic but also custom.
             creator=self._user_1
         )
         muc3, muo3 = self._create_muo_and_misuse_case(
             cwes=[cwe102, cwe103],
             muc_desc="Misuse Case 3",
             custom=True,
-            approved=False,  # Not approved, so it's custom.
             creator=self._user_1
         )
         muc4, muo4 = self._create_muo_and_misuse_case(
             cwes=[cwe102],
             muc_desc="Misuse Case 4",
             custom=True,
-            approved=False,  # Not approved, so it's custom.
             creator=self._user_1
         )
         muc5, muo5 = self._create_muo_and_misuse_case(
             cwes=[cwe103],
             muc_desc="Misuse Case 5",
             custom=True,
-            approved=False,  # Not approved, so it's custom.
             creator=self._user_2
         )  # By another user
 
@@ -1014,7 +1014,7 @@ class TestUseCaseSuggestion(RestAPITestBase):
         for json_uc in json_content:
             if (json_uc['id'] == uc_index
                     and json_uc['name'] == uc_name
-                    and json_uc['description'] == uc_description
+                    and json_uc['use_case_description'] == uc_description
                     and json_uc['osr'] == osr):
                 found = True
                 break
@@ -1141,24 +1141,29 @@ class TestSaveCustomMUO(RestAPITestBase):
     def _form_base_url(self):
         return reverse("restapi_CustomMUO_Create")
 
-    def _form_post_data(self, cwe_id_list, muc, uc, osr):
-        cwe_ids_str = ("".join(str(cwe_id)+',' for cwe_id in cwe_id_list)).rstrip(',')
-        return {SaveCustomMUO.PARAM_CWE_IDS: cwe_ids_str,
-                SaveCustomMUO.PARAM_MISUSE_CASE_DESCRIPTION: muc,
-                SaveCustomMUO.PARAM_USE_CASE_DESCRIPTION: uc,
-                SaveCustomMUO.PARAM_OSR_DESCRIPTION: osr
+    def _form_post_data(self, cwe_code_list, muc_desc, uc_desc, osr_desc):
+        muc_dict = copy.deepcopy(SaveCustomMUO.TEMPLATE_MISUSE_CASE)
+        muc_dict["misuse_case_description"] = muc_desc
+
+        uc_dict = copy.deepcopy(SaveCustomMUO.TEMPLATE_USE_CASE)
+        uc_dict["use_case_description"] = uc_desc
+        uc_dict["osr"] = osr_desc
+
+        return {SaveCustomMUO.PARAM_CWE_CODES: json.dumps(cwe_code_list),
+                SaveCustomMUO.PARAM_MISUSE_CASE: json.dumps(muc_dict),
+                SaveCustomMUO.PARAM_USE_CASE: json.dumps(uc_dict)
                 }
 
     def test_positive_all_valid(self):
         base_url = self._form_base_url()
-        data = self._form_post_data(cwe_id_list=[self.CWE_CODES[0]],      # One CWE code
-                                    muc="",     # Empty description
-                                    uc="",      # Empty description
-                                    osr=""      # Empty description
+        data = self._form_post_data(cwe_code_list=[self.CWE_CODES[0]],      # One CWE code
+                                    muc_desc="",     # Empty description
+                                    uc_desc="",      # Empty description
+                                    osr_desc=""      # Empty description
                                     )
         response = self.http_post(base_url, data)
         # The POST method returned OK.
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.content)
         # Verify the post-conditions.
         # One and only one MUO was created.
         self.assertEqual(MUOContainer.objects.count(), 1)
@@ -1169,24 +1174,24 @@ class TestSaveCustomMUO(RestAPITestBase):
         passed_in_cwe_ids = {self.CWE_IDS[0]}
         self.assertEqual(associated_cwe_ids, passed_in_cwe_ids)
         # The misuse case was created correctly.
-        self.assertEqual(muo.misuse_case.description, "")
+        self.assertEqual(muo.misuse_case.misuse_case_description, "")
         # Verify use case & OSR.
         use_cases = UseCase.objects.filter(muo_container=muo)
         self.assertEqual(use_cases.count(), 1)
         uc = use_cases[0]
-        self.assertEqual(uc.description, "")
+        self.assertEqual(uc.use_case_description, "")
         self.assertEqual(uc.osr, "")
 
     def test_positive_all_valid_2(self):
         base_url = self._form_base_url()
-        data = self._form_post_data(cwe_id_list=self.CWE_CODES,      # Multiple CWE codes
-                                    muc=self.DESCRIPTION_MISUSE_CASE,   # Non-empty description
-                                    uc=self.DESCRIPTION_USE_CASE,       # Non-empty description
-                                    osr=self.DESCRIPTION_OSR        # Non-empty description
+        data = self._form_post_data(cwe_code_list=self.CWE_CODES,      # Multiple CWE codes
+                                    muc_desc=self.DESCRIPTION_MISUSE_CASE,   # Non-empty description
+                                    uc_desc=self.DESCRIPTION_USE_CASE,       # Non-empty description
+                                    osr_desc=self.DESCRIPTION_OSR        # Non-empty description
                                     )
         response = self.http_post(base_url, data)
         # The POST method returned OK.
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.content)
         # Verify the post-conditions.
         # One and only one MUO was created.
         self.assertEqual(MUOContainer.objects.count(), 1)
@@ -1197,12 +1202,12 @@ class TestSaveCustomMUO(RestAPITestBase):
         passed_in_cwe_ids = set(self.CWE_IDS)
         self.assertEqual(associated_cwe_ids, passed_in_cwe_ids)
         # The misuse case was created correctly.
-        self.assertEqual(muo.misuse_case.description, self.DESCRIPTION_MISUSE_CASE)
+        self.assertEqual(muo.misuse_case.misuse_case_description, self.DESCRIPTION_MISUSE_CASE)
         # Verify use case & OSR.
         use_cases = UseCase.objects.filter(muo_container=muo)
         self.assertEqual(use_cases.count(), 1)
         uc = use_cases[0]
-        self.assertEqual(uc.description, self.DESCRIPTION_USE_CASE)
+        self.assertEqual(uc.use_case_description, self.DESCRIPTION_USE_CASE)
         self.assertEqual(uc.osr, self.DESCRIPTION_OSR)
 
     def test_negative_invalid_cwe_ids(self):
@@ -1216,10 +1221,9 @@ class TestSaveCustomMUO(RestAPITestBase):
         ]
         base_url = self._form_base_url()
         for invalid_cwes_str in invalid_cwes_str_list:
-            data = {SaveCustomMUO.PARAM_CWE_IDS: invalid_cwes_str,
-                    SaveCustomMUO.PARAM_MISUSE_CASE_DESCRIPTION: self.DESCRIPTION_MISUSE_CASE,
-                    SaveCustomMUO.PARAM_USE_CASE_DESCRIPTION: self.DESCRIPTION_USE_CASE,
-                    SaveCustomMUO.PARAM_OSR_DESCRIPTION: self.DESCRIPTION_OSR
+            data = {SaveCustomMUO.PARAM_CWE_CODES: invalid_cwes_str,
+                    SaveCustomMUO.PARAM_MISUSE_CASE: self.DESCRIPTION_MISUSE_CASE,
+                    SaveCustomMUO.PARAM_USE_CASE: self.DESCRIPTION_USE_CASE,
                     }
             response = self.http_post(base_url, data)
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -1229,10 +1233,10 @@ class TestSaveCustomMUO(RestAPITestBase):
 
     def test_negative_inactive_user(self):
         base_url = self._form_base_url()
-        data = self._form_post_data(cwe_id_list=self.CWE_CODES,      # Valid CWE codes
-                                    muc=self.DESCRIPTION_MISUSE_CASE,   # Non-empty description
-                                    uc=self.DESCRIPTION_USE_CASE,       # Non-empty description
-                                    osr=self.DESCRIPTION_OSR        # Non-empty description
+        data = self._form_post_data(cwe_code_list=self.CWE_CODES,      # Valid CWE codes
+                                    muc_desc=self.DESCRIPTION_MISUSE_CASE,   # Non-empty description
+                                    uc_desc=self.DESCRIPTION_USE_CASE,       # Non-empty description
+                                    osr_desc=self.DESCRIPTION_OSR        # Non-empty description
                                     )
         response = self.http_post(base_url, data, auth_token_type=self.AUTH_TOKEN_TYPE_INACTIVE_USER)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -1242,13 +1246,81 @@ class TestSaveCustomMUO(RestAPITestBase):
 
     def test_negative_no_auth(self):
         base_url = self._form_base_url()
-        data = self._form_post_data(cwe_id_list=self.CWE_CODES,      # Valid CWE codes
-                                    muc=self.DESCRIPTION_MISUSE_CASE,   # Non-empty description
-                                    uc=self.DESCRIPTION_USE_CASE,       # Non-empty description
-                                    osr=self.DESCRIPTION_OSR        # Non-empty description
+        data = self._form_post_data(cwe_code_list=self.CWE_CODES,      # Valid CWE codes
+                                    muc_desc=self.DESCRIPTION_MISUSE_CASE,   # Non-empty description
+                                    uc_desc=self.DESCRIPTION_USE_CASE,       # Non-empty description
+                                    osr_desc=self.DESCRIPTION_OSR        # Non-empty description
                                     )
         response = self.http_post(base_url, data, auth_token_type=self.AUTH_TOKEN_TYPE_NONE)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(MUOContainer.objects.count(), 0)   # No MUO was created.
         self.assertEqual(MisuseCase.objects.count(), 0)     # No misuse cases was created.
         self.assertEqual(UseCase.objects.count(), 0)     # No use cases was created.
+
+    def test_negative_data_in_wrong_format(self):
+        wrong_format_cases = [
+            None,   # Wrong format: No parameters
+            {10: 10},    # Wrong format: No parameters
+            {"": ""},    # Wrong format: No parameters
+            SaveCustomMUO.TEMPLATE_MISUSE_CASE,  # Wrong format: No parameters
+            {
+                SaveCustomMUO.PARAM_CWE_CODES: [101, 102, 103],     # Wrong format: Not a JSON string
+                SaveCustomMUO.PARAM_MISUSE_CASE: json.dumps(SaveCustomMUO.TEMPLATE_MISUSE_CASE),
+                SaveCustomMUO.PARAM_USE_CASE: json.dumps(SaveCustomMUO.TEMPLATE_USE_CASE)
+            },
+            {
+                SaveCustomMUO.PARAM_CWE_CODES: "101,102,103",     # Wrong format: Not a JSON string
+                SaveCustomMUO.PARAM_MISUSE_CASE: json.dumps(SaveCustomMUO.TEMPLATE_MISUSE_CASE),
+                SaveCustomMUO.PARAM_USE_CASE: json.dumps(SaveCustomMUO.TEMPLATE_USE_CASE)
+            },
+            {
+                SaveCustomMUO.PARAM_CWE_CODES: "{101,102,103}",     # Wrong format: A JSON string but not a list
+                SaveCustomMUO.PARAM_MISUSE_CASE: json.dumps(SaveCustomMUO.TEMPLATE_MISUSE_CASE),
+                SaveCustomMUO.PARAM_USE_CASE: json.dumps(SaveCustomMUO.TEMPLATE_USE_CASE)
+            },
+            {
+                # Wrong format: A JSON string but not a list
+                SaveCustomMUO.PARAM_CWE_CODES: "{101:101,102:102,103:103}",
+                SaveCustomMUO.PARAM_MISUSE_CASE: json.dumps(SaveCustomMUO.TEMPLATE_MISUSE_CASE),
+                SaveCustomMUO.PARAM_USE_CASE: json.dumps(SaveCustomMUO.TEMPLATE_USE_CASE)
+            },
+            {
+                SaveCustomMUO.PARAM_CWE_CODES: json.dumps([101, 102, 103]),
+                SaveCustomMUO.PARAM_MISUSE_CASE: SaveCustomMUO.TEMPLATE_MISUSE_CASE,  # Wrong format: Not a JSON string
+                SaveCustomMUO.PARAM_USE_CASE: json.dumps(SaveCustomMUO.TEMPLATE_USE_CASE)
+            },
+            {
+                SaveCustomMUO.PARAM_CWE_CODES: json.dumps([101, 102, 103]),
+                # A JSON string but not a dictionary
+                SaveCustomMUO.PARAM_MISUSE_CASE: "[101, 102, 103]",
+                SaveCustomMUO.PARAM_USE_CASE: json.dumps(SaveCustomMUO.TEMPLATE_USE_CASE)
+            },
+            {
+                SaveCustomMUO.PARAM_CWE_CODES: json.dumps([101, 102, 103]),
+                # A JSON dictionary but missing a field.
+                SaveCustomMUO.PARAM_MISUSE_CASE: json.dumps({"misuse_case_descripition": ""}),
+                SaveCustomMUO.PARAM_USE_CASE: json.dumps(SaveCustomMUO.TEMPLATE_USE_CASE)
+            },
+            {
+                SaveCustomMUO.PARAM_CWE_CODES: json.dumps([101, 102, 103]),
+                SaveCustomMUO.PARAM_MISUSE_CASE: json.dumps(SaveCustomMUO.TEMPLATE_MISUSE_CASE),
+                SaveCustomMUO.PARAM_USE_CASE: SaveCustomMUO.TEMPLATE_USE_CASE  # Wrong format: Not a JSON string
+            },
+            {
+                SaveCustomMUO.PARAM_CWE_CODES: json.dumps([101, 102, 103]),
+                SaveCustomMUO.PARAM_MISUSE_CASE: json.dumps(SaveCustomMUO.TEMPLATE_MISUSE_CASE),
+                SaveCustomMUO.PARAM_USE_CASE: "[101, 102, 103]"  # Not a JSON dictionary
+            },
+            {
+                SaveCustomMUO.PARAM_CWE_CODES: json.dumps([101, 102, 103]),
+                SaveCustomMUO.PARAM_MISUSE_CASE: json.dumps(SaveCustomMUO.TEMPLATE_MISUSE_CASE),
+                SaveCustomMUO.PARAM_USE_CASE: json.dumps({"use_case_descripition": ""}),
+            },
+        ]
+        base_url = self._form_base_url()
+        for data in wrong_format_cases:
+            response = self.http_post(base_url, data)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(MUOContainer.objects.count(), 0)   # No MUO was created.
+            self.assertEqual(MisuseCase.objects.count(), 0)     # No misuse cases was created.
+            self.assertEqual(UseCase.objects.count(), 0)     # No use cases was created.
