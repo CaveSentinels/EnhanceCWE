@@ -6,6 +6,10 @@ from .models import EmailAddress
 
 def check_admin_approval(request, user, email_verification, *args, **kwargs):
 
+    # Allow super users to login regardless of admin approval
+    if user.is_active and user.is_superuser:
+        return
+
     user_email = EmailAddress.objects.filter(user=user)
 
     has_verified_email = user_email.filter(verified=True).exists()
