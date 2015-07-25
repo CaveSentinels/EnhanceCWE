@@ -9,6 +9,7 @@ from allauth.account.models import EmailAddress, EmailConfirmation
 from selenium import webdriver
 import os
 
+
 @override_settings(
     ACCOUNT_EMAIL_VERIFICATION='mandatory',
     SET_STAFF_ON_REGISTRATION=True)
@@ -17,7 +18,7 @@ class RegisterTest(LiveServerTestCase):
                    'first_name': 'myfirstname',
                    'last_name': 'mylastname',
                    'password': 'mypassword',
-                   'email': 'wdbaruni@yahoo.com',
+                   'email': 'user@example.com',
                    'recaptcha_response_field': 'PASSED',
                    'admin_username': 'admin',
                    'admin_email': 'admin@example.com',
@@ -50,8 +51,8 @@ class RegisterTest(LiveServerTestCase):
 
     def test_signup_positive(self):
         email_count = len(mail.outbox)
-        self.fill_register_form(self.selenium, self.signup_url)
-        self.submit_register_form(self.selenium)
+        RegisterHelper.fill_register_form(self.selenium, self.signup_url)
+        RegisterHelper.submit_register_form(self.selenium)
 
         # Verify signup was successful and redirected to the correct page
         self.assertEqual(self.selenium.current_url, self.email_verify_sent_url)
@@ -86,58 +87,10 @@ class RegisterTest(LiveServerTestCase):
 
 
         # Verify user email
-        self.verify_email(self.live_server_url, self.selenium)
+        RegisterHelper.verify_email(self.live_server_url, self.selenium)
         # Re-reading email object from DB
         email_obj = EmailAddress.objects.filter(email= self.form_params.get('email'))[0]
         self.assertTrue(email_obj.verified, 'EmailAddress was not verified after confirming the verification link')
-
-
-
-    @classmethod
-    def fill_register_form(cls, selenium, signup_url, admin=False):
-        # Open the signup page.
-        selenium.get(signup_url)
-
-        # Fill signup information
-        if admin:
-            selenium.find_element_by_id("id_username").send_keys(cls.form_params.get('admin_username'))
-            selenium.find_element_by_id("id_email").send_keys(cls.form_params.get('admin_email'))
-        else:
-            selenium.find_element_by_id("id_username").send_keys(cls.form_params.get('username'))
-            selenium.find_element_by_id("id_email").send_keys(cls.form_params.get('email'))
-
-        selenium.find_element_by_id("id_password1").send_keys(cls.form_params.get('password'))
-        selenium.find_element_by_id("id_password2").send_keys(cls.form_params.get('password'))
-        selenium.find_element_by_id("id_first_name").send_keys(cls.form_params.get('first_name'))
-        selenium.find_element_by_id("id_last_name").send_keys(cls.form_params.get('last_name'))
-        selenium.find_element_by_id("recaptcha_response_field").send_keys(cls.form_params.get('recaptcha_response_field'))
-
-
-    @classmethod
-    def submit_register_form(cls, selenium):
-        # Locate register button and click it
-        selenium.find_element_by_xpath('//input[@value="Sign Up"]').click()
-
-
-    @classmethod
-    def verify_email(cls, server_url, selenium, email=form_params['email']):
-        email_filter = EmailAddress.objects.filter(email=email)
-        assert email_filter.exists(), 'There is no EmailAddress object with email %s' % email
-
-        email_obj = email_filter[0]
-        assert email_obj.verified is False, 'The email address %s is already verified' % email
-
-        email_confirm_filter = EmailConfirmation.objects.filter(email_address=email_obj)
-        assert email_confirm_filter.exists(), 'There is no EmailConfirmation object with email %s' % email
-
-        email_confirm_obj = email_confirm_filter[0]
-
-        # Open the confirmation page.
-        email_confirm_url = '%s%s' % (server_url, reverse('account_confirm_email', args=[email_confirm_obj.key]))
-        selenium.get(email_confirm_url)
-
-        # Locate submit button and click it
-        selenium.find_element_by_xpath('//input[@value="Confirm"]').click()
 
 
 
@@ -148,7 +101,7 @@ class LoginTest(LiveServerTestCase):
 
     form_params = {'username': 'myusername',
                    'password': 'mypassword',
-                   'email': 'wdbaruni@yahoo.com',
+                   'email': 'user@example.com',
                    'recaptcha_response_field': 'PASSED',
                    'admin_username': 'admin',
                    'admin_email': 'admin@example.com',
@@ -169,7 +122,7 @@ class LoginTest(LiveServerTestCase):
         self.login_url = '%s%s' % (self.live_server_url, reverse('account_login'))
         self.login_redirect_url = '%s%s' % (self.live_server_url, settings.LOGIN_REDIRECT_URL)
 
-        self.user = LoginTest.create_user()
+        self.user = RegisterHelper.create_user()
         self.selenium = webdriver.Firefox()
         super(LoginTest, self).setUp()
 
@@ -179,8 +132,8 @@ class LoginTest(LiveServerTestCase):
 
 
     def test_login_positive(self):
-        self.fill_login_form(self.selenium, self.login_url)
-        self.submit_login_form(self.selenium)
+        RegisterHelper.fill_login_form(self.selenium, self.login_url)
+        RegisterHelper.submit_login_form(self.selenium)
 
         self.assertEqual(self.selenium.current_url, self.login_redirect_url, 'Login Failed!')
 
@@ -189,31 +142,45 @@ class LoginTest(LiveServerTestCase):
 
         # Test the captcha won't show before N failed attempts
         for n in range(0, settings.NUMBER_OF_FAILED_LOGINS_BEFORE_CAPTCHA):
-            self.fill_login_form(self.selenium, self.login_url)
+            RegisterHelper.fill_login_form(self.selenium, self.login_url)
             self.assertFalse(self.selenium.find_elements_by_id("recaptcha_response_field"), # note the element(s)
                              "Captcha appeard in login form before N failed attempts")
 
             # pass wrong password to fail the login attemmpt
             self.selenium.find_element_by_id("id_password").send_keys('wrong_password')
-            self.submit_login_form(self.selenium)
+            RegisterHelper.submit_login_form(self.selenium)
 
             self.assertEqual(self.selenium.current_url, self.login_url, "Logged in even though the password is wrong")
 
 
         # Test the captcha will show after N failed attempts and that login will fail without correct captcha
-        self.fill_login_form(self.selenium, self.login_url)
+        RegisterHelper.fill_login_form(self.selenium, self.login_url)
         self.assertTrue(self.selenium.find_elements_by_id("recaptcha_response_field"),
                         "Captcha did not appear in login after N failed attmpts")
-        self.submit_login_form(self.selenium)
+        RegisterHelper.submit_login_form(self.selenium)
         self.assertEqual(self.selenium.current_url, self.login_url, "Logged in even though the captcha is not entered")
 
         # Test that login will succeed with capthca
-        self.fill_login_form(self.selenium, self.login_url)
+        RegisterHelper.fill_login_form(self.selenium, self.login_url)
         self.selenium.find_element_by_id("recaptcha_response_field").send_keys(self.form_params.get('recaptcha_response_field'))
-        self.submit_login_form(self.selenium)
+        RegisterHelper.submit_login_form(self.selenium)
         self.assertEqual(self.selenium.current_url, self.login_redirect_url, 'Login Failed with correct captcha!')
 
 
+
+
+
+class RegisterHelper():
+
+    form_params = {'username': 'myusername',
+                   'first_name': 'myfirstname',
+                   'last_name': 'mylastname',
+                   'password': 'mypassword',
+                   'email': 'user@example.com',
+                   'recaptcha_response_field': 'PASSED',
+                   'admin_username': 'admin',
+                   'admin_email': 'admin@example.com',
+                   }
 
     @classmethod
     def fill_login_form(cls, selenium, login_url, admin=False):
@@ -226,6 +193,17 @@ class LoginTest(LiveServerTestCase):
         else:
             selenium.find_element_by_id("id_login").send_keys(cls.form_params.get('username'))
         selenium.find_element_by_id("id_password").send_keys(cls.form_params.get('password'))
+
+
+    @classmethod
+    def logout(cls, selenium, site_url):
+        logout_url = '%s%s' % (site_url, reverse('admin:logout'))
+        selenium.get(logout_url)
+
+        # if the user is already logged out, then he won't be directed to logout url
+        if selenium.current_url == logout_url:
+            selenium.find_element_by_xpath('//input[@value="Sign Out"]').click()
+
 
 
     @classmethod
@@ -276,3 +254,50 @@ class LoginTest(LiveServerTestCase):
         email_obj.save()
 
         return user
+
+
+    @classmethod
+    def fill_register_form(cls, selenium, signup_url, admin=False):
+        # Open the signup page.
+        selenium.get(signup_url)
+
+        # Fill signup information
+        if admin:
+            selenium.find_element_by_id("id_username").send_keys(cls.form_params.get('admin_username'))
+            selenium.find_element_by_id("id_email").send_keys(cls.form_params.get('admin_email'))
+        else:
+            selenium.find_element_by_id("id_username").send_keys(cls.form_params.get('username'))
+            selenium.find_element_by_id("id_email").send_keys(cls.form_params.get('email'))
+
+        selenium.find_element_by_id("id_password1").send_keys(cls.form_params.get('password'))
+        selenium.find_element_by_id("id_password2").send_keys(cls.form_params.get('password'))
+        selenium.find_element_by_id("id_first_name").send_keys(cls.form_params.get('first_name'))
+        selenium.find_element_by_id("id_last_name").send_keys(cls.form_params.get('last_name'))
+        selenium.find_element_by_id("recaptcha_response_field").send_keys(cls.form_params.get('recaptcha_response_field'))
+
+
+    @classmethod
+    def submit_register_form(cls, selenium):
+        # Locate register button and click it
+        selenium.find_element_by_xpath('//input[@value="Sign Up"]').click()
+
+
+    @classmethod
+    def verify_email(cls, server_url, selenium, email=form_params['email']):
+        email_filter = EmailAddress.objects.filter(email=email)
+        assert email_filter.exists(), 'There is no EmailAddress object with email %s' % email
+
+        email_obj = email_filter[0]
+        assert email_obj.verified is False, 'The email address %s is already verified' % email
+
+        email_confirm_filter = EmailConfirmation.objects.filter(email_address=email_obj)
+        assert email_confirm_filter.exists(), 'There is no EmailConfirmation object with email %s' % email
+
+        email_confirm_obj = email_confirm_filter[0]
+
+        # Open the confirmation page.
+        email_confirm_url = '%s%s' % (server_url, reverse('account_confirm_email', args=[email_confirm_obj.key]))
+        selenium.get(email_confirm_url)
+
+        # Locate submit button and click it
+        selenium.find_element_by_xpath('//input[@value="Confirm"]').click()

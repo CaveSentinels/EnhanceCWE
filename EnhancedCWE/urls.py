@@ -16,11 +16,13 @@ Including another URLconf
 from django.conf.urls import include, url
 from django.contrib import admin
 from django.views.generic import TemplateView
+from user_profile.views import ProfileView
 
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [
     url(r'^$', include('frontpage.urls', namespace='frontpage')),
+    url(r'^profile/$', ProfileView.as_view(), name='user_profile'),
     url(r'^robots\.txt/$', TemplateView.as_view(template_name='robots.txt', content_type='text/plain')),
     url(r'^accounts/', include('register.urls')),
     url(r'^app/login/', 'register.views.login'),

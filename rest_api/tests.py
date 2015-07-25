@@ -40,16 +40,16 @@ class RestAPITestBase(TestCase):
     def set_up_users_and_tokens(self):
         self._user_1 = User(username='user_1', is_active=True)
         self._user_1.save()
-        self._user_1_token = str(Token.objects.get(user__id=self._user_1.id))
+        self._user_1_token = str(Token.objects.create(user=self._user_1))
 
         self._user_2 = User(username='user_2', is_active=True)
         self._user_2.save()
-        self._user_2_token = str(Token.objects.get(user__id=self._user_2.id))
+        self._user_2_token = str(Token.objects.create(user=self._user_2))
 
         self._user_3_inactive = User(username='user_3_inactive', is_active=False)
         self._user_3_inactive.save()
         self._user_3_inactive_id = self._user_3_inactive.id
-        self._user_3_inactive_token = Token.objects.get(user__id=self._user_3_inactive_id)
+        self._user_3_inactive_token = Token.objects.create(user=self._user_3_inactive)
 
     def set_up_test_data(self):
         # To be overridden by the subclass.

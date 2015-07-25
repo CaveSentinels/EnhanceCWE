@@ -66,7 +66,7 @@ INSTALLED_APPS = (
     'rest_api',
     'cwe',
     'user_profile',
-    'emailer',
+    'muo_mailer',
     'widget_tweaks',
 )
 
