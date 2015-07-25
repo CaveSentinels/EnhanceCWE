@@ -213,6 +213,13 @@ class RegisterHelper():
 
 
     @classmethod
+    def is_login_page(cls, selenium, site_url):
+        allauth_login = '%s%s' % (site_url, reverse('account_login'))
+        admin_login = '%s%s' % (site_url, reverse('admin:login'))
+        return selenium.current_url.startswith(allauth_login) or selenium.current_url.startswith(admin_login)
+
+
+    @classmethod
     def create_user(cls, verified=True, approved=True):
         user = get_user_model().objects.create(username=cls.form_params['username'],
                                                email=cls.form_params['email'],

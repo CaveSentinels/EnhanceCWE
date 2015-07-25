@@ -1,17 +1,20 @@
 from django.conf import settings
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.core import mail
-from django.test import LiveServerTestCase
 from django.core.urlresolvers import reverse
 from django.contrib.auth import get_user_model
 from django.test.utils import override_settings
 from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from register.tests import RegisterHelper
 from rest_framework.authtoken.models import Token
 
 
 @override_settings(
     LOGIN_REDIRECT_URL='/app/')
-class UserProfileTest(LiveServerTestCase):
+class UserProfileTest(StaticLiveServerTestCase):
 
 
     @classmethod
@@ -28,7 +31,9 @@ class UserProfileTest(LiveServerTestCase):
     def setUp(self):
         self.profile_url = '%s%s' % (self.live_server_url, reverse('user_profile'))
         self.login_url = '%s%s' % (self.live_server_url, reverse('account_login'))
+        self.inactive_url = '%s%s' % (self.live_server_url, reverse('account_inactive'))
         self.login_redirect_url = '%s%s' % (self.live_server_url, settings.LOGIN_REDIRECT_URL)
+
         super(UserProfileTest, self).setUp()
 
     def tearDown(self):
@@ -93,6 +98,39 @@ class UserProfileTest(LiveServerTestCase):
         self.assertFalse(mailer_profile.notify_muo_accepted , "Failed to update notification option in mailer model")
 
 
+    def test_deactivate_account(self):
+        user = RegisterHelper.create_user()
+        RegisterHelper.fill_login_form(self.selenium, self.login_url)
+        RegisterHelper.submit_login_form(self.selenium)
+
+        self.selenium.get(self.profile_url)
+
+        # show deactivation popup
+        self.selenium.find_element_by_xpath('//button[@name="_deactivate_account"]').click()
+
+        # wait for popup
+        deactivate_button = WebDriverWait(self.selenium, 10).until(
+            EC.visibility_of_element_located((By.ID, "deactivate_account_button"))
+        )
+        deactivate_button.click()
+
+        # reload user to check updates in the model
+        user = get_user_model().objects.get(pk=user.pk)
+        self.assertFalse(user.is_active, "User still active even after clicking on deactivate button")
+
+        # Test that the user is redirected to home screen
+        self.assertEqual(self.selenium.current_url, '%s/' % self.live_server_url, "Browser is not redirected to home screen after deactivating the user")
+
+        # Test the user has been logged out
+        self.selenium.get(self.login_redirect_url)
+        self.assertTrue(RegisterHelper.is_login_page(self.selenium, self.live_server_url),
+                        "User is still logged in after deactivating his account")
+
+        # Test the user is not able to login
+        RegisterHelper.fill_login_form(self.selenium, self.login_url)
+        RegisterHelper.submit_login_form(self.selenium)
+        self.assertEqual(self.selenium.current_url, self.inactive_url, "User is not redirected to inactive URL when trying to login")
+
 
     def test_rest_token(self):
         user = RegisterHelper.create_user()
@@ -127,3 +165,6 @@ class UserProfileTest(LiveServerTestCase):
 
         # Test the user has been notified by email when the token was changed
         self.assertEqual(len(mail.outbox), 1, 'Token changed email failed to send')
+
+
+

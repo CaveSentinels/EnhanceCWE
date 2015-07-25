@@ -1,6 +1,7 @@
 from django import forms
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
@@ -77,6 +78,15 @@ class ProfileView(UpdateView):
                 return self.form_valid(user_form)
             else:
                 return self.form_invalid(**{'form': user_form, 'mailer_form': mailer_form})
+
+
+        elif '_deactivate_account' in request.POST:
+            logout(request)
+            self.object.is_active = False
+            self.object.save()
+            messages.add_message(request, messages.WARNING, "Your account has been deactivated!")
+            return HttpResponseRedirect("/")
+
 
         elif 'rest_token_submit' in request.POST:
             Token.objects.filter(user=self.object).delete()
