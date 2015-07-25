@@ -7,6 +7,7 @@ from django.utils.translation import ugettext as _
 from django.db.models.signals import pre_delete, pre_save
 from django.dispatch import receiver
 from cwe_search import CWESearchLocator
+import caching.base
 
 class Category(BaseModel):
     name = models.CharField(max_length=128, unique=True)
@@ -34,8 +35,10 @@ def pre_delete_category(sender, instance, using, **kwargs):
             })
 
 
-class Keyword(BaseModel):
+class Keyword(caching.base.CachingMixin,BaseModel):
+#class Keyword(BaseModel):
     name = models.CharField(max_length=32, unique=True)
+    objects = caching.base.CachingManager()
 
     class Meta:
         verbose_name = "Keyword"
@@ -60,12 +63,13 @@ def pre_save_keyword(sender, instance, *args, **kwargs):
             else:
                 instance.name = stemmed_name
 
-class CWE(BaseModel):
+class CWE(caching.base.CachingMixin,BaseModel):
     code = models.IntegerField(unique=True)
     name = models.CharField(max_length=128, db_index=True)
     description = models.TextField(null=True, blank=True)
     categories = models.ManyToManyField(Category, related_name='cwes')
     keywords = models.ManyToManyField(Keyword, related_name='cwes', blank=True)
+    objects = caching.base.CachingManager()
 
     class Meta:
         verbose_name = "CWE"
