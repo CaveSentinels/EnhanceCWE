@@ -1,0 +1,89 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls admin_static admin_modify bootstrapped_goodies_tags %}
+{% load staticfiles %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <link rel="stylesheet" type="text/css" href="{% static 'muo/misusecase_search_style.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'fluent_comments/css/ajaxcomments.css' %}"/>
+    <link rel="stylesheet" type="text/css" href="{% static 'comments/comments.css' %}" />
+{% endblock %}
+
+
+{% block extrahead %}
+    {{ block.super }}
+    {% url 'admin:jsi18n' as jsi18nurl %}
+    <script type="text/javascript" src="{{ jsi18nurl|default:"../../../jsi18n/" }}"></script>
+    <script src="{% static 'muo/misusecase_search_ajax.js' %}"></script>
+    <script type="text/javascript" src="{% static 'comments/comments.js' %}"></script>
+    {{ media }}
+{% endblock %}
+
+
+{% block content %}
+    <form class="form-horizontal" enctype="multipart/form-data" action method="post" id="misusecase_search" novalidate>
+        {% csrf_token %}
+        <div id="content-main" class="muo-search-container">
+            <div>
+                <div class="fieldset-box col-md-12">
+                    <div class="box box-primary" style="min-height: 0px; margin-bottom: 0px;">
+                        <div class="box-body">
+                            <fieldset class="_module _aligned" id="fieldset-1" style="background:transparent">
+                                <div class="fields box-col-md-12">
+                                    <div class="row">
+                                        <div class="control-group  field-categories">
+                                            <div class="col-md-12 form-group ">
+                                                <div class="control-label col-md-3">
+                                                    <label class="required" for="id_categories">CWEs:</label>
+                                                </div>
+                                                <div class="controls col-md-12">
+                                                    <div class="related-widget-wrapper">
+                                                        <span id="id_cwes-wrapper" class="modern-style autocomplete-light-widget cwes multiple" style="width: 97%;" data-widget-bootstrap="normal" data-widget-ready="1">
+                                                            <span id="id_cwes-deck" class="deck"></span>
+                                                            <input type="text" name="cwes-autocomplete" id="id_cwes-autocomplete" value="" class=" autocomplete vTextField" data-autocomplete-choice-selector="[data-value]" data-autocomplete-url="/autocomplete/CWEAutocomplete/" placeholder="Start typing CWE code or name..." autocomplete="on">
+                                                            <select style="display:none" class="value-select" name="cwes" id="id_cwes" multiple="multiple"></select>
+                                                            <span style="display:none" class="remove">
+                                                                ˣ
+                                                            </span>
+                                                            <span style="display:none" class="choice-template">
+                                                                <span class="choice prepend-remove append-option-html"></span>
+                                                            </span>
+                                                        </span>
+                                                        <a class="related-widget-wrapper-link btn btn-xs search-related" id="search_id_cwes" href="{% url 'admin:cwe_cwe_changelist' %}?_to_field=id&amp;_popup=1" title="" data-original-title="Search CWE">
+                                                            <span class="glyphicon glyphicon-search"></span>
+                                                        </a>
+                                                        <div style="clear: both"></div></div>
+                                                        <input type="submit" id="refresh_button" class="btn btn-primary pull-right" style="margin-top: 7px; margin-right: 33px;" value="{% trans 'Refresh Misuse Cases' %}" name="_refresh" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                <div class="fieldset-box col-md-12">
+                    <div class="box" style="min-height: 0px; border-top-color: white; border-radius:0px">
+                        <div class="box-body">
+                            <div>
+                                <label id="misuse-case-title-label">Misuse Cases</label>
+                                <label id="use-case-title-label">Use Cases & Overlooked Security Requirements</label>
+                            </div>
+                            <hr style="margin: 0px;"></hr>
+                            <div class="slim-scroll-div"></div>
+                            {# slim-scroll-div is to loaded from misusecase.html after the ajax response #}
+                            <div class="fat-scroll-div"></div>
+                            {# fat-scroll-div is to loaded from usecase.html after the ajax response #}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+{# Modal used for popups, such as report inappropriate#}
+<div class="modal fade" id="muo-modal" tabindex="-1" role="dialog" aria-labelledby="" aria-hidden="true"></div>
+
+
+{% endblock %}

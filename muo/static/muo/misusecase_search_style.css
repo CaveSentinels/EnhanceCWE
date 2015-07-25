@@ -1,0 +1,116 @@
+.muo-search-container .fieldset-box .box {
+    min-height: 0px;
+}
+
+.muo-search-container .slim-scroll-div {
+    float: left;
+    position: relative;
+    height: 400px;
+    width: 35%;
+    overflow-y: scroll;
+    overflow-x:hidden;
+    margin-top: 0px;
+}
+
+.muo-search-container .fat-scroll-div {
+    float: right;
+    position: relative;
+    height: 400px;
+    width: 65%;
+    overflow-y: scroll;
+    overflow-x:hidden;
+    background-color: #ecf0f5;
+    margin-bottom: 0px;
+}
+
+.muo-search-container #misuse-case-title-label {
+    width: 35%;
+    position: relative;
+    margin-top: 0px;
+    padding-left: 15px;
+    text-align: left;
+}
+
+.muo-search-container #use-case-title-label {
+    width: 65%;
+    float: right;
+    position: relative;
+    margin-top: 0px;
+    padding-left: 15px;
+    text-align: left;
+}
+
+.muo-search-container .misuse-case-container {
+    border-right: thin double;
+    border-bottom: thin double;
+    border-color: #e7eaec;
+}
+
+.muo-search-container .misuse-case-container:hover,
+    .muo-search-container .misuse-case-container.selected {
+    background-color: #ecf0f5;
+    cursor: pointer;
+}
+
+.muo-search-container .misuse-case-header {
+    /*border-right: thin double;*/
+    /*border-color: #e7eaec;*/
+    padding: 15px;
+}
+
+.muo-search-container .usecase-footer {
+    height: 20px;
+}
+
+.muo-search-container .misuse-case-div {
+    width: 100%;
+    padding: 15px;
+    padding-bottom: 0px;
+    border-color: #e7eaec;
+    background-color: transparent;
+    margin-top: 0px;
+}
+
+.muo-search-container .use-case-container {
+    width: 97%;
+    margin: 10px;
+    padding: 15px 15px 0 15px;
+    background-color: white;
+
+    -webkit-box-shadow: 0px 0px 2px 0px rgba(173,173,173,1);
+    -moz-box-shadow: 0px 0px 2px 0px rgba(173,173,173,1);
+    box-shadow: 0px 0px 2px 0px rgba(173,173,173,1);
+}
+
+.muo-search-container .use-case-container .use-case-div {
+    width: 100%;
+    padding: 15px;
+    padding-bottom: 0px;
+    border-color: #e7eaec;
+    background-color: transparent;
+    margin-top: 0px;
+}
+
+.muo-search-container .use-case-container .use-case-header {
+    padding: 15px;
+}
+
+.muo-search-container #muo-date-header {
+    float: right;
+    color: #888888;
+    font-size: 85%
+}
+
+.misuse-case-div .heading, .use-case-div .heading {
+    margin-bottom: 0px;
+    font-weight: 400;
+}
+
+.misuse-case-div .text, .use-case-div .text {
+    font-weight: 300;
+}
+
+.use-case-div .osr-heading {
+    margin-bottom: 0px;
+    font-weight: 700;
+}
