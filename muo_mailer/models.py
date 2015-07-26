@@ -15,7 +15,7 @@ class MailerProfile(models.Model):
     notify_muo_submitted_for_review = models.BooleanField(default=True, verbose_name='When an MUO is Submitted for Review')
     notify_custom_muo_created = models.BooleanField(default=True, verbose_name='When a Custom MUO is Created')
     notify_custom_muo_promoted_as_generic = models.BooleanField(default=True, verbose_name='When a Custom MUO is Promoted')
-
+    notify_cwe_created = models.BooleanField(default=True, verbose_name='When a CWE is created')
 
     def __unicode__(self):
         return self.user.username

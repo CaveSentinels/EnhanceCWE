@@ -6,6 +6,7 @@ from django.db.models import Q
 from django_comments.signals import comment_was_posted
 from muo.models import *
 from muo.signals import *
+from cwe.signals import *
 import constants
 
 SENDER_EMAIL = getattr(settings, 'SENDER_EMAIL', '')
@@ -115,6 +116,20 @@ def on_custom_muo_promoted_generic(sender,instance,**kwargs):
     action = constants.PROMOTED
     notify_reviewers(instance, subject, action, emails)
 
+@receiver(cwe_created)
+def on_cwe_created(sender,instance, **kwargs):
+    cwe_container_type = ContentType.objects.get(app_label='cwe', model='CWE')
+    # First filter the permission which has to be checked from the list of permission in the muo_container
+    perm = Permission.objects.filter(codename__in=('can_approve', 'can_reject'), content_type = cwe_container_type)
+    # The user might have the permission either as a user or in a group of which he is a part, so check both
+    users = User.objects.filter(mailer_profile__notify_cwe_created=True)\
+                        .filter(Q(groups__permissions__in=perm) | Q(user_permissions__in=perm)).distinct()
+    emails = [user.email for user in users]
+    subject = constants.CWE_CREATED_SUBJECT
+    action = constants.CREATED
+    notify_reviewers_cwe(instance, subject, action, emails)
+
+
 """
 This method is called when we have to send the email after fixing all the parameters
 """
@@ -137,6 +152,18 @@ def notify_reviewers(instance, subject, action, emails):
         send_mail(subject, get_template('mailer/muo_action_bulk.html').render(
             Context({
                 'muo_name': instance.name,
+                'action': action,
+                })
+            ), SENDER_EMAIL, emails, fail_silently=True)
+
+"""
+This method is called when we have to send bulk email to many recipients
+"""
+def notify_reviewers_cwe(instance, subject, action, emails):
+    if emails:
+        send_mail(subject, get_template('mailer/cwe_action_bulk.html').render(
+            Context({
+                'cwe_name': instance.name,
                 'action': action,
                 })
             ), SENDER_EMAIL, emails, fail_silently=True)

@@ -42,6 +42,7 @@ class MailerProfileForm(forms.ModelForm):
                     'notify_muo_inappropriate',
                     'notify_custom_muo_created',
                     'notify_custom_muo_promoted_as_generic',
+                    'notify_cwe_created',
                     css_class='col-sm-6',
                 ),
             )
