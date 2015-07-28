@@ -79,7 +79,17 @@ def muo_submit_row(context):
         'show_promote': model_object and
                         model_object.is_custom == True and
                         model_object.status == 'draft' and
-                        user_object.has_perm('muo.can_approve')
+                        user_object.has_perm('muo.can_approve'),
+
+        'show_publish': model_object and
+                        model_object.status in ('approved') and
+                        model_object.is_published == False and
+                        (user_object.has_perm('muo.can_edit_all') or user_object.has_perm('muo.can_approve') or user_object.has_perm('muo.can_reject')),
+
+        'show_unpublish':   model_object and
+                            model_object.is_published == True and
+                            model_object.status in ('approved') and
+                            (user_object.has_perm('muo.can_edit_all') or user_object.has_perm('muo.can_approve') or user_object.has_perm('muo.can_reject')),
     })
 
     return ctx

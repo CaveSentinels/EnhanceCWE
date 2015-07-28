@@ -299,6 +299,14 @@ class MUOContainerAdmin(BaseAdmin):
                 obj.action_promote(request.user)
                 msg = "This MUO has been promoted and now everyone will have access to it."
 
+            elif "_unpublish" in request.POST:
+                obj.action_set_publish(0)
+                msg = "This MUO has been unpublished."
+
+            elif "_publish" in request.POST:
+                obj.action_set_publish(1)
+                msg = "This MUO has been published."
+
             else:
                 # Let super class 'ModelAdmin' handle rest of the button clicks i.e. 'save' 'save and continue' etc.
                 return super(MUOContainerAdmin, self).response_change(request, obj, *args, **kwargs)
