@@ -436,7 +436,7 @@ class MUOContainer(BaseModel):
         :param should_publish: The publish status to be set to the report
         :return: Null
         '''
-        if self.status == 'approved' or self.is_published == should_publish:
+        if self.status == 'approved' and self.is_published != should_publish:
             self.is_published = should_publish
             self.save()
         else:
