@@ -195,6 +195,7 @@ class MUOWorkflow(StaticLiveServerTestCase):
             "//select[@id='id_misuse_case_type']/option[position()=2]"
         )
         self.assertEqual(elm_muc_type_new.get_attribute("selected"), "true")
+
         # Verify: The misuse case fields are editable.
         muc_field_id_list = [
             "id_misuse_case_description",
@@ -216,6 +217,29 @@ class MUOWorkflow(StaticLiveServerTestCase):
             "//fieldset[@id='fieldset-1']/div/div[position()=13]/div/div/div/p"
         )
         self.assertEqual(elm_status.get_attribute("textContent"), "Draft")
+
+        # Verify: The use case fields are editable.
+        uc_field_id_list = [
+            "id_usecase_set-0-use_case_description",
+            "id_usecase_set-0-use_case_primary_actor",
+            "id_usecase_set-0-use_case_secondary_actor",
+            "id_usecase_set-0-use_case_precondition",
+            "id_usecase_set-0-use_case_flow_of_events",
+            "id_usecase_set-0-use_case_postcondition",
+            "id_usecase_set-0-use_case_assumption",
+            "id_usecase_set-0-use_case_source",
+            "id_usecase_set-0-osr"
+        ]
+        for field_id in uc_field_id_list:
+            elm_field = self.browser.find_element_by_id(field_id)
+            self.assertTrue(self._is_editable(elm_field), "Field '"+field_id+"' is not editable.")
+        # Verify: Option box works correctly.
+        elm_options = self.browser.find_elements_by_xpath("//select[@id='id_usecase_set-0-osr_pattern_type']/option")
+        self.assertEqual(elm_options[0].get_attribute("textContent"), "Ubiquitous")
+        self.assertEqual(elm_options[1].get_attribute("textContent"), "Event-Driven")
+        self.assertEqual(elm_options[2].get_attribute("textContent"), "Unwanted Behavior")
+        self.assertEqual(elm_options[3].get_attribute("textContent"), "State-Driven")
+        self.assertEqual(elm_options[0].get_attribute("selected"), "true")
 
         # Now select the "Existing misuse case"
         sel_muc_type = Select(self.browser.find_element_by_id("id_misuse_case_type"))
