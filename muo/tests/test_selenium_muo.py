@@ -44,7 +44,7 @@ class MUOWorkflow(StaticLiveServerTestCase):
         super(MUOWorkflow, self).tearDown()
 
     def _set_up_test_data(self):
-        # Create some CWEs.
+        # Create some CWEs. These CWEs will be used by all the test methods.
         cwe101 = CWE(code=101, name="101")
         cwe101.save()
 
@@ -62,21 +62,54 @@ class MUOWorkflow(StaticLiveServerTestCase):
         # Delete the issue report.
         IssueReport.objects.all().delete()
 
-    def _create_draft_muo(self, new_misuse_case):
+    def _create_draft_muo(self, muc_type):
         cwe101 = CWE.objects.get(code=101)
-        # Create the MUO containers and misuse cases.
-        muc1, muo1 = self._create_muo_and_misuse_case(
-            index=1,
-            cwes=[cwe101],
-            custom=False,
-            new_misuse_case=new_misuse_case
-        )
-        # Create some use cases(with OSRs)
-        self._create_use_case_and_link_muo(1, muc1, muo1)
-        return muo1
 
-    def _create_draft_muo_after_rejection(self):
-        muo1 = self._create_draft_muo(new_misuse_case=False)
+        # Create the misuse case and establish the relationship with the CWEs
+        misuse_case = MisuseCase(
+            misuse_case_description="Misuse case #1",
+            misuse_case_primary_actor="Primary actor #1",
+            misuse_case_secondary_actor="Secondary actor #1",
+            misuse_case_precondition="Pre-condition #1",
+            misuse_case_flow_of_events="Event flow #1",
+            misuse_case_postcondition="Post-condition #1",
+            misuse_case_assumption="Assumption #1",
+            misuse_case_source="Source #1"
+        )
+        misuse_case.save()
+        misuse_case.cwes.add(cwe101)  # Establish the relationship between the misuse case and CWEs
+
+        # Create the MUO container for the misuse case and establish the relationship between the
+        # MUO Container and CWEs.
+        muo_container = MUOContainer(is_custom=False,
+                                     status='draft',
+                                     misuse_case=misuse_case,
+                                     misuse_case_type=muc_type
+                                     )
+        muo_container.save()
+        muo_container.cwes.add(cwe101)   # Establish the relationship between the muo container and cwes
+
+        # Create some use cases(with OSRs)
+        uc = UseCase(
+            use_case_description="Use Case #1",
+            use_case_primary_actor="Primary actor #1",
+            use_case_secondary_actor="Secondary actor #1",
+            use_case_precondition="Pre-condition #1",
+            use_case_flow_of_events="Event flow #1",
+            use_case_postcondition="Post-condition #1",
+            use_case_assumption="Assumption #1",
+            use_case_source="Source #1",
+            osr_pattern_type="ubiquitous",
+            osr="Overlooked Security Requirement #1"
+        )
+        uc.muo_container = muo_container
+        uc.misuse_case = misuse_case
+        uc.save()
+
+        return muo_container
+
+    def _create_draft_muo_after_rejection(self, muc_type):
+        muo1 = self._create_draft_muo(muc_type=muc_type)
         # Submit the MUO
         muo1.action_submit()
         # Reject the MUO
@@ -84,13 +117,13 @@ class MUOWorkflow(StaticLiveServerTestCase):
         # Reopen the MUO
         muo1.action_save_in_draft()
 
-    def _create_in_review_muo(self):
-        muo1 = self._create_draft_muo(new_misuse_case=False)
+    def _create_in_review_muo(self, muc_type):
+        muo1 = self._create_draft_muo(muc_type=muc_type)
         # Submit the MUO
         muo1.action_submit()
 
-    def _create_in_review_muo_after_rejection(self):
-        muo1 = self._create_draft_muo(new_misuse_case=False)
+    def _create_in_review_muo_after_rejection(self, muc_type):
+        muo1 = self._create_draft_muo(muc_type=muc_type)
         # Submit the MUO
         muo1.action_submit()
         # Reject the MUO
@@ -100,69 +133,19 @@ class MUOWorkflow(StaticLiveServerTestCase):
         # Submit the MUO again.
         muo1.action_submit()
 
-    def _create_rejected_muo(self):
-        muo1 = self._create_draft_muo(new_misuse_case=False)
+    def _create_rejected_muo(self, muc_type):
+        muo1 = self._create_draft_muo(muc_type=muc_type)
         # Submit the MUO
         muo1.action_submit()
         # Reject the MUO
         muo1.action_reject(reject_reason="For testing purpose.")
 
-    def _create_approved_muo(self):
-        muo1 = self._create_draft_muo(new_misuse_case=False)
+    def _create_approved_muo(self, muc_type):
+        muo1 = self._create_draft_muo(muc_type=muc_type)
         # Submit the MUO
         muo1.action_submit()
         # Approve the MUO
         muo1.action_approve()
-
-    def _create_muo_and_misuse_case(self, index, cwes, custom, new_misuse_case):
-        # Create the misuse case and establish the relationship with the CWEs
-        misuse_case = MisuseCase(
-            misuse_case_description="Misuse case #"+str(index),
-            misuse_case_primary_actor="Primary actor #"+str(index),
-            misuse_case_secondary_actor="Secondary actor #"+str(index),
-            misuse_case_precondition="Pre-condition #"+str(index),
-            misuse_case_flow_of_events="Event flow #"+str(index),
-            misuse_case_postcondition="Post-condition #"+str(index),
-            misuse_case_assumption="Assumption #"+str(index),
-            misuse_case_source="Source #"+str(index)
-        )
-        misuse_case.save()
-        misuse_case.cwes.add(*cwes)  # Establish the relationship between the misuse case and CWEs
-
-        # Create the MUO container for the misuse case and establish the relationship between the
-        # MUO Container and CWEs
-        muc_type = "new" if new_misuse_case else "existing"
-        muo_container = MUOContainer(is_custom=custom,
-                                     status='draft',
-                                     misuse_case=misuse_case,
-                                     misuse_case_type=muc_type
-                                     )
-        muo_container.save()
-        muo_container.cwes.add(*cwes)   # Establish the relationship between the muo container and cwes
-
-        return misuse_case, muo_container
-
-    def _create_use_case_and_link_muo(self, index, muc, muo):
-        uc = UseCase(
-            use_case_description="Use Case #"+str(index),
-            use_case_primary_actor="Primary actor #"+str(index),
-            use_case_secondary_actor="Secondary actor #"+str(index),
-            use_case_precondition="Pre-condition #"+str(index),
-            use_case_flow_of_events="Event flow #"+str(index),
-            use_case_postcondition="Post-condition #"+str(index),
-            use_case_assumption="Assumption #"+str(index),
-            use_case_source="Source #"+str(index),
-            osr_pattern_type="ubiquitous",
-            osr="Overlooked Security Requirement #"+str(index)
-        )
-        uc.muo_container = muo
-        uc.misuse_case = muc
-        uc.save()
-        return uc
-
-    def _approve_muo_container(self, muo_container):
-        muo_container.action_submit()
-        muo_container.action_approve()
 
     def _is_editable(self, web_element):
         old_text = web_element.get_attribute("value")
@@ -178,7 +161,7 @@ class MUOWorkflow(StaticLiveServerTestCase):
         """
 
         # Create test data
-        self._create_draft_muo(new_misuse_case=True)
+        self._create_draft_muo(muc_type="new")
         # Open Page: "MUO Containers"
         self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
         # Click Link: MUO
@@ -270,7 +253,7 @@ class MUOWorkflow(StaticLiveServerTestCase):
         """
 
         # Create test data
-        self._create_in_review_muo()
+        self._create_in_review_muo(muc_type="existing")
         # Open Page: "MUO Containers"
         self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
         # Click Link: MUO
@@ -339,7 +322,7 @@ class MUOWorkflow(StaticLiveServerTestCase):
         """
 
         # Create test data
-        self._create_rejected_muo()
+        self._create_rejected_muo(muc_type="existing")
         # Open Page: "MUO Containers"
         self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
         # Click Link: MUO
@@ -409,7 +392,7 @@ class MUOWorkflow(StaticLiveServerTestCase):
         """
 
         # Create test data
-        self._create_draft_muo_after_rejection()
+        self._create_draft_muo_after_rejection(muc_type="existing")
         # Open Page: "MUO Containers"
         self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
         # Click Link: MUO
@@ -506,7 +489,7 @@ class MUOWorkflow(StaticLiveServerTestCase):
         """
 
         # Create test data
-        self._create_in_review_muo_after_rejection()
+        self._create_in_review_muo_after_rejection(muc_type="existing")
         # Open Page: "MUO Containers"
         self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
         # Click Link: MUO
@@ -577,7 +560,7 @@ class MUOWorkflow(StaticLiveServerTestCase):
         """
 
         # Create test data
-        self._create_approved_muo()
+        self._create_approved_muo(muc_type="existing")
         # Open Page: "MUO Containers"
         self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
         # Click Link: MUO
