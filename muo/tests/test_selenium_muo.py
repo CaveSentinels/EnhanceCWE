@@ -428,9 +428,9 @@ class MUOWorkflow(StaticLiveServerTestCase):
             "id_misuse_case_assumption",
             "id_misuse_case_source"
         ]
-        for id in muc_field_id_list:
-            elm_field = self.browser.find_element_by_id(id)
-            self.assertEqual(elm_field.is_displayed(), False, "Field '"+id+"' is visible.")
+        for field_id in muc_field_id_list:
+            elm_field = self.browser.find_element_by_id(field_id)
+            self.assertEqual(elm_field.is_displayed(), False, "Field '"+field_id+"' is visible.")
         # Verify: The "Misuse case" auto-completion box for using existing misuse case is not visible.
         self.assertEqual(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed(), False)
         # Verify: Status shows "Draft".
@@ -476,9 +476,9 @@ class MUOWorkflow(StaticLiveServerTestCase):
             "id_misuse_case_assumption",
             "id_misuse_case_source"
         ]
-        for id in muc_field_id_list:
-            elm_field = self.browser.find_element_by_id(id)
-            self.assertEqual(self._is_editable(elm_field), True, "Field '"+id+"' is not editable.")
+        for field_id in muc_field_id_list:
+            elm_field = self.browser.find_element_by_id(field_id)
+            self.assertEqual(self._is_editable(elm_field), True, "Field '"+field_id+"' is not editable.")
         # Verify: The "Misuse case" auto-completion box for using existing misuse case is visible.
         self.assertTrue(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed())
 
