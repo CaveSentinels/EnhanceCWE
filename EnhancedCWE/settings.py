@@ -149,12 +149,20 @@ WSGI_APPLICATION = 'EnhancedCWE.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
-DATABASES = {
-    'default': dj_database_url.config(),
-}
-# Enable Connection Pooling
-DATABASES['default']['ENGINE'] = 'django_postgrespool'
+# DATABASES = {
+#     'default': dj_database_url.config(),
+# }
+# # Enable Connection Pooling
+# DATABASES['default']['ENGINE'] = 'django_postgrespool'
+#
 
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db_invitation.sqlite3'),
+    }
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.8/topics/i18n/
