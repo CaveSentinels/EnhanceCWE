@@ -155,111 +155,7 @@ class MUOWorkflow(StaticLiveServerTestCase):
         web_element.send_keys(old_text)     # Resume to the previous text
         return old_text != new_text
 
-    def test_point_01_ui_draft(self):
-        """
-        Test Point: Verify that the MUO container page in 'Draft' status works as expected.
-        """
-
-        # Create test data
-        self._create_draft_muo(muc_type="new")
-        # Open Page: "MUO Containers"
-        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
-        # Click Link: MUO
-        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
-
-        # Verify: The UI elements are in the correct states.
-        # CWE auto-complete edit box is editable.
-        # FIXME: How to verify if an auto-completion edit box is editable or not??
-        # elm_cwe_auto_complete = self.browser.find_element_by_id("id_cwes-autocomplete")
-        # self.assertTrue(self._is_editable(elm_cwe_auto_complete))
-        # "New" option is checked
-        elm_muc_type_existing = self.browser.find_element_by_xpath(
-            "//select[@id='id_misuse_case_type']/option[position()=1]"
-        )
-        self.assertEqual(elm_muc_type_existing.get_attribute("selected"), None)
-        elm_muc_type_new = self.browser.find_element_by_xpath(
-            "//select[@id='id_misuse_case_type']/option[position()=2]"
-        )
-        self.assertEqual(elm_muc_type_new.get_attribute("selected"), "true")
-
-        # Verify: The misuse case fields are editable.
-        muc_field_id_list = [
-            "id_misuse_case_description",
-            "id_misuse_case_primary_actor",
-            "id_misuse_case_secondary_actor",
-            "id_misuse_case_precondition",
-            "id_misuse_case_flow_of_events",
-            "id_misuse_case_postcondition",
-            "id_misuse_case_assumption",
-            "id_misuse_case_source"
-        ]
-        for field_id in muc_field_id_list:
-            elm_field = self.browser.find_element_by_id(field_id)
-            self.assertTrue(self._is_editable(elm_field), "Field '"+field_id+"' is not editable.")
-        # Verify: The "Misuse case" auto-completion box for using existing misuse case is not visible.
-        self.assertEqual(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed(), False)
-        # Verify: Status shows "Draft".
-        elm_status = self.browser.find_element_by_xpath(
-            "//fieldset[@id='fieldset-1']/div/div[position()=13]/div/div/div/p"
-        )
-        self.assertEqual(elm_status.get_attribute("textContent"), "Draft")
-
-        # Verify: The use case fields are editable.
-        uc_field_id_list = [
-            "id_usecase_set-0-use_case_description",
-            "id_usecase_set-0-use_case_primary_actor",
-            "id_usecase_set-0-use_case_secondary_actor",
-            "id_usecase_set-0-use_case_precondition",
-            "id_usecase_set-0-use_case_flow_of_events",
-            "id_usecase_set-0-use_case_postcondition",
-            "id_usecase_set-0-use_case_assumption",
-            "id_usecase_set-0-use_case_source",
-            "id_usecase_set-0-osr"
-        ]
-        for field_id in uc_field_id_list:
-            elm_field = self.browser.find_element_by_id(field_id)
-            self.assertTrue(self._is_editable(elm_field), "Field '"+field_id+"' is not editable.")
-        # Verify: Option box works correctly.
-        elm_options = self.browser.find_elements_by_xpath("//select[@id='id_usecase_set-0-osr_pattern_type']/option")
-        self.assertEqual(elm_options[0].get_attribute("textContent"), "Ubiquitous")
-        self.assertEqual(elm_options[1].get_attribute("textContent"), "Event-Driven")
-        self.assertEqual(elm_options[2].get_attribute("textContent"), "Unwanted Behavior")
-        self.assertEqual(elm_options[3].get_attribute("textContent"), "State-Driven")
-        self.assertEqual(elm_options[0].get_attribute("selected"), "true")
-
-        # Now select the "Existing misuse case"
-        sel_muc_type = Select(self.browser.find_element_by_id("id_misuse_case_type"))
-        sel_muc_type.select_by_visible_text("Existing")
-        # Verify: The misuse case fields are now hidden.
-        muc_field_id_list = [
-            "id_misuse_case_description",
-            "id_misuse_case_primary_actor",
-            "id_misuse_case_secondary_actor",
-            "id_misuse_case_precondition",
-            "id_misuse_case_flow_of_events",
-            "id_misuse_case_postcondition",
-            "id_misuse_case_assumption",
-            "id_misuse_case_source"
-        ]
-        for field_id in muc_field_id_list:
-            elm_field = self.browser.find_element_by_id(field_id)
-            self.assertEqual(elm_field.is_displayed(), False, "Field '"+field_id+"' is not editable.")
-        # Verify: The "Misuse case" auto-completion box for using existing misuse case is visible.
-        self.assertTrue(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed())
-
-    def test_point_02_ui_in_review(self):
-        """
-        Test Point: Verify that the MUO container page in 'In Review' status works as expected.
-        """
-
-        # Create test data
-        self._create_in_review_muo(muc_type="existing")
-        # Open Page: "MUO Containers"
-        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
-        # Click Link: MUO
-        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
-
-        # Verify: The information of the MUO is displayed correctly.
+    def _verify_muo_fields_info(self, expected_status):
         fields = self.browser.find_elements_by_xpath("//fieldset[@id='fieldset-1']/div/div/div/div/div/p")
         # Name
         # self.assertEqual(fields[0].get_attribute("textContent"), "MUO/00001")
@@ -289,9 +185,9 @@ class MUOWorkflow(StaticLiveServerTestCase):
         # Source
         self.assertEqual(fields[11].get_attribute("textContent"), "Source #1")
         # Status
-        self.assertEqual(fields[12].get_attribute("textContent"), "In Review")
+        self.assertEqual(fields[12].get_attribute("textContent"), expected_status)
 
-        # Verify: The information of the Use Cases is displayed correctly.
+    def _verify_use_case_fields_info(self):
         fields = self.browser.find_elements_by_xpath("//fieldset[@id='fieldset-1-1']/div/div/div/div/div/p")
         # Name
         # self.assertEqual(fields[0].get_attribute("textContent"), "UC/00001")
@@ -315,6 +211,130 @@ class MUOWorkflow(StaticLiveServerTestCase):
         self.assertEqual(fields[9].get_attribute("textContent"), "Ubiquitous")
         # Overlooked security requirements
         self.assertEqual(fields[10].get_attribute("textContent"), "Overlooked Security Requirement #1")
+
+    def _verify_misuse_case_fields_are_editable(self):
+        muc_field_id_list = [
+            "id_misuse_case_description",
+            "id_misuse_case_primary_actor",
+            "id_misuse_case_secondary_actor",
+            "id_misuse_case_precondition",
+            "id_misuse_case_flow_of_events",
+            "id_misuse_case_postcondition",
+            "id_misuse_case_assumption",
+            "id_misuse_case_source"
+        ]
+        for field_id in muc_field_id_list:
+            elm_field = self.browser.find_element_by_id(field_id)
+            self.assertTrue(self._is_editable(elm_field), "Field '" + field_id + "' is not editable.")
+        # Verify: The "Misuse case" auto-completion box for using existing misuse case is not visible.
+        self.assertEqual(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed(), False)
+
+    def _verify_misuse_case_fields_are_hidden(self):
+        muc_field_id_list = [
+            "id_misuse_case_description",
+            "id_misuse_case_primary_actor",
+            "id_misuse_case_secondary_actor",
+            "id_misuse_case_precondition",
+            "id_misuse_case_flow_of_events",
+            "id_misuse_case_postcondition",
+            "id_misuse_case_assumption",
+            "id_misuse_case_source"
+        ]
+        for field_id in muc_field_id_list:
+            elm_field = self.browser.find_element_by_id(field_id)
+            self.assertEqual(elm_field.is_displayed(), False, "Field '" + field_id + "' is visible.")
+        # Verify: The "Misuse case" auto-completion box for using existing misuse case is visible.
+        self.assertEqual(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed(), True)
+
+    def _verify_use_case_fields_are_editable(self):
+        uc_field_id_list = [
+            "id_usecase_set-0-use_case_description",
+            "id_usecase_set-0-use_case_primary_actor",
+            "id_usecase_set-0-use_case_secondary_actor",
+            "id_usecase_set-0-use_case_precondition",
+            "id_usecase_set-0-use_case_flow_of_events",
+            "id_usecase_set-0-use_case_postcondition",
+            "id_usecase_set-0-use_case_assumption",
+            "id_usecase_set-0-use_case_source",
+            "id_usecase_set-0-osr"
+        ]
+        for field_id in uc_field_id_list:
+            elm_field = self.browser.find_element_by_id(field_id)
+            self.assertTrue(self._is_editable(elm_field), "Field '" + field_id + "' is not editable.")
+        # Verify: Option box works correctly.
+        elm_options = self.browser.find_elements_by_xpath("//select[@id='id_usecase_set-0-osr_pattern_type']/option")
+        self.assertEqual(elm_options[0].get_attribute("textContent"), "Ubiquitous")
+        self.assertEqual(elm_options[1].get_attribute("textContent"), "Event-Driven")
+        self.assertEqual(elm_options[2].get_attribute("textContent"), "Unwanted Behavior")
+        self.assertEqual(elm_options[3].get_attribute("textContent"), "State-Driven")
+        self.assertEqual(elm_options[0].get_attribute("selected"), "true")
+
+    def test_point_01_ui_draft(self):
+        """
+        Test Point: Verify that the MUO container page in 'Draft' status works as expected.
+        """
+
+        # Create test data
+        self._create_draft_muo(muc_type="new")
+        # Open Page: "MUO Containers"
+        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
+        # Click Link: MUO
+        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
+
+        # Verify: The UI elements are in the correct states.
+        # CWE auto-complete edit box is editable.
+        # FIXME: How to verify if an auto-completion edit box is editable or not??
+        # elm_cwe_auto_complete = self.browser.find_element_by_id("id_cwes-autocomplete")
+        # self.assertTrue(self._is_editable(elm_cwe_auto_complete))
+        # "New" option is checked
+        elm_muc_type_existing = self.browser.find_element_by_xpath(
+            "//select[@id='id_misuse_case_type']/option[position()=1]"
+        )
+        self.assertEqual(elm_muc_type_existing.get_attribute("selected"), None)
+        elm_muc_type_new = self.browser.find_element_by_xpath(
+            "//select[@id='id_misuse_case_type']/option[position()=2]"
+        )
+        self.assertEqual(elm_muc_type_new.get_attribute("selected"), "true")
+
+        # Verify: The misuse case fields are editable.
+        self._verify_misuse_case_fields_are_editable()
+
+        # Verify: Status shows "Draft".
+        elm_status = self.browser.find_element_by_xpath(
+            "//fieldset[@id='fieldset-1']/div/div[position()=13]/div/div/div/p"
+        )
+        self.assertEqual(elm_status.get_attribute("textContent"), "Draft")
+
+        # Verify: The use case fields are editable.
+        self._verify_use_case_fields_are_editable()
+
+        # Now select the "Existing misuse case"
+        sel_muc_type = Select(self.browser.find_element_by_id("id_misuse_case_type"))
+        sel_muc_type.select_by_visible_text("Existing")
+
+        # Verify: The misuse case fields are now hidden.
+        self._verify_misuse_case_fields_are_hidden()
+
+        # Verify: The "Misuse case" auto-completion box for using existing misuse case is visible.
+        self.assertTrue(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed())
+
+    def test_point_02_ui_in_review(self):
+        """
+        Test Point: Verify that the MUO container page in 'In Review' status works as expected.
+        """
+
+        # Create test data
+        self._create_in_review_muo(muc_type="existing")
+        # Open Page: "MUO Containers"
+        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
+        # Click Link: MUO
+        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
+
+        # Verify: The information of the MUO is displayed correctly.
+        self._verify_muo_fields_info("In Review")
+
+        # Verify: The information of the Use Cases is displayed correctly.
+        self._verify_use_case_fields_info()
 
     def test_point_03_ui_rejected(self):
         """
@@ -332,58 +352,10 @@ class MUOWorkflow(StaticLiveServerTestCase):
         expected_conditions.presence_of_element_located((By.XPATH, "//div[@class='alert alert-error']"))(self.browser)
 
         # Verify: The information of the MUO is displayed correctly.
-        fields = self.browser.find_elements_by_xpath("//fieldset[@id='fieldset-1']/div/div/div/div/div/p")
-        # Name
-        # self.assertEqual(fields[0].get_attribute("textContent"), "MUO/00003")
-        # Cwes
-        self.assertEqual(fields[1].get_attribute("textContent"), "CWE-101: 101")
-        # Misuse Case Type
-        self.assertEqual(fields[2].get_attribute("textContent"), "Existing")
-        # Misuse case
-        # self.assertEqual(fields[3].get_attribute("textContent"), "MU/00001 - Misuse Case #1...")
-        # Brief Description
-        self.assertEqual(fields[4].get_attribute("textContent"), "Misuse case #1")
-        # Primary actor
-        self.assertEqual(fields[5].get_attribute("textContent"), "Primary actor #1")
-        # Secondary actor
-        self.assertEqual(fields[6].get_attribute("textContent"), "Secondary actor #1")
-        # Pre-condition
-        self.assertEqual(fields[7].get_attribute("textContent"), "Pre-condition #1")
-        # Flow of events
-        self.assertEqual(fields[8].get_attribute("textContent"), "Event flow #1")
-        # Post-condition
-        self.assertEqual(fields[9].get_attribute("textContent"), "Post-condition #1")
-        # Assumption
-        self.assertEqual(fields[10].get_attribute("textContent"), "Assumption #1")
-        # Source
-        self.assertEqual(fields[11].get_attribute("textContent"), "Source #1")
-        # Status
-        self.assertEqual(fields[12].get_attribute("textContent"), "Rejected")
+        self._verify_muo_fields_info("Rejected")
 
         # Verify: The information of the Use Cases is displayed correctly.
-        fields = self.browser.find_elements_by_xpath("//fieldset[@id='fieldset-1-1']/div/div/div/div/div/p")
-        # Name
-        # self.assertEqual(fields[0].get_attribute("textContent"), "UC/00001")
-        # Brief description
-        self.assertEqual(fields[1].get_attribute("textContent"), "Use Case #1")
-        # Primary actor
-        self.assertEqual(fields[2].get_attribute("textContent"), "Primary actor #1")
-        # Secondary actor
-        self.assertEqual(fields[3].get_attribute("textContent"), "Secondary actor #1")
-        # Pre-condition
-        self.assertEqual(fields[4].get_attribute("textContent"), "Pre-condition #1")
-        # Flow of events
-        self.assertEqual(fields[5].get_attribute("textContent"), "Event flow #1")
-        # Post-condition
-        self.assertEqual(fields[6].get_attribute("textContent"), "Post-condition #1")
-        # Assumption
-        self.assertEqual(fields[7].get_attribute("textContent"), "Assumption #1")
-        # Source
-        self.assertEqual(fields[8].get_attribute("textContent"), "Source #1")
-        # Overlooked security requirements pattern type
-        self.assertEqual(fields[9].get_attribute("textContent"), "Ubiquitous")
-        # Overlooked security requirements
-        self.assertEqual(fields[10].get_attribute("textContent"), "Overlooked Security Requirement #1")
+        self._verify_use_case_fields_info()
 
     def test_point_04_ui_draft_after_rejection(self):
         """
@@ -417,22 +389,13 @@ class MUOWorkflow(StaticLiveServerTestCase):
             "//select[@id='id_misuse_case_type']/option[position()=2]"
         )
         self.assertEqual(elm_muc_type_new.get_attribute("selected"), None)
+
         # Verify: The misuse case fields are hidden.
-        muc_field_id_list = [
-            "id_misuse_case_description",
-            "id_misuse_case_primary_actor",
-            "id_misuse_case_secondary_actor",
-            "id_misuse_case_precondition",
-            "id_misuse_case_flow_of_events",
-            "id_misuse_case_postcondition",
-            "id_misuse_case_assumption",
-            "id_misuse_case_source"
-        ]
-        for field_id in muc_field_id_list:
-            elm_field = self.browser.find_element_by_id(field_id)
-            self.assertEqual(elm_field.is_displayed(), False, "Field '"+field_id+"' is visible.")
+        self._verify_misuse_case_fields_are_hidden()
+
         # Verify: The "Misuse case" auto-completion box for using existing misuse case is not visible.
         self.assertEqual(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed(), False)
+
         # Verify: Status shows "Draft".
         elm_status = self.browser.find_element_by_xpath(
             "//fieldset[@id='fieldset-1']/div/div[position()=13]/div/div/div/p"
@@ -440,47 +403,14 @@ class MUOWorkflow(StaticLiveServerTestCase):
         self.assertEqual(elm_status.get_attribute("textContent"), "Draft")
 
         # Verify: The use case fields are editable.
-        uc_field_id_list = [
-            "id_usecase_set-0-use_case_description",
-            "id_usecase_set-0-use_case_primary_actor",
-            "id_usecase_set-0-use_case_secondary_actor",
-            "id_usecase_set-0-use_case_precondition",
-            "id_usecase_set-0-use_case_flow_of_events",
-            "id_usecase_set-0-use_case_postcondition",
-            "id_usecase_set-0-use_case_assumption",
-            "id_usecase_set-0-use_case_source",
-            "id_usecase_set-0-osr"
-        ]
-        for field_id in uc_field_id_list:
-            elm_field = self.browser.find_element_by_id(field_id)
-            self.assertTrue(self._is_editable(elm_field), "Field '"+field_id+"' is not editable.")
-        # Verify: Option box works correctly.
-        elm_options = self.browser.find_elements_by_xpath("//select[@id='id_usecase_set-0-osr_pattern_type']/option")
-        self.assertEqual(elm_options[0].get_attribute("textContent"), "Ubiquitous")
-        self.assertEqual(elm_options[1].get_attribute("textContent"), "Event-Driven")
-        self.assertEqual(elm_options[2].get_attribute("textContent"), "Unwanted Behavior")
-        self.assertEqual(elm_options[3].get_attribute("textContent"), "State-Driven")
-        self.assertEqual(elm_options[0].get_attribute("selected"), "true")
+        self._verify_use_case_fields_are_editable()
 
         # Now select the "Existing misuse case"
         sel_muc_type = Select(self.browser.find_element_by_id("id_misuse_case_type"))
         sel_muc_type.select_by_visible_text("New")
+
         # Verify: The misuse case fields are now displayed and editable.
-        muc_field_id_list = [
-            "id_misuse_case_description",
-            "id_misuse_case_primary_actor",
-            "id_misuse_case_secondary_actor",
-            "id_misuse_case_precondition",
-            "id_misuse_case_flow_of_events",
-            "id_misuse_case_postcondition",
-            "id_misuse_case_assumption",
-            "id_misuse_case_source"
-        ]
-        for field_id in muc_field_id_list:
-            elm_field = self.browser.find_element_by_id(field_id)
-            self.assertEqual(self._is_editable(elm_field), True, "Field '"+field_id+"' is not editable.")
-        # Verify: The "Misuse case" auto-completion box for using existing misuse case is visible.
-        self.assertTrue(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed())
+        self._verify_misuse_case_fields_are_editable()
 
     def test_point_05_ui_in_review_after_rejection(self):
         """
@@ -501,58 +431,10 @@ class MUOWorkflow(StaticLiveServerTestCase):
         )(self.browser)
 
         # Verify: The information of the MUO is displayed correctly.
-        fields = self.browser.find_elements_by_xpath("//fieldset[@id='fieldset-1']/div/div/div/div/div/p")
-        # Name
-        # self.assertEqual(fields[0].get_attribute("textContent"), "MUO/00001")
-        # Cwes
-        self.assertEqual(fields[1].get_attribute("textContent"), "CWE-101: 101")
-        # Misuse Case Type
-        self.assertEqual(fields[2].get_attribute("textContent"), "Existing")
-        # Misuse case
-        # self.assertEqual(fields[3].get_attribute("textContent"), "MU/00001 - Misuse Case #1...")
-        # Brief Description
-        self.assertEqual(fields[4].get_attribute("textContent"), "Misuse case #1")
-        # Primary actor
-        self.assertEqual(fields[5].get_attribute("textContent"), "Primary actor #1")
-        # Secondary actor
-        self.assertEqual(fields[6].get_attribute("textContent"), "Secondary actor #1")
-        # Pre-condition
-        self.assertEqual(fields[7].get_attribute("textContent"), "Pre-condition #1")
-        # Flow of events
-        self.assertEqual(fields[8].get_attribute("textContent"), "Event flow #1")
-        # Post-condition
-        self.assertEqual(fields[9].get_attribute("textContent"), "Post-condition #1")
-        # Assumption
-        self.assertEqual(fields[10].get_attribute("textContent"), "Assumption #1")
-        # Source
-        self.assertEqual(fields[11].get_attribute("textContent"), "Source #1")
-        # Status
-        self.assertEqual(fields[12].get_attribute("textContent"), "In Review")
+        self._verify_muo_fields_info("In Review")
 
         # Verify: The information of the Use Cases is displayed correctly.
-        fields = self.browser.find_elements_by_xpath("//fieldset[@id='fieldset-1-1']/div/div/div/div/div/p")
-        # Name
-        # self.assertEqual(fields[0].get_attribute("textContent"), "UC/00001")
-        # Brief description
-        self.assertEqual(fields[1].get_attribute("textContent"), "Use Case #1")
-        # Primary actor
-        self.assertEqual(fields[2].get_attribute("textContent"), "Primary actor #1")
-        # Secondary actor
-        self.assertEqual(fields[3].get_attribute("textContent"), "Secondary actor #1")
-        # Pre-condition
-        self.assertEqual(fields[4].get_attribute("textContent"), "Pre-condition #1")
-        # Flow of events
-        self.assertEqual(fields[5].get_attribute("textContent"), "Event flow #1")
-        # Post-condition
-        self.assertEqual(fields[6].get_attribute("textContent"), "Post-condition #1")
-        # Assumption
-        self.assertEqual(fields[7].get_attribute("textContent"), "Assumption #1")
-        # Source
-        self.assertEqual(fields[8].get_attribute("textContent"), "Source #1")
-        # Overlooked security requirements pattern type
-        self.assertEqual(fields[9].get_attribute("textContent"), "Ubiquitous")
-        # Overlooked security requirements
-        self.assertEqual(fields[10].get_attribute("textContent"), "Overlooked Security Requirement #1")
+        self._verify_use_case_fields_info()
 
     def test_point_06_ui_approved(self):
         """
@@ -567,55 +449,7 @@ class MUOWorkflow(StaticLiveServerTestCase):
         self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
 
         # Verify: The information of the MUO is displayed correctly.
-        fields = self.browser.find_elements_by_xpath("//fieldset[@id='fieldset-1']/div/div/div/div/div/p")
-        # Name
-        # self.assertEqual(fields[0].get_attribute("textContent"), "MUO/00003")
-        # Cwes
-        self.assertEqual(fields[1].get_attribute("textContent"), "CWE-101: 101")
-        # Misuse Case Type
-        self.assertEqual(fields[2].get_attribute("textContent"), "Existing")
-        # Misuse case
-        # self.assertEqual(fields[3].get_attribute("textContent"), "MU/00001 - Misuse Case #1...")
-        # Brief Description
-        self.assertEqual(fields[4].get_attribute("textContent"), "Misuse case #1")
-        # Primary actor
-        self.assertEqual(fields[5].get_attribute("textContent"), "Primary actor #1")
-        # Secondary actor
-        self.assertEqual(fields[6].get_attribute("textContent"), "Secondary actor #1")
-        # Pre-condition
-        self.assertEqual(fields[7].get_attribute("textContent"), "Pre-condition #1")
-        # Flow of events
-        self.assertEqual(fields[8].get_attribute("textContent"), "Event flow #1")
-        # Post-condition
-        self.assertEqual(fields[9].get_attribute("textContent"), "Post-condition #1")
-        # Assumption
-        self.assertEqual(fields[10].get_attribute("textContent"), "Assumption #1")
-        # Source
-        self.assertEqual(fields[11].get_attribute("textContent"), "Source #1")
-        # Status
-        self.assertEqual(fields[12].get_attribute("textContent"), "Approved")
+        self._verify_muo_fields_info("Approved")
 
         # Verify: The information of the Use Cases is displayed correctly.
-        fields = self.browser.find_elements_by_xpath("//fieldset[@id='fieldset-1-1']/div/div/div/div/div/p")
-        # Name
-        # self.assertEqual(fields[0].get_attribute("textContent"), "UC/00001")
-        # Brief description
-        self.assertEqual(fields[1].get_attribute("textContent"), "Use Case #1")
-        # Primary actor
-        self.assertEqual(fields[2].get_attribute("textContent"), "Primary actor #1")
-        # Secondary actor
-        self.assertEqual(fields[3].get_attribute("textContent"), "Secondary actor #1")
-        # Pre-condition
-        self.assertEqual(fields[4].get_attribute("textContent"), "Pre-condition #1")
-        # Flow of events
-        self.assertEqual(fields[5].get_attribute("textContent"), "Event flow #1")
-        # Post-condition
-        self.assertEqual(fields[6].get_attribute("textContent"), "Post-condition #1")
-        # Assumption
-        self.assertEqual(fields[7].get_attribute("textContent"), "Assumption #1")
-        # Source
-        self.assertEqual(fields[8].get_attribute("textContent"), "Source #1")
-        # Overlooked security requirements pattern type
-        self.assertEqual(fields[9].get_attribute("textContent"), "Ubiquitous")
-        # Overlooked security requirements
-        self.assertEqual(fields[10].get_attribute("textContent"), "Overlooked Security Requirement #1")
+        self._verify_use_case_fields_info()
