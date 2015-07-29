@@ -62,20 +62,21 @@ class MUOWorkflow(StaticLiveServerTestCase):
         # Delete the issue report.
         IssueReport.objects.all().delete()
 
-    def _create_draft_muo(self):
+    def _create_draft_muo(self, new_misuse_case):
         cwe101 = CWE.objects.get(code=101)
         # Create the MUO containers and misuse cases.
         muc1, muo1 = self._create_muo_and_misuse_case(
             index=1,
             cwes=[cwe101],
-            custom=False
+            custom=False,
+            new_misuse_case=new_misuse_case
         )
         # Create some use cases(with OSRs)
         self._create_use_case_and_link_muo(1, muc1, muo1)
         return muo1
 
     def _create_draft_muo_after_rejection(self):
-        muo1 = self._create_draft_muo()
+        muo1 = self._create_draft_muo(new_misuse_case=False)
         # Submit the MUO
         muo1.action_submit()
         # Reject the MUO
@@ -84,12 +85,12 @@ class MUOWorkflow(StaticLiveServerTestCase):
         muo1.action_save_in_draft()
 
     def _create_in_review_muo(self):
-        muo1 = self._create_draft_muo()
+        muo1 = self._create_draft_muo(new_misuse_case=False)
         # Submit the MUO
         muo1.action_submit()
 
     def _create_in_review_muo_after_rejection(self):
-        muo1 = self._create_draft_muo()
+        muo1 = self._create_draft_muo(new_misuse_case=False)
         # Submit the MUO
         muo1.action_submit()
         # Reject the MUO
@@ -100,20 +101,20 @@ class MUOWorkflow(StaticLiveServerTestCase):
         muo1.action_submit()
 
     def _create_rejected_muo(self):
-        muo1 = self._create_draft_muo()
+        muo1 = self._create_draft_muo(new_misuse_case=False)
         # Submit the MUO
         muo1.action_submit()
         # Reject the MUO
         muo1.action_reject(reject_reason="For testing purpose.")
 
     def _create_approved_muo(self):
-        muo1 = self._create_draft_muo()
+        muo1 = self._create_draft_muo(new_misuse_case=False)
         # Submit the MUO
         muo1.action_submit()
         # Approve the MUO
         muo1.action_approve()
 
-    def _create_muo_and_misuse_case(self, index, cwes, custom):
+    def _create_muo_and_misuse_case(self, index, cwes, custom, new_misuse_case):
         # Create the misuse case and establish the relationship with the CWEs
         misuse_case = MisuseCase(
             misuse_case_description="Misuse case #"+str(index),
@@ -121,18 +122,20 @@ class MUOWorkflow(StaticLiveServerTestCase):
             misuse_case_secondary_actor="Secondary actor #"+str(index),
             misuse_case_precondition="Pre-condition #"+str(index),
             misuse_case_flow_of_events="Event flow #"+str(index),
-            misuse_case_postcondition="Post-condition"+str(index),
-            misuse_case_assumption="Assumption"+str(index),
-            misuse_case_source="Source"+str(index)
+            misuse_case_postcondition="Post-condition #"+str(index),
+            misuse_case_assumption="Assumption #"+str(index),
+            misuse_case_source="Source #"+str(index)
         )
         misuse_case.save()
         misuse_case.cwes.add(*cwes)  # Establish the relationship between the misuse case and CWEs
 
         # Create the MUO container for the misuse case and establish the relationship between the
         # MUO Container and CWEs
+        muc_type = "new" if new_misuse_case else "existing"
         muo_container = MUOContainer(is_custom=custom,
                                      status='draft',
-                                     misuse_case=misuse_case
+                                     misuse_case=misuse_case,
+                                     misuse_case_type=muc_type
                                      )
         muo_container.save()
         muo_container.cwes.add(*cwes)   # Establish the relationship between the muo container and cwes
@@ -175,7 +178,7 @@ class MUOWorkflow(StaticLiveServerTestCase):
         """
 
         # Create test data
-        self._create_draft_muo()
+        self._create_draft_muo(new_misuse_case=True)
         # Open Page: "MUO Containers"
         self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
         # Click Link: MUO
@@ -190,7 +193,7 @@ class MUOWorkflow(StaticLiveServerTestCase):
         elm_muc_type_existing = self.browser.find_element_by_xpath(
             "//select[@id='id_misuse_case_type']/option[position()=1]"
         )
-        self.assertTrue(elm_muc_type_existing.get_attribute("selected") is None)
+        self.assertEqual(elm_muc_type_existing.get_attribute("selected"), None)
         elm_muc_type_new = self.browser.find_element_by_xpath(
             "//select[@id='id_misuse_case_type']/option[position()=2]"
         )
@@ -280,26 +283,28 @@ class MUOWorkflow(StaticLiveServerTestCase):
         # Cwes
         self.assertEqual(fields[1].get_attribute("textContent"), "CWE-101: 101")
         # Misuse Case Type
-        self.assertEqual(fields[2].get_attribute("textContent"), "New")
+        self.assertEqual(fields[2].get_attribute("textContent"), "Existing")
         # Misuse case
-        # TODO: Add comments here.
+        # The misuse case name is dependent on its ID. However, when we run the entire test suite
+        # or run the test method individually, the database IDs are different, which means the test
+        # case may fail when you use different ways to run it. Therefore, for now we do not test it.
         # self.assertEqual(fields[3].get_attribute("textContent"), "MU/00001 - Misuse Case #1...")
         # Brief Description
-        self.assertEqual(fields[4].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[4].get_attribute("textContent"), "Misuse case #1")
         # Primary actor
-        self.assertEqual(fields[5].get_attribute("textContent"), "(None)")    # TODO: Should add data for these.
+        self.assertEqual(fields[5].get_attribute("textContent"), "Primary actor #1")
         # Secondary actor
-        self.assertEqual(fields[6].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[6].get_attribute("textContent"), "Secondary actor #1")
         # Pre-condition
-        self.assertEqual(fields[7].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[7].get_attribute("textContent"), "Pre-condition #1")
         # Flow of events
-        self.assertEqual(fields[8].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[8].get_attribute("textContent"), "Event flow #1")
         # Post-condition
-        self.assertEqual(fields[9].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[9].get_attribute("textContent"), "Post-condition #1")
         # Assumption
-        self.assertEqual(fields[10].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[10].get_attribute("textContent"), "Assumption #1")
         # Source
-        self.assertEqual(fields[11].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[11].get_attribute("textContent"), "Source #1")
         # Status
         self.assertEqual(fields[12].get_attribute("textContent"), "In Review")
 
@@ -310,19 +315,19 @@ class MUOWorkflow(StaticLiveServerTestCase):
         # Brief description
         self.assertEqual(fields[1].get_attribute("textContent"), "Use Case #1")
         # Primary actor
-        self.assertEqual(fields[2].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[2].get_attribute("textContent"), "Primary actor #1")
         # Secondary actor
-        self.assertEqual(fields[3].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[3].get_attribute("textContent"), "Secondary actor #1")
         # Pre-condition
-        self.assertEqual(fields[4].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[4].get_attribute("textContent"), "Pre-condition #1")
         # Flow of events
-        self.assertEqual(fields[5].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[5].get_attribute("textContent"), "Event flow #1")
         # Post-condition
-        self.assertEqual(fields[6].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[6].get_attribute("textContent"), "Post-condition #1")
         # Assumption
-        self.assertEqual(fields[7].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[7].get_attribute("textContent"), "Assumption #1")
         # Source
-        self.assertEqual(fields[8].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[8].get_attribute("textContent"), "Source #1")
         # Overlooked security requirements pattern type
         self.assertEqual(fields[9].get_attribute("textContent"), "Ubiquitous")
         # Overlooked security requirements
@@ -350,25 +355,25 @@ class MUOWorkflow(StaticLiveServerTestCase):
         # Cwes
         self.assertEqual(fields[1].get_attribute("textContent"), "CWE-101: 101")
         # Misuse Case Type
-        self.assertEqual(fields[2].get_attribute("textContent"), "New")
+        self.assertEqual(fields[2].get_attribute("textContent"), "Existing")
         # Misuse case
         # self.assertEqual(fields[3].get_attribute("textContent"), "MU/00001 - Misuse Case #1...")
         # Brief Description
-        self.assertEqual(fields[4].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[4].get_attribute("textContent"), "Misuse case #1")
         # Primary actor
-        self.assertEqual(fields[5].get_attribute("textContent"), "(None)")    # TODO: Should add data for these.
+        self.assertEqual(fields[5].get_attribute("textContent"), "Primary actor #1")
         # Secondary actor
-        self.assertEqual(fields[6].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[6].get_attribute("textContent"), "Secondary actor #1")
         # Pre-condition
-        self.assertEqual(fields[7].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[7].get_attribute("textContent"), "Pre-condition #1")
         # Flow of events
-        self.assertEqual(fields[8].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[8].get_attribute("textContent"), "Event flow #1")
         # Post-condition
-        self.assertEqual(fields[9].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[9].get_attribute("textContent"), "Post-condition #1")
         # Assumption
-        self.assertEqual(fields[10].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[10].get_attribute("textContent"), "Assumption #1")
         # Source
-        self.assertEqual(fields[11].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[11].get_attribute("textContent"), "Source #1")
         # Status
         self.assertEqual(fields[12].get_attribute("textContent"), "Rejected")
 
@@ -379,19 +384,19 @@ class MUOWorkflow(StaticLiveServerTestCase):
         # Brief description
         self.assertEqual(fields[1].get_attribute("textContent"), "Use Case #1")
         # Primary actor
-        self.assertEqual(fields[2].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[2].get_attribute("textContent"), "Primary actor #1")
         # Secondary actor
-        self.assertEqual(fields[3].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[3].get_attribute("textContent"), "Secondary actor #1")
         # Pre-condition
-        self.assertEqual(fields[4].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[4].get_attribute("textContent"), "Pre-condition #1")
         # Flow of events
-        self.assertEqual(fields[5].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[5].get_attribute("textContent"), "Event flow #1")
         # Post-condition
-        self.assertEqual(fields[6].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[6].get_attribute("textContent"), "Post-condition #1")
         # Assumption
-        self.assertEqual(fields[7].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[7].get_attribute("textContent"), "Assumption #1")
         # Source
-        self.assertEqual(fields[8].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[8].get_attribute("textContent"), "Source #1")
         # Overlooked security requirements pattern type
         self.assertEqual(fields[9].get_attribute("textContent"), "Ubiquitous")
         # Overlooked security requirements
@@ -424,12 +429,12 @@ class MUOWorkflow(StaticLiveServerTestCase):
         elm_muc_type_existing = self.browser.find_element_by_xpath(
             "//select[@id='id_misuse_case_type']/option[position()=1]"
         )
-        self.assertTrue(elm_muc_type_existing.get_attribute("selected") is None)
+        self.assertEqual(elm_muc_type_existing.get_attribute("selected"), "true")
         elm_muc_type_new = self.browser.find_element_by_xpath(
             "//select[@id='id_misuse_case_type']/option[position()=2]"
         )
-        self.assertEqual(elm_muc_type_new.get_attribute("selected"), "true")
-        # Verify: The misuse case fields are editable.
+        self.assertEqual(elm_muc_type_new.get_attribute("selected"), None)
+        # Verify: The misuse case fields are hidden.
         muc_field_id_list = [
             "id_misuse_case_description",
             "id_misuse_case_primary_actor",
@@ -442,7 +447,7 @@ class MUOWorkflow(StaticLiveServerTestCase):
         ]
         for id in muc_field_id_list:
             elm_field = self.browser.find_element_by_id(id)
-            self.assertTrue(self._is_editable(elm_field), "Field '"+id+"' is not editable.")
+            self.assertEqual(elm_field.is_displayed(), False, "Field '"+id+"' is visible.")
         # Verify: The "Misuse case" auto-completion box for using existing misuse case is not visible.
         self.assertEqual(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed(), False)
         # Verify: Status shows "Draft".
@@ -451,10 +456,33 @@ class MUOWorkflow(StaticLiveServerTestCase):
         )
         self.assertEqual(elm_status.get_attribute("textContent"), "Draft")
 
+        # Verify: The use case fields are editable.
+        uc_field_id_list = [
+            "id_usecase_set-0-use_case_description",
+            "id_usecase_set-0-use_case_primary_actor",
+            "id_usecase_set-0-use_case_secondary_actor",
+            "id_usecase_set-0-use_case_precondition",
+            "id_usecase_set-0-use_case_flow_of_events",
+            "id_usecase_set-0-use_case_postcondition",
+            "id_usecase_set-0-use_case_assumption",
+            "id_usecase_set-0-use_case_source",
+            "id_usecase_set-0-osr"
+        ]
+        for field_id in uc_field_id_list:
+            elm_field = self.browser.find_element_by_id(field_id)
+            self.assertTrue(self._is_editable(elm_field), "Field '"+field_id+"' is not editable.")
+        # Verify: Option box works correctly.
+        elm_options = self.browser.find_elements_by_xpath("//select[@id='id_usecase_set-0-osr_pattern_type']/option")
+        self.assertEqual(elm_options[0].get_attribute("textContent"), "Ubiquitous")
+        self.assertEqual(elm_options[1].get_attribute("textContent"), "Event-Driven")
+        self.assertEqual(elm_options[2].get_attribute("textContent"), "Unwanted Behavior")
+        self.assertEqual(elm_options[3].get_attribute("textContent"), "State-Driven")
+        self.assertEqual(elm_options[0].get_attribute("selected"), "true")
+
         # Now select the "Existing misuse case"
         sel_muc_type = Select(self.browser.find_element_by_id("id_misuse_case_type"))
-        sel_muc_type.select_by_visible_text("Existing")
-        # Verify: The misuse case fields are now hidden.
+        sel_muc_type.select_by_visible_text("New")
+        # Verify: The misuse case fields are now displayed and editable.
         muc_field_id_list = [
             "id_misuse_case_description",
             "id_misuse_case_primary_actor",
@@ -467,7 +495,7 @@ class MUOWorkflow(StaticLiveServerTestCase):
         ]
         for id in muc_field_id_list:
             elm_field = self.browser.find_element_by_id(id)
-            self.assertEqual(elm_field.is_displayed(), False, "Field '"+id+"' is not editable.")
+            self.assertEqual(self._is_editable(elm_field), True, "Field '"+id+"' is not editable.")
         # Verify: The "Misuse case" auto-completion box for using existing misuse case is visible.
         self.assertTrue(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed())
 
@@ -496,25 +524,25 @@ class MUOWorkflow(StaticLiveServerTestCase):
         # Cwes
         self.assertEqual(fields[1].get_attribute("textContent"), "CWE-101: 101")
         # Misuse Case Type
-        self.assertEqual(fields[2].get_attribute("textContent"), "New")
+        self.assertEqual(fields[2].get_attribute("textContent"), "Existing")
         # Misuse case
         # self.assertEqual(fields[3].get_attribute("textContent"), "MU/00001 - Misuse Case #1...")
         # Brief Description
-        self.assertEqual(fields[4].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[4].get_attribute("textContent"), "Misuse case #1")
         # Primary actor
-        self.assertEqual(fields[5].get_attribute("textContent"), "(None)")    # TODO: Should add data for these.
+        self.assertEqual(fields[5].get_attribute("textContent"), "Primary actor #1")
         # Secondary actor
-        self.assertEqual(fields[6].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[6].get_attribute("textContent"), "Secondary actor #1")
         # Pre-condition
-        self.assertEqual(fields[7].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[7].get_attribute("textContent"), "Pre-condition #1")
         # Flow of events
-        self.assertEqual(fields[8].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[8].get_attribute("textContent"), "Event flow #1")
         # Post-condition
-        self.assertEqual(fields[9].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[9].get_attribute("textContent"), "Post-condition #1")
         # Assumption
-        self.assertEqual(fields[10].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[10].get_attribute("textContent"), "Assumption #1")
         # Source
-        self.assertEqual(fields[11].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[11].get_attribute("textContent"), "Source #1")
         # Status
         self.assertEqual(fields[12].get_attribute("textContent"), "In Review")
 
@@ -525,19 +553,19 @@ class MUOWorkflow(StaticLiveServerTestCase):
         # Brief description
         self.assertEqual(fields[1].get_attribute("textContent"), "Use Case #1")
         # Primary actor
-        self.assertEqual(fields[2].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[2].get_attribute("textContent"), "Primary actor #1")
         # Secondary actor
-        self.assertEqual(fields[3].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[3].get_attribute("textContent"), "Secondary actor #1")
         # Pre-condition
-        self.assertEqual(fields[4].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[4].get_attribute("textContent"), "Pre-condition #1")
         # Flow of events
-        self.assertEqual(fields[5].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[5].get_attribute("textContent"), "Event flow #1")
         # Post-condition
-        self.assertEqual(fields[6].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[6].get_attribute("textContent"), "Post-condition #1")
         # Assumption
-        self.assertEqual(fields[7].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[7].get_attribute("textContent"), "Assumption #1")
         # Source
-        self.assertEqual(fields[8].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[8].get_attribute("textContent"), "Source #1")
         # Overlooked security requirements pattern type
         self.assertEqual(fields[9].get_attribute("textContent"), "Ubiquitous")
         # Overlooked security requirements
@@ -562,25 +590,25 @@ class MUOWorkflow(StaticLiveServerTestCase):
         # Cwes
         self.assertEqual(fields[1].get_attribute("textContent"), "CWE-101: 101")
         # Misuse Case Type
-        self.assertEqual(fields[2].get_attribute("textContent"), "New")
+        self.assertEqual(fields[2].get_attribute("textContent"), "Existing")
         # Misuse case
         # self.assertEqual(fields[3].get_attribute("textContent"), "MU/00001 - Misuse Case #1...")
         # Brief Description
-        self.assertEqual(fields[4].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[4].get_attribute("textContent"), "Misuse case #1")
         # Primary actor
-        self.assertEqual(fields[5].get_attribute("textContent"), "(None)")    # TODO: Should add data for these.
+        self.assertEqual(fields[5].get_attribute("textContent"), "Primary actor #1")
         # Secondary actor
-        self.assertEqual(fields[6].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[6].get_attribute("textContent"), "Secondary actor #1")
         # Pre-condition
-        self.assertEqual(fields[7].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[7].get_attribute("textContent"), "Pre-condition #1")
         # Flow of events
-        self.assertEqual(fields[8].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[8].get_attribute("textContent"), "Event flow #1")
         # Post-condition
-        self.assertEqual(fields[9].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[9].get_attribute("textContent"), "Post-condition #1")
         # Assumption
-        self.assertEqual(fields[10].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[10].get_attribute("textContent"), "Assumption #1")
         # Source
-        self.assertEqual(fields[11].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[11].get_attribute("textContent"), "Source #1")
         # Status
         self.assertEqual(fields[12].get_attribute("textContent"), "Approved")
 
@@ -591,19 +619,19 @@ class MUOWorkflow(StaticLiveServerTestCase):
         # Brief description
         self.assertEqual(fields[1].get_attribute("textContent"), "Use Case #1")
         # Primary actor
-        self.assertEqual(fields[2].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[2].get_attribute("textContent"), "Primary actor #1")
         # Secondary actor
-        self.assertEqual(fields[3].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[3].get_attribute("textContent"), "Secondary actor #1")
         # Pre-condition
-        self.assertEqual(fields[4].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[4].get_attribute("textContent"), "Pre-condition #1")
         # Flow of events
-        self.assertEqual(fields[5].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[5].get_attribute("textContent"), "Event flow #1")
         # Post-condition
-        self.assertEqual(fields[6].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[6].get_attribute("textContent"), "Post-condition #1")
         # Assumption
-        self.assertEqual(fields[7].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[7].get_attribute("textContent"), "Assumption #1")
         # Source
-        self.assertEqual(fields[8].get_attribute("textContent"), "(None)")
+        self.assertEqual(fields[8].get_attribute("textContent"), "Source #1")
         # Overlooked security requirements pattern type
         self.assertEqual(fields[9].get_attribute("textContent"), "Ubiquitous")
         # Overlooked security requirements
