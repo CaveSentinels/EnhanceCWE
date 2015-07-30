@@ -1,5 +1,7 @@
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.core.urlresolvers import reverse
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
@@ -13,35 +15,33 @@ from muo.models import MUOContainer
 from muo.models import IssueReport
 
 
-class MUOWorkflow(StaticLiveServerTestCase):
+class MUOTestBase(StaticLiveServerTestCase):
 
     # The URLs of the CWE-related pages.
     PAGE_URL_MUO_HOME = "/app/muo/muocontainer/"
 
     def setUp(self):
-        # Create test data.
-        self._set_up_test_data()
-        # Create the admin.
-        RegisterHelper.create_superuser()
+        # Call the setUp() of parent class.
+        super(MUOTestBase, self).setUp()
         # Launch a browser.
         self.browser = webdriver.Firefox()
         self.browser.implicitly_wait(SELENIUM_WEB_ELEMENT_PRESENCE_CHECK_TIMEOUT)
         self.browser.maximize_window()
-        # Log in.
-        RegisterHelper.fill_login_form(
-            selenium=self.browser,
-            login_url="%s%s" % (self.live_server_url, reverse("account_login")),
-            admin=True
-        )
-        RegisterHelper.submit_login_form(selenium=self.browser)
+        # Create test data.
+        self._set_up_test_data()
+        # Create the user.
+        user = RegisterHelper.create_user()
+        # Assign user's permissions.
+        self._assign_user_permissions(user)
 
     def tearDown(self):
         # Create test data.
         self._tear_down_test_data()
         # Call tearDown to close the web browser.
         self.browser.quit()
+
         # Call the tearDown() of parent class.
-        super(MUOWorkflow, self).tearDown()
+        super(MUOTestBase, self).tearDown()
 
     def _set_up_test_data(self):
         # Create some CWEs. These CWEs will be used by all the test methods.
@@ -61,6 +61,10 @@ class MUOWorkflow(StaticLiveServerTestCase):
         CWE.objects.all().delete()
         # Delete the issue report.
         IssueReport.objects.all().delete()
+
+    def _assign_user_permissions(self, user):
+        # Empty.
+        pass
 
     def _create_draft_muo(self, muc_type):
         cwe101 = CWE.objects.get(code=101)
@@ -269,6 +273,203 @@ class MUOWorkflow(StaticLiveServerTestCase):
         self.assertEqual(elm_options[3].get_attribute("textContent"), "State-Driven")
         self.assertEqual(elm_options[0].get_attribute("selected"), "true")
 
+    def _test_point_06_ui_approved(self):
+        """
+        Test Point: Verify that the MUO container page in 'Approved' status works as expected.
+        """
+
+        # Create test data
+        self._create_approved_muo(muc_type="existing")
+        # Open Page: "MUO Containers"
+        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
+        # Click Link: MUO
+        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
+
+        # Verify: The information of the MUO is displayed correctly.
+        self._verify_muo_fields_info("Approved")
+
+        # Verify: The information of the Use Cases is displayed correctly.
+        self._verify_use_case_fields_info()
+
+
+class MUOReviewerTest(MUOTestBase):
+
+    def setUp(self):
+        # Call the setUp() of parent class.
+        super(MUOReviewerTest, self).setUp()
+        # Log in.
+        RegisterHelper.fill_login_form(
+            selenium=self.browser,
+            login_url="%s%s" % (self.live_server_url, reverse("account_login")),
+            admin=False
+        )
+        RegisterHelper.submit_login_form(selenium=self.browser)
+
+    def _assign_user_permissions(self, user):
+        ct_keyword = ContentType.objects.get(app_label="cwe", model="keyword")
+        ct_category = ContentType.objects.get(app_label="cwe", model="category")
+        ct_cwe = ContentType.objects.get(app_label="cwe", model="cwe")
+        ct_misuse_case = ContentType.objects.get(app_label="muo", model="misusecase")
+        ct_use_case = ContentType.objects.get(app_label="muo", model="usecase")
+        ct_issue_report = ContentType.objects.get(app_label="muo", model="issuereport")
+        ct_tag = ContentType.objects.get(app_label="muo", model="tag")
+        ct_muo = ContentType.objects.get(app_label="muo", model="muocontainer")
+
+        reviewer_permissions = [
+            Permission.objects.get(content_type=ct_keyword, codename="add_keyword"),
+            Permission.objects.get(content_type=ct_keyword, codename="change_keyword"),
+            Permission.objects.get(content_type=ct_keyword, codename="delete_keyword"),
+
+            Permission.objects.get(content_type=ct_category, codename="view_category"),
+            Permission.objects.get(content_type=ct_category, codename="delete_category"),
+            Permission.objects.get(content_type=ct_category, codename="change_category"),
+            Permission.objects.get(content_type=ct_category, codename="add_category"),
+
+            Permission.objects.get(content_type=ct_cwe, codename="view_cwe"),
+            Permission.objects.get(content_type=ct_cwe, codename="delete_cwe"),
+            Permission.objects.get(content_type=ct_cwe, codename="change_cwe"),
+            Permission.objects.get(content_type=ct_cwe, codename="add_cwe"),
+
+            Permission.objects.get(content_type=ct_tag, codename="change_tag"),
+            Permission.objects.get(content_type=ct_tag, codename="view_tag"),
+            Permission.objects.get(content_type=ct_tag, codename="delete_tag"),
+            Permission.objects.get(content_type=ct_tag, codename="change_tag"),
+
+            Permission.objects.get(content_type=ct_misuse_case, codename="add_misusecase"),
+            Permission.objects.get(content_type=ct_misuse_case, codename="change_misusecase"),
+            Permission.objects.get(content_type=ct_misuse_case, codename="delete_misusecase"),
+
+            Permission.objects.get(content_type=ct_use_case, codename="add_usecase"),
+            Permission.objects.get(content_type=ct_use_case, codename="change_usecase"),
+            Permission.objects.get(content_type=ct_use_case, codename="delete_usecase"),
+
+            Permission.objects.get(content_type=ct_issue_report, codename="add_issuereport"),
+            Permission.objects.get(content_type=ct_issue_report, codename="change_issuereport"),
+            Permission.objects.get(content_type=ct_issue_report, codename="delete_issuereport"),
+
+            Permission.objects.get(content_type=ct_muo, codename="can_view_all"),
+            Permission.objects.get(content_type=ct_muo, codename="can_reject"),
+            # Permission.objects.get(content_type=ct_muo, codename="delete_muocontainer"),
+            # Permission.objects.get(content_type=ct_muo, codename="can_edit_all"),
+            Permission.objects.get(content_type=ct_muo, codename="change_muocontainer"),
+            Permission.objects.get(content_type=ct_muo, codename="can_approve"),
+            # Permission.objects.get(content_type=ct_muo, codename="add_muocontainer"),
+        ]
+        user.user_permissions.add(*reviewer_permissions)
+
+    def test_point_02_ui_in_review(self):
+        """
+        Test Point: Verify that the MUO container page in 'In Review' status works as expected.
+        """
+
+        # Create test data
+        self._create_in_review_muo(muc_type="existing")
+        # Open Page: "MUO Containers"
+        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
+
+        # Click Link: MUO
+        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
+
+        # Verify: The information of the MUO is displayed correctly.
+        self._verify_muo_fields_info("In Review")
+
+        # Verify: The information of the Use Cases is displayed correctly.
+        self._verify_use_case_fields_info()
+
+    def test_point_05_ui_in_review_after_rejection(self):
+        """
+        Test Point: Verify that the MUO container page in 'In Review' status but which was
+            previously rejected works as expected.
+        """
+
+        # Create test data
+        self._create_in_review_muo_after_rejection(muc_type="existing")
+        # Open Page: "MUO Containers"
+        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
+        # Click Link: MUO
+        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
+
+        # Verify: The "This MUO used to be rejected" message is shown.
+        expected_conditions.presence_of_element_located(
+            (By.XPATH, "//div[@class='alert alert-warning']")
+        )(self.browser)
+
+        # Verify: The information of the MUO is displayed correctly.
+        self._verify_muo_fields_info("In Review")
+
+        # Verify: The information of the Use Cases is displayed correctly.
+        self._verify_use_case_fields_info()
+
+    def test_point_06_ui_approved(self):
+        self._test_point_06_ui_approved()
+
+
+class MUOContributorTest(MUOTestBase):
+
+    def setUp(self):
+        # Call the setUp() of parent class.
+        super(MUOContributorTest, self).setUp()
+
+        # Log in.
+        RegisterHelper.fill_login_form(
+            selenium=self.browser,
+            login_url="%s%s" % (self.live_server_url, reverse("account_login")),
+            admin=False
+        )
+        RegisterHelper.submit_login_form(selenium=self.browser)
+
+    def _assign_user_permissions(self, user):
+        ct_keyword = ContentType.objects.get(app_label="cwe", model="keyword")
+        ct_category = ContentType.objects.get(app_label="cwe", model="category")
+        ct_cwe = ContentType.objects.get(app_label="cwe", model="cwe")
+        ct_misuse_case = ContentType.objects.get(app_label="muo", model="misusecase")
+        ct_use_case = ContentType.objects.get(app_label="muo", model="usecase")
+        ct_issue_report = ContentType.objects.get(app_label="muo", model="issuereport")
+        ct_tag = ContentType.objects.get(app_label="muo", model="tag")
+        ct_muo = ContentType.objects.get(app_label="muo", model="muocontainer")
+
+        contributor_permissions = [
+            Permission.objects.get(content_type=ct_keyword, codename="add_keyword"),
+            Permission.objects.get(content_type=ct_keyword, codename="change_keyword"),
+            Permission.objects.get(content_type=ct_keyword, codename="delete_keyword"),
+
+            Permission.objects.get(content_type=ct_category, codename="view_category"),
+            Permission.objects.get(content_type=ct_category, codename="delete_category"),
+            Permission.objects.get(content_type=ct_category, codename="change_category"),
+            Permission.objects.get(content_type=ct_category, codename="add_category"),
+
+            Permission.objects.get(content_type=ct_cwe, codename="view_cwe"),
+            Permission.objects.get(content_type=ct_cwe, codename="delete_cwe"),
+            Permission.objects.get(content_type=ct_cwe, codename="change_cwe"),
+            Permission.objects.get(content_type=ct_cwe, codename="add_cwe"),
+
+            Permission.objects.get(content_type=ct_tag, codename="change_tag"),
+            Permission.objects.get(content_type=ct_tag, codename="view_tag"),
+            Permission.objects.get(content_type=ct_tag, codename="delete_tag"),
+            Permission.objects.get(content_type=ct_tag, codename="change_tag"),
+
+            Permission.objects.get(content_type=ct_misuse_case, codename="add_misusecase"),
+            Permission.objects.get(content_type=ct_misuse_case, codename="change_misusecase"),
+            Permission.objects.get(content_type=ct_misuse_case, codename="delete_misusecase"),
+
+            Permission.objects.get(content_type=ct_use_case, codename="add_usecase"),
+            Permission.objects.get(content_type=ct_use_case, codename="change_usecase"),
+            Permission.objects.get(content_type=ct_use_case, codename="delete_usecase"),
+
+            Permission.objects.get(content_type=ct_issue_report, codename="add_issuereport"),
+            Permission.objects.get(content_type=ct_issue_report, codename="change_issuereport"),
+            Permission.objects.get(content_type=ct_issue_report, codename="delete_issuereport"),
+
+            Permission.objects.get(content_type=ct_muo, codename="can_view_all"),
+            # Permission.objects.get(content_type=ct_muo, codename="can_reject"),
+            Permission.objects.get(content_type=ct_muo, codename="delete_muocontainer"),
+            Permission.objects.get(content_type=ct_muo, codename="can_edit_all"),
+            Permission.objects.get(content_type=ct_muo, codename="change_muocontainer"),
+            # Permission.objects.get(content_type=ct_muo, codename="can_approve"),
+            Permission.objects.get(content_type=ct_muo, codename="add_muocontainer"),
+        ]
+        user.user_permissions.add(*contributor_permissions)
+
     def test_point_01_ui_draft(self):
         """
         Test Point: Verify that the MUO container page in 'Draft' status works as expected.
@@ -317,24 +518,6 @@ class MUOWorkflow(StaticLiveServerTestCase):
 
         # Verify: The "Misuse case" auto-completion box for using existing misuse case is visible.
         self.assertTrue(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed())
-
-    def test_point_02_ui_in_review(self):
-        """
-        Test Point: Verify that the MUO container page in 'In Review' status works as expected.
-        """
-
-        # Create test data
-        self._create_in_review_muo(muc_type="existing")
-        # Open Page: "MUO Containers"
-        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
-        # Click Link: MUO
-        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
-
-        # Verify: The information of the MUO is displayed correctly.
-        self._verify_muo_fields_info("In Review")
-
-        # Verify: The information of the Use Cases is displayed correctly.
-        self._verify_use_case_fields_info()
 
     def test_point_03_ui_rejected(self):
         """
@@ -412,44 +595,5 @@ class MUOWorkflow(StaticLiveServerTestCase):
         # Verify: The misuse case fields are now displayed and editable.
         self._verify_misuse_case_fields_are_editable()
 
-    def test_point_05_ui_in_review_after_rejection(self):
-        """
-        Test Point: Verify that the MUO container page in 'In Review' status but which was
-            previously rejected works as expected.
-        """
-
-        # Create test data
-        self._create_in_review_muo_after_rejection(muc_type="existing")
-        # Open Page: "MUO Containers"
-        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
-        # Click Link: MUO
-        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
-
-        # Verify: The "This MUO used to be rejected" message is shown.
-        expected_conditions.presence_of_element_located(
-            (By.XPATH, "//div[@class='alert alert-warning']")
-        )(self.browser)
-
-        # Verify: The information of the MUO is displayed correctly.
-        self._verify_muo_fields_info("In Review")
-
-        # Verify: The information of the Use Cases is displayed correctly.
-        self._verify_use_case_fields_info()
-
     def test_point_06_ui_approved(self):
-        """
-        Test Point: Verify that the MUO container page in 'Approved' status works as expected.
-        """
-
-        # Create test data
-        self._create_approved_muo(muc_type="existing")
-        # Open Page: "MUO Containers"
-        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
-        # Click Link: MUO
-        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
-
-        # Verify: The information of the MUO is displayed correctly.
-        self._verify_muo_fields_info("Approved")
-
-        # Verify: The information of the Use Cases is displayed correctly.
-        self._verify_use_case_fields_info()
+        self._test_point_06_ui_approved()
