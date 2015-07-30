@@ -451,16 +451,13 @@ def post_delete_muo_container(sender, instance, using, **kwargs):
             instance.misuse_case.delete()
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def post_save_deactivate_user(sender, instance, using, **kwargs):
+def post_save_deactivate_user(sender, instance, created=False, **kwargs):
     """
     Registering for the post_save signal so that after the User gets deactivated, we can delete all the MUOs
     which are in draft, rejected and in_review state from the database
     """
     if not instance.is_active:
-        for muocontainer in MUOContainer.objects.all():
-            if muocontainer.created_by.username == instance.username and muocontainer.status in ('draft','rejected','in_review'):
-                muocontainer.delete()
-
+        MUOContainer.objects.filter(created_by=instance, status__in=['draft', 'rejected', 'in_review']).delete()
 
 class UseCase(BaseModel):
     name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
