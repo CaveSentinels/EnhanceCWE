@@ -3,6 +3,7 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.select import Select
@@ -35,10 +36,10 @@ class MUOTestBase(StaticLiveServerTestCase):
         self._assign_user_permissions(user)
 
     def tearDown(self):
-        # Create test data.
-        self._tear_down_test_data()
-        # Call tearDown to close the web browser.
+        # Close the web browser.
         self.browser.quit()
+        # Tear down the test data.
+        self._tear_down_test_data()
 
         # Call the tearDown() of parent class.
         super(MUOTestBase, self).tearDown()
@@ -158,6 +159,13 @@ class MUOTestBase(StaticLiveServerTestCase):
         web_element.clear()
         web_element.send_keys(old_text)     # Resume to the previous text
         return old_text != new_text
+
+    def _is_element_not_present(self, by, value):
+        try:
+            expected_conditions.presence_of_element_located((by, value))
+            return False
+        except NoSuchElementException:
+            return True
 
     def _verify_muo_fields_info(self, expected_status):
         fields = self.browser.find_elements_by_xpath("//fieldset[@id='fieldset-1']/div/div/div/div/div/p")
@@ -483,10 +491,17 @@ class MUOContributorTest(MUOTestBase):
         self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
 
         # Verify: The UI elements are in the correct states.
-        # CWE auto-complete edit box is editable.
+        # Verify: CWE auto-complete edit box is editable.
         # FIXME: How to verify if an auto-completion edit box is editable or not??
         # elm_cwe_auto_complete = self.browser.find_element_by_id("id_cwes-autocomplete")
         # self.assertTrue(self._is_editable(elm_cwe_auto_complete))
+
+        # Verify: The "Search CWE" button is present.
+        expected_conditions.presence_of_element_located((By.ID, "search_id_cwes"))
+
+        # Verify: The "Search Misuse Case" button is present.
+        expected_conditions.presence_of_element_located((By.ID, "search_id_misuse_case"))
+
         # "New" option is checked
         elm_muc_type_existing = self.browser.find_element_by_xpath(
             "//select[@id='id_misuse_case_type']/option[position()=1]"
@@ -573,9 +588,6 @@ class MUOContributorTest(MUOTestBase):
         )
         self.assertEqual(elm_muc_type_new.get_attribute("selected"), None)
 
-        # Verify: The misuse case fields are hidden.
-        self._verify_misuse_case_fields_are_hidden()
-
         # Verify: The "Misuse case" auto-completion box for using existing misuse case is not visible.
         self.assertEqual(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed(), False)
 
@@ -597,3 +609,137 @@ class MUOContributorTest(MUOTestBase):
 
     def test_point_06_ui_approved(self):
         self._test_point_06_ui_approved()
+
+
+class MUOContributorTestRegression(MUOContributorTest):
+    """
+    This class includes all the regression test cases to make sure the test cases that once
+    failed are not broken again.
+    """
+
+    def test_draft_cwe_add_button_is_not_present(self):
+        """
+        Test Point: In 'Draft' status, the "+" button is not displayed for
+            "Cwes" auto-complete box.
+        """
+        # Create test data
+        self._create_draft_muo(muc_type="new")
+        # Open Page: "MUO Containers"
+        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
+        # Click Link: MUO
+        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
+
+        # Verify: CWE auto-complete edit box does NOT have the "Add" button.
+        # It's hard to expect how the "Add" button is implemented. It's better we
+        # use the link to see if we can find this button.
+        btn_not_present = self._is_element_not_present(
+            By.XPATH, "//a[@href='/app/cwe/cwe/add/?_to_field=id&_popup=1']"
+        )
+        self.assertEqual(btn_not_present, True)
+
+    def test_draft_misuse_case_add_button_is_not_present(self):
+        """
+        Test Point: In 'Draft' status, the "Add another Misuse Case" button is not displayed
+            for "Misuse case" box.
+        """
+        # Create test data
+        self._create_draft_muo(muc_type="new")
+        # Open Page: "MUO Containers"
+        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
+        # Click Link: MUO
+        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
+
+        # Verify: The "Add another Misuse Case" button is NOT present.
+        btn_not_present = self._is_element_not_present(
+            By.XPATH, "//a[@href='/app/muo/misusecase/add/?_to_field=id&_popup=1']"
+        )
+        self.assertEqual(btn_not_present, True)
+
+    def test_draft_misuse_case_change_button_is_not_present(self):
+        """
+        Test Point: In 'Draft' status, the "Change selected Misuse Case" button is not displayed
+            for "Misuse case" box.
+        """
+        # Create test data
+        self._create_draft_muo(muc_type="new")
+        # Open Page: "MUO Containers"
+        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
+        # Click Link: MUO
+        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
+
+        # Verify: The "Change selected Misuse Case" button is NOT present.
+        btn_not_present = self._is_element_not_present(
+            By.XPATH, "//a[@data-href-template='/app/muo/misusecase/__fk__/?_to_field=id&_popup=1']"
+        )
+        self.assertEqual(btn_not_present, True)
+
+    def test_draft_after_rejection_cwe_add_button_is_not_present(self):
+        """
+        Test Point: In 'Draft(after rejection)' status, the "+" button is not displayed for
+            "Cwes" auto-complete box.
+        """
+        # Create test data
+        self._create_draft_muo_after_rejection(muc_type="existing")
+        # Open Page: "MUO Containers"
+        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
+        # Click Link: MUO
+        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
+
+        # Verify: CWE auto-complete edit box does NOT have the "Add" button.
+        # It's hard to expect how the "Add" button is implemented. It's better we
+        # use the link to see if we can find this button.
+        btn_not_present = self._is_element_not_present(
+            By.XPATH, "//a[@href='/app/cwe/cwe/add/?_to_field=id&_popup=1']"
+        )
+        self.assertEqual(btn_not_present, True)
+
+    def test_draft_after_rejection_misuse_case_add_button_is_not_present(self):
+        """
+        Test Point: In 'Draft(after rejection)' status, the "Add another Misuse Case" button is not displayed
+            for "Misuse case" box.
+        """
+        # Create test data
+        self._create_draft_muo_after_rejection(muc_type="existing")
+        # Open Page: "MUO Containers"
+        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
+        # Click Link: MUO
+        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
+
+        # Verify: The "Add another Misuse Case" button is NOT present.
+        btn_not_present = self._is_element_not_present(
+            By.XPATH, "//a[@href='/app/muo/misusecase/add/?_to_field=id&_popup=1']"
+        )
+        self.assertEqual(btn_not_present, True)
+
+    def test_draft_after_rejection_misuse_case_change_button_is_not_present(self):
+        """
+        Test Point: In 'Draft(after rejection)' status, the "Change selected Misuse Case" button
+            is not displayed for "Misuse case" box.
+        """
+        # Create test data
+        self._create_draft_muo_after_rejection(muc_type="existing")
+        # Open Page: "MUO Containers"
+        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
+        # Click Link: MUO
+        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
+
+        # Verify: The "Change selected Misuse Case" button is NOT present.
+        btn_not_present = self._is_element_not_present(
+            By.XPATH, "//a[@data-href-template='/app/muo/misusecase/__fk__/?_to_field=id&_popup=1']"
+        )
+        self.assertEqual(btn_not_present, True)
+
+    def test_draft_after_rejection_misuse_case_fields_are_hidden(self):
+        """
+        Test Point: When opening a 'Draft(after rejection)' MUO container, the misuse case
+            fields are not displayed.
+        """
+        # Create test data
+        self._create_draft_muo_after_rejection(muc_type="existing")
+        # Open Page: "MUO Containers"
+        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
+        # Click Link: MUO
+        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
+
+        # Verify: The misuse case fields are hidden.
+        self._verify_misuse_case_fields_are_hidden()
