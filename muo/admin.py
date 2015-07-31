@@ -179,6 +179,11 @@ class MisuseCaseAdmin(BaseAdmin):
 
         return render(request, 'admin/muo/misusecase/misusecase_search.html', context)
 
+# This class is to implement an ENUM for PUBLISH and UNPUBLISH. Used in response_change method.
+class PublishUnpublishValues:
+    UNPUBLISH, PUBLISH = range(2)
+
+
 @admin.register(MUOContainer)
 class MUOContainerAdmin(BaseAdmin):
     form = autocomplete_light.modelform_factory(MUOContainer, fields="__all__")
@@ -300,11 +305,11 @@ class MUOContainerAdmin(BaseAdmin):
                 msg = "This MUO has been promoted and now everyone will have access to it."
 
             elif "_unpublish" in request.POST:
-                obj.action_set_publish(0)
+                obj.action_set_publish(PublishUnpublishValues.UNPUBLISH)
                 msg = "This MUO has been unpublished."
 
             elif "_publish" in request.POST:
-                obj.action_set_publish(1)
+                obj.action_set_publish(PublishUnpublishValues.PUBLISH)
                 msg = "This MUO has been published."
 
             else:

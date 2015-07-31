@@ -111,30 +111,3 @@ class TestPublishUnpublish(TestCase):
             muo_container.action_set_publish(False)
 
 
-
-    def test_muo_unpublishing_an_unpublished(self):
-        """
-        This is a negative test case
-        Value error should be raised while trying to unpublish an already unpublished report
-        """
-
-        muo_container = self.get_muo_container('approved')
-        muo_container.is_published = False
-        muo_container.save()
-
-        with self.assertRaises(ValueError):
-            muo_container.action_set_publish(False)
-
-    def test_muo_publishing_a_published(self):
-        """
-        This is a negative test case
-        Value error should be raised while trying to publish an already published report
-        """
-
-        muo_container = self.get_muo_container('approved')
-        muo_container.is_published = True
-        muo_container.save()
-
-        with self.assertRaises(ValueError):
-            muo_container.action_set_publish(True)
-
