@@ -15,10 +15,11 @@ from django.utils.safestring import mark_safe
 from django.http import HttpResponseRedirect
 from base.admin import BaseAdmin
 
-@admin.register(Tag)
-class TagAdmin(BaseAdmin):
-    fields = ['name']
-    search_fields = ['name']
+# Tags are not used anywhere for now
+# @admin.register(Tag)
+# class TagAdmin(BaseAdmin):
+#     fields = ['name']
+#     search_fields = ['name']
 
 
 @admin.register(UseCase)
@@ -107,77 +108,6 @@ class UseCaseAdminInLine(admin.StackedInline):
                 # No 'Add another Use Case' button
                 return 0
 
-
-@admin.register(MisuseCase)
-class MisuseCaseAdmin(BaseAdmin):
-    fields = ['name', 'cwes', ('misuse_case_description', 'tags')]
-    readonly_fields = ['name']
-    list_display = ['name']
-    search_fields = ['name', 'misuse_case_description', 'tags__name']
-    inlines = [UseCaseAdminInLine]
-
-    def get_urls(self):
-        #  Add the additional urls to the url list. These additional urls are for making ajax requests
-
-        urls = super(MisuseCaseAdmin, self).get_urls()
-
-        additional_urls = [
-            url(r'^misusecases/$', self.admin_site.admin_view(self.misusecases_view)),
-            url(r'^usecases/$', self.admin_site.admin_view(self.usecases_view)),
-        ]
-
-        return additional_urls + urls
-
-
-    def misusecases_view(self, request):
-        if request.method != 'POST':
-            raise Http404("Invalid access using GET request!")
-
-        #  Get the selected CWE ids from the request
-        selected_cwe_ids = request.POST.getlist('cwe_ids', None)
-
-        if len(selected_cwe_ids) == 0:
-            # If list of CWE ids is empty return all the misuse cases
-            misuse_cases = MisuseCase.objects.approved()
-        else:
-            #  Get the use cases for the selected CWE ids
-            misuse_cases = MisuseCase.objects.filter(cwes__in=selected_cwe_ids)
-
-        #  Create a context with all the corresponding misuse cases
-        context = {'misuse_cases': misuse_cases}
-
-        return TemplateResponse(request, "admin/muo/misusecase/misusecase.html", context)
-
-
-    def usecases_view(self, request):
-        if request.method != 'POST':
-            raise Http404("Invalid access using GET request!")
-
-        misuse_case_id = request.POST['misuse_case_id']
-
-        try:
-            # Fetch the misuse case object for the misuse_case_id
-            misuse_case = MisuseCase.objects.get(pk=misuse_case_id)
-        except ObjectDoesNotExist as e:
-            raise Http404("Misuse case with id %d doesn't exist", misuse_case_id)
-
-        #  Create a context with all the corresponding use cases
-        context = {'use_cases': misuse_case.usecase_set.all()}
-
-        return TemplateResponse(request, "admin/muo/misusecase/usecase.html", context)
-
-
-    def changelist_view(self, request, extra_context=None):
-        if request.GET.get('_popup', False):
-            #  If its a popup request let super handle it
-            return super(MisuseCaseAdmin, self).changelist_view(request, extra_context)
-
-        urls = super(MisuseCaseAdmin, self).get_urls()
-
-        # Render the custom template for the changelist_view
-        context = {}
-
-        return render(request, 'admin/muo/misusecase/misusecase_search.html', context)
 
 @admin.register(MUOContainer)
 class MUOContainerAdmin(BaseAdmin):
@@ -340,76 +270,6 @@ class IssueReportAdmin(BaseAdmin):
             fields.remove('usecase_duplicate')
 
         return fields
-
-
-    def get_urls(self):
-        urls = super(IssueReportAdmin, self).get_urls()
-        info = self.model._meta.app_label, self.model._meta.model_name
-
-        my_urls = [
-            # url will be /admin/muo/issuereport/new_report
-            url(r'new_report/$', self.admin_site.admin_view(self.new_report_view), name='%s_%s_new_report' % info),
-            url(r'add_report/$', self.admin_site.admin_view(self.render_add_report), name='%s_%s_add_report' % info),
-        ]
-        return my_urls + urls
-
-
-    def new_report_view(self, request):
-        """
-        This view is called by muo search using ajax to display the report issue popup
-        """
-        if request.method == "POST":
-            # read the usecase_id that triggered this action
-            usecase_id = request.POST.get('usecase_id')
-            usecase = get_object_or_404(UseCase, pk=usecase_id)
-
-            # Render issue report form and default initial values, if any
-            ModelForm = self.get_form(request)
-            initial = self.get_changeform_initial_data(request)
-            initial['usecase'] = usecase
-            form = ModelForm(initial=initial)
-
-            context = dict(
-                # Include common variables for rendering the admin template.
-                self.admin_site.each_context(request),
-                form=form,
-                usecase=usecase,
-            )
-            return TemplateResponse(request, "admin/muo/issuereport/new_report.html", context)
-        else:
-            raise Http404("Invalid access using GET request!")
-
-
-    def render_add_report(self, request):
-        """
-        Handle adding new report created using muo search popup
-        """
-
-        if request.method == 'POST':
-
-            ModelForm = self.get_form(request)
-            form = ModelForm(request.POST, request.FILES)
-            if form.is_valid():
-                new_object = form.save()
-                self.message_user(request, "Report %s has been created will be reviewed by our reviewers" % new_object.name , messages.SUCCESS)
-            else:
-                # submitted form is invalid
-                errors = ["%s: %s" % (form.fields[field].label, error[0]) for field, error in form.errors.iteritems()]
-                errors = '<br/>'.join(errors)
-                self.message_user(request, mark_safe("Invalid report content!<br/>%s" % errors) , messages.ERROR)
-
-            # Go back to misuse case view
-            opts = self.model._meta
-            post_url = reverse('admin:%s_%s_changelist' %
-                               (opts.app_label, 'misusecase'),
-                               current_app=self.admin_site.name)
-            preserved_filters = self.get_preserved_filters(request)
-            post_url = add_preserved_filters({'preserved_filters': preserved_filters, 'opts': opts}, post_url)
-
-            return HttpResponseRedirect(post_url)
-
-        else:
-            raise Http404("Invalid access using GET request!")
 
 
     def response_change(self, request, obj, *args, **kwargs):

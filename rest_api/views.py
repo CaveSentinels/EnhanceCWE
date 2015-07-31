@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_api.serializers import CWESerializer
 from rest_api.serializers import MisuseCaseSerializer
 from rest_api.serializers import UseCaseSerializer
+from .settings import SUGGESTED_CWE_MAX_RETURN
 
 
 # Constants
@@ -262,6 +263,10 @@ class CWERelatedList(APIView):
 
     PARAM_TEXT = "text"
 
+    # This allows the unit test to modify the max return dynamically
+    # without having to modify the settings.py manually.
+    CWE_MAX_RETURN = SUGGESTED_CWE_MAX_RETURN
+
     def get(self, request):
         """
         @brief: Return the CWE objects that are suggested given the text.
@@ -271,9 +276,10 @@ class CWERelatedList(APIView):
 
         text = request.GET.get(self.PARAM_TEXT)
 
+        # Get the suggested CWEs.
         cwe_count_tuples = CWESearchLocator.get_instance().search_cwes(text)
+        cwe_list = [cwe_count_tuple[0] for cwe_count_tuple in cwe_count_tuples][0:self.CWE_MAX_RETURN]
 
-        cwe_list = [cwe_count_tuple[0] for cwe_count_tuple in cwe_count_tuples]
         serializer = CWESerializer(cwe_list, many=True)
 
         return Response(data=serializer.data)
@@ -559,6 +565,15 @@ class SaveCustomMUO(APIView):
     def _form_err_msg_fields_missing(object_name, fields_missing):
         return ("The following fields are missing from " + object_name + ": " +
                 ("".join(field+", " for field in fields_missing).rstrip(", ")))
+
+    @staticmethod
+    def _form_err_msg_method_not_allowed():
+        return "Use POST method for this REST API function."
+
+    def get(self, request):
+        # Because all the other REST API functions are implemented using GET,
+        # we return an error message that tells the developer to use the POST method.
+        return Response(data=self._form_err_msg_method_not_allowed(), status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def post(self, request):
         # Validation: Check if all the sections have the (string -> string) mapping.
