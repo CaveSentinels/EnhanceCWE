@@ -6,7 +6,7 @@ from django.test.utils import override_settings
 from allauth.account.models import EmailAddress
 from selenium import webdriver
 import os
-from register.tests import RegisterTest
+from register.tests import RegisterHelper
 from .models import EmailInvitation
 
 
@@ -41,7 +41,7 @@ class RegisterInvitationTest(LiveServerTestCase):
 
     def test_create_invitation(self):
 
-        invitation = EmailInvitation.objects.create(email=RegisterTest.form_params['email'])
+        invitation = EmailInvitation.objects.create(email=RegisterHelper.form_params['email'])
         self.assertEqual(invitation.status, 'pending', 'Default invitation status is not equal to pending')
         self.assertIsNotNone(invitation.key, 'Failed to create an invitation key')
 
@@ -51,11 +51,11 @@ class RegisterInvitationTest(LiveServerTestCase):
         self.assertEqual(len(mail.outbox), email_count + 1, 'Invitation email failed to send')
 
     def test_register_invited(self):
-        invitation = EmailInvitation.objects.create(email=RegisterTest.form_params['email'])
+        invitation = EmailInvitation.objects.create(email=RegisterHelper.form_params['email'])
         signup_url = '%s?token=%s&email=%s' % (self.signup_url, invitation.key, invitation.email)
 
-        RegisterTest.fill_register_form(self.selenium, signup_url)
-        RegisterTest.submit_register_form(self.selenium)
+        RegisterHelper.fill_register_form(self.selenium, signup_url)
+        RegisterHelper.submit_register_form(self.selenium)
 
         invitation = EmailInvitation.objects.get(pk=invitation.pk) # reload invitation object
         self.assertEqual(invitation.status, 'accepted', 'Invitation status was not updated to accepted after registration')

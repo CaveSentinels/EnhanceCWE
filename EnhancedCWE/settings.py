@@ -66,7 +66,7 @@ INSTALLED_APPS = (
     'rest_api',
     'cwe',
     'user_profile',
-    'emailer',
+    'muo_mailer',
     'widget_tweaks',
 )
 
@@ -123,20 +123,16 @@ TEMPLATES = [
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
-                "django.contrib.auth.context_processors.auth",
-                "django.template.context_processors.debug",
-                "django.template.context_processors.i18n",
-                "django.template.context_processors.media",
-                "django.template.context_processors.static",
-                "django.template.context_processors.tz",
-                "django.contrib.messages.context_processors.messages",
-                'django.core.context_processors.request',
+                'django.template.context_processors.debug',
+                'django.contrib.auth.context_processors.auth',
+                'django.template.context_processors.i18n',
+                'django.template.context_processors.media',
+                'django.template.context_processors.static',
+                'django.template.context_processors.tz',
+                'django.contrib.messages.context_processors.messages',
                 'allauth.account.context_processors.account',
-                'allauth.socialaccount.context_processors.socialaccount',
             ],
-            'debug': True,
         },
-
     },
 ]
 
@@ -153,10 +149,11 @@ WSGI_APPLICATION = 'EnhancedCWE.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/1.8/ref/settings/#databases
-
 DATABASES = {
-    'default': dj_database_url.config()
+    'default': dj_database_url.config(),
 }
+# Enable Connection Pooling
+DATABASES['default']['ENGINE'] = 'django_postgrespool'
 
 
 # Internationalization

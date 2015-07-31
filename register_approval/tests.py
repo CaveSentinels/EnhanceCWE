@@ -9,7 +9,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import os
-from register.tests import RegisterTest, LoginTest
+from register.tests import RegisterHelper
 
 @override_settings(
     LOGIN_REDIRECT_URL='/app/',
@@ -43,12 +43,12 @@ class RegisterApprovalTest(StaticLiveServerTestCase):
 
     def test_approve_request(self):
         # Create admin
-        LoginTest.create_superuser()
-        LoginTest.fill_login_form(self.selenium, self.login_url, admin=True)
-        LoginTest.submit_login_form(self.selenium)
+        RegisterHelper.create_superuser()
+        RegisterHelper.fill_login_form(self.selenium, self.login_url, admin=True)
+        RegisterHelper.submit_login_form(self.selenium)
 
         # Create user
-        user = LoginTest.create_user(approved=False)
+        user = RegisterHelper.create_user(approved=False)
         # Get EmailAddress URL
         email_obj = EmailAddress.objects.filter(user=user)[0]
         assert email_obj.admin_approval != 'approved', 'EmailAddress is already approved when created!'
@@ -65,12 +65,12 @@ class RegisterApprovalTest(StaticLiveServerTestCase):
 
     def test_reject_request(self):
         # Create admin
-        LoginTest.create_superuser()
-        LoginTest.fill_login_form(self.selenium, self.login_url, admin=True)
-        LoginTest.submit_login_form(self.selenium)
+        RegisterHelper.create_superuser()
+        RegisterHelper.fill_login_form(self.selenium, self.login_url, admin=True)
+        RegisterHelper.submit_login_form(self.selenium)
 
         # Create user
-        user = LoginTest.create_user(approved=False)
+        user = RegisterHelper.create_user(approved=False)
         # Get EmailAddress URL
         email_obj = EmailAddress.objects.filter(user=user)[0]
         assert email_obj.admin_approval != 'rejected', 'EmailAddress is already rejected when created!'
@@ -104,23 +104,23 @@ class RegisterApprovalTest(StaticLiveServerTestCase):
 
 
     def test_login_approval(self):
-        RegisterTest.fill_register_form(self.selenium, self.signup_url)
-        RegisterTest.submit_register_form(self.selenium)
-        RegisterTest.verify_email(self.live_server_url, self.selenium)
+        RegisterHelper.fill_register_form(self.selenium, self.signup_url)
+        RegisterHelper.submit_register_form(self.selenium)
+        RegisterHelper.verify_email(self.live_server_url, self.selenium)
 
         # Test that user is redirected to login page after email confirmation
         self.assertEqual(self.selenium.current_url, self.login_url,
                          'Failed to redirect to login page after email confirmation')
 
-        email_obj = EmailAddress.objects.filter(email=RegisterTest.form_params.get('email'))[0]
+        email_obj = EmailAddress.objects.filter(email=RegisterHelper.form_params.get('email'))[0]
 
         # Verify email is not approved
         self.assertEqual(email_obj.admin_approval, 'pending', 'Registration request is not in pending state by default')
 
 
         # Try to login before approving from admin
-        LoginTest.fill_login_form(self.selenium, self.login_url)
-        LoginTest.submit_login_form(self.selenium)
+        RegisterHelper.fill_login_form(self.selenium, self.login_url)
+        RegisterHelper.submit_login_form(self.selenium)
         self.assertEqual(self.selenium.current_url, self.login_url,
                          'Login succeeded even though admin did not approve registration request!')
 
@@ -134,8 +134,8 @@ class RegisterApprovalTest(StaticLiveServerTestCase):
         self.assertEqual(len(mail.outbox), email_count + 1, 'Registration rejection email failed to send')
 
         # Try to login after rejecting the request
-        LoginTest.fill_login_form(self.selenium, self.login_url)
-        LoginTest.submit_login_form(self.selenium)
+        RegisterHelper.fill_login_form(self.selenium, self.login_url)
+        RegisterHelper.submit_login_form(self.selenium)
         self.assertEqual(self.selenium.current_url, self.login_url,
                          'Login succeeded even after admin rejected registration request!')
 
@@ -150,21 +150,21 @@ class RegisterApprovalTest(StaticLiveServerTestCase):
 
 
         # Try to login after approving the request
-        LoginTest.fill_login_form(self.selenium, self.login_url)
-        LoginTest.submit_login_form(self.selenium)
+        RegisterHelper.fill_login_form(self.selenium, self.login_url)
+        RegisterHelper.submit_login_form(self.selenium)
         self.assertEqual(self.selenium.current_url, self.login_redirect_url,
                          'Login failed even after admin approved registration request!')
 
 
     def test_login_pre_approved(self):
-        RegisterTest.fill_register_form(self.selenium, self.signup_url)
-        RegisterTest.submit_register_form(self.selenium)
+        RegisterHelper.fill_register_form(self.selenium, self.signup_url)
+        RegisterHelper.submit_register_form(self.selenium)
 
-        email_obj = EmailAddress.objects.filter(email=RegisterTest.form_params.get('email'))[0]
+        email_obj = EmailAddress.objects.filter(email=RegisterHelper.form_params.get('email'))[0]
         email_obj.admin_approval = 'approved'
         email_obj.save()
 
-        RegisterTest.verify_email(self.live_server_url, self.selenium)
+        RegisterHelper.verify_email(self.live_server_url, self.selenium)
 
         # Test that user is redirected to login page after email confirmation as he is already approved
         self.assertEqual(self.selenium.current_url, self.login_redirect_url,

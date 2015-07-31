@@ -9,6 +9,7 @@ from allauth.account.models import EmailAddress, EmailConfirmation
 from selenium import webdriver
 import os
 
+
 @override_settings(
     ACCOUNT_EMAIL_VERIFICATION='mandatory',
     SET_STAFF_ON_REGISTRATION=True)
@@ -17,7 +18,7 @@ class RegisterTest(LiveServerTestCase):
                    'first_name': 'myfirstname',
                    'last_name': 'mylastname',
                    'password': 'mypassword',
-                   'email': 'wdbaruni@yahoo.com',
+                   'email': 'user@example.com',
                    'recaptcha_response_field': 'PASSED',
                    'admin_username': 'admin',
                    'admin_email': 'admin@example.com',
@@ -50,8 +51,8 @@ class RegisterTest(LiveServerTestCase):
 
     def test_signup_positive(self):
         email_count = len(mail.outbox)
-        self.fill_register_form(self.selenium, self.signup_url)
-        self.submit_register_form(self.selenium)
+        RegisterHelper.fill_register_form(self.selenium, self.signup_url)
+        RegisterHelper.submit_register_form(self.selenium)
 
         # Verify signup was successful and redirected to the correct page
         self.assertEqual(self.selenium.current_url, self.email_verify_sent_url)
@@ -86,11 +87,180 @@ class RegisterTest(LiveServerTestCase):
 
 
         # Verify user email
-        self.verify_email(self.live_server_url, self.selenium)
+        RegisterHelper.verify_email(self.live_server_url, self.selenium)
         # Re-reading email object from DB
         email_obj = EmailAddress.objects.filter(email= self.form_params.get('email'))[0]
         self.assertTrue(email_obj.verified, 'EmailAddress was not verified after confirming the verification link')
 
+
+
+@override_settings(
+    LOGIN_REDIRECT_URL='/app/',
+    NUMBER_OF_FAILED_LOGINS_BEFORE_CAPTCHA=3)
+class LoginTest(LiveServerTestCase):
+
+    form_params = {'username': 'myusername',
+                   'password': 'mypassword',
+                   'email': 'user@example.com',
+                   'recaptcha_response_field': 'PASSED',
+                   'admin_username': 'admin',
+                   'admin_email': 'admin@example.com',
+                   }
+
+    @classmethod
+    def setUpClass(cls):
+        super(LoginTest, cls).setUpClass()
+        os.environ['RECAPTCHA_TESTING'] = 'True'
+
+    @classmethod
+    def tearDownClass(cls):
+        super(LoginTest, cls).tearDownClass()
+        os.environ['RECAPTCHA_TESTING'] = 'False'
+
+
+    def setUp(self):
+        self.login_url = '%s%s' % (self.live_server_url, reverse('account_login'))
+        self.login_redirect_url = '%s%s' % (self.live_server_url, settings.LOGIN_REDIRECT_URL)
+
+        self.user = RegisterHelper.create_user()
+        self.selenium = webdriver.Firefox()
+        super(LoginTest, self).setUp()
+
+    def tearDown(self):
+        self.selenium.quit()
+        super(LoginTest, self).tearDown()
+
+
+    def test_login_positive(self):
+        RegisterHelper.fill_login_form(self.selenium, self.login_url)
+        RegisterHelper.submit_login_form(self.selenium)
+
+        self.assertEqual(self.selenium.current_url, self.login_redirect_url, 'Login Failed!')
+
+
+    def test_login_captcha_after_n_failed_attempts(self):
+
+        # Test the captcha won't show before N failed attempts
+        for n in range(0, settings.NUMBER_OF_FAILED_LOGINS_BEFORE_CAPTCHA):
+            RegisterHelper.fill_login_form(self.selenium, self.login_url)
+            self.assertFalse(self.selenium.find_elements_by_id("recaptcha_response_field"), # note the element(s)
+                             "Captcha appeard in login form before N failed attempts")
+
+            # pass wrong password to fail the login attemmpt
+            self.selenium.find_element_by_id("id_password").send_keys('wrong_password')
+            RegisterHelper.submit_login_form(self.selenium)
+
+            self.assertEqual(self.selenium.current_url, self.login_url, "Logged in even though the password is wrong")
+
+
+        # Test the captcha will show after N failed attempts and that login will fail without correct captcha
+        RegisterHelper.fill_login_form(self.selenium, self.login_url)
+        self.assertTrue(self.selenium.find_elements_by_id("recaptcha_response_field"),
+                        "Captcha did not appear in login after N failed attmpts")
+        RegisterHelper.submit_login_form(self.selenium)
+        self.assertEqual(self.selenium.current_url, self.login_url, "Logged in even though the captcha is not entered")
+
+        # Test that login will succeed with capthca
+        RegisterHelper.fill_login_form(self.selenium, self.login_url)
+        self.selenium.find_element_by_id("recaptcha_response_field").send_keys(self.form_params.get('recaptcha_response_field'))
+        RegisterHelper.submit_login_form(self.selenium)
+        self.assertEqual(self.selenium.current_url, self.login_redirect_url, 'Login Failed with correct captcha!')
+
+
+
+
+
+class RegisterHelper():
+
+    form_params = {'username': 'myusername',
+                   'first_name': 'myfirstname',
+                   'last_name': 'mylastname',
+                   'password': 'mypassword',
+                   'email': 'user@example.com',
+                   'recaptcha_response_field': 'PASSED',
+                   'admin_username': 'admin',
+                   'admin_email': 'admin@example.com',
+                   }
+
+    @classmethod
+    def fill_login_form(cls, selenium, login_url, admin=False):
+        # Open the signup page.
+        selenium.get(login_url)
+
+        # Fill signup information
+        if admin:
+            selenium.find_element_by_id("id_login").send_keys(cls.form_params.get('admin_username'))
+        else:
+            selenium.find_element_by_id("id_login").send_keys(cls.form_params.get('username'))
+        selenium.find_element_by_id("id_password").send_keys(cls.form_params.get('password'))
+
+
+    @classmethod
+    def logout(cls, selenium, site_url):
+        logout_url = '%s%s' % (site_url, reverse('admin:logout'))
+        selenium.get(logout_url)
+
+        # if the user is already logged out, then he won't be directed to logout url
+        if selenium.current_url == logout_url:
+            selenium.find_element_by_xpath('//input[@value="Sign Out"]').click()
+
+
+
+    @classmethod
+    def submit_login_form(cls, selenium):
+        # Locate Login button and click it
+        selenium.find_element_by_xpath('//button[@type="submit"][contains(text(), "Sign In")]').click()
+
+
+    @classmethod
+    def is_login_page(cls, selenium, site_url):
+        allauth_login = '%s%s' % (site_url, reverse('account_login'))
+        admin_login = '%s%s' % (site_url, reverse('admin:login'))
+        return selenium.current_url.startswith(allauth_login) or selenium.current_url.startswith(admin_login)
+
+
+    @classmethod
+    def create_user(cls, verified=True, approved=True):
+        user = get_user_model().objects.create(username=cls.form_params['username'],
+                                               email=cls.form_params['email'],
+                                               is_staff=True,
+                                               is_active=True)
+        user.set_password(cls.form_params['password'])
+        user.save()
+
+        if verified:
+            email_obj = EmailAddress.objects.create(user=user,
+                                                    email=cls.form_params['email'],
+                                                    primary=True,
+                                                    verified=True)
+            if approved:
+                if 'register_approval' in settings.INSTALLED_APPS:
+                    email_obj.admin_approval = 'approved'
+                email_obj.save()
+
+        return user
+
+
+    @classmethod
+    def create_superuser(cls):
+        user = get_user_model().objects.create(username=cls.form_params['admin_username'],
+                                               email=cls.form_params['admin_email'],
+                                               is_staff=True,
+                                               is_active=True,
+                                               is_superuser=True)
+        user.set_password(cls.form_params['password'])
+        user.save()
+
+        email_obj = EmailAddress.objects.create(user=user,
+                                                email=cls.form_params['admin_email'],
+                                                primary=True,
+                                                verified=True)
+
+        if 'register_approval' in settings.INSTALLED_APPS:
+            email_obj.admin_approval = 'approved'
+        email_obj.save()
+
+        return user
 
 
     @classmethod
@@ -138,141 +308,3 @@ class RegisterTest(LiveServerTestCase):
 
         # Locate submit button and click it
         selenium.find_element_by_xpath('//input[@value="Confirm"]').click()
-
-
-
-@override_settings(
-    LOGIN_REDIRECT_URL='/app/',
-    NUMBER_OF_FAILED_LOGINS_BEFORE_CAPTCHA=3)
-class LoginTest(LiveServerTestCase):
-
-    form_params = {'username': 'myusername',
-                   'password': 'mypassword',
-                   'email': 'wdbaruni@yahoo.com',
-                   'recaptcha_response_field': 'PASSED',
-                   'admin_username': 'admin',
-                   'admin_email': 'admin@example.com',
-                   }
-
-    @classmethod
-    def setUpClass(cls):
-        super(LoginTest, cls).setUpClass()
-        os.environ['RECAPTCHA_TESTING'] = 'True'
-
-    @classmethod
-    def tearDownClass(cls):
-        super(LoginTest, cls).tearDownClass()
-        os.environ['RECAPTCHA_TESTING'] = 'False'
-
-
-    def setUp(self):
-        self.login_url = '%s%s' % (self.live_server_url, reverse('account_login'))
-        self.login_redirect_url = '%s%s' % (self.live_server_url, settings.LOGIN_REDIRECT_URL)
-
-        self.user = LoginTest.create_user()
-        self.selenium = webdriver.Firefox()
-        super(LoginTest, self).setUp()
-
-    def tearDown(self):
-        self.selenium.quit()
-        super(LoginTest, self).tearDown()
-
-
-    def test_login_positive(self):
-        self.fill_login_form(self.selenium, self.login_url)
-        self.submit_login_form(self.selenium)
-
-        self.assertEqual(self.selenium.current_url, self.login_redirect_url, 'Login Failed!')
-
-
-    def test_login_captcha_after_n_failed_attempts(self):
-
-        # Test the captcha won't show before N failed attempts
-        for n in range(0, settings.NUMBER_OF_FAILED_LOGINS_BEFORE_CAPTCHA):
-            self.fill_login_form(self.selenium, self.login_url)
-            self.assertFalse(self.selenium.find_elements_by_id("recaptcha_response_field"), # note the element(s)
-                             "Captcha appeard in login form before N failed attempts")
-
-            # pass wrong password to fail the login attemmpt
-            self.selenium.find_element_by_id("id_password").send_keys('wrong_password')
-            self.submit_login_form(self.selenium)
-
-            self.assertEqual(self.selenium.current_url, self.login_url, "Logged in even though the password is wrong")
-
-
-        # Test the captcha will show after N failed attempts and that login will fail without correct captcha
-        self.fill_login_form(self.selenium, self.login_url)
-        self.assertTrue(self.selenium.find_elements_by_id("recaptcha_response_field"),
-                        "Captcha did not appear in login after N failed attmpts")
-        self.submit_login_form(self.selenium)
-        self.assertEqual(self.selenium.current_url, self.login_url, "Logged in even though the captcha is not entered")
-
-        # Test that login will succeed with capthca
-        self.fill_login_form(self.selenium, self.login_url)
-        self.selenium.find_element_by_id("recaptcha_response_field").send_keys(self.form_params.get('recaptcha_response_field'))
-        self.submit_login_form(self.selenium)
-        self.assertEqual(self.selenium.current_url, self.login_redirect_url, 'Login Failed with correct captcha!')
-
-
-
-    @classmethod
-    def fill_login_form(cls, selenium, login_url, admin=False):
-        # Open the signup page.
-        selenium.get(login_url)
-
-        # Fill signup information
-        if admin:
-            selenium.find_element_by_id("id_login").send_keys(cls.form_params.get('admin_username'))
-        else:
-            selenium.find_element_by_id("id_login").send_keys(cls.form_params.get('username'))
-        selenium.find_element_by_id("id_password").send_keys(cls.form_params.get('password'))
-
-
-    @classmethod
-    def submit_login_form(cls, selenium):
-        # Locate Login button and click it
-        selenium.find_element_by_xpath('//button[@type="submit"][contains(text(), "Sign In")]').click()
-
-
-    @classmethod
-    def create_user(cls, verified=True, approved=True):
-        user = get_user_model().objects.create(username=cls.form_params['username'],
-                                               email=cls.form_params['email'],
-                                               is_staff=True,
-                                               is_active=True)
-        user.set_password(cls.form_params['password'])
-        user.save()
-
-        if verified:
-            email_obj = EmailAddress.objects.create(user=user,
-                                                    email=cls.form_params['email'],
-                                                    primary=True,
-                                                    verified=True)
-            if approved:
-                if 'register_approval' in settings.INSTALLED_APPS:
-                    email_obj.admin_approval = 'approved'
-                email_obj.save()
-
-        return user
-
-
-    @classmethod
-    def create_superuser(cls):
-        user = get_user_model().objects.create(username=cls.form_params['admin_username'],
-                                               email=cls.form_params['admin_email'],
-                                               is_staff=True,
-                                               is_active=True,
-                                               is_superuser=True)
-        user.set_password(cls.form_params['password'])
-        user.save()
-
-        email_obj = EmailAddress.objects.create(user=user,
-                                                email=cls.form_params['admin_email'],
-                                                primary=True,
-                                                verified=True)
-
-        if 'register_approval' in settings.INSTALLED_APPS:
-            email_obj.admin_approval = 'approved'
-        email_obj.save()
-
-        return user

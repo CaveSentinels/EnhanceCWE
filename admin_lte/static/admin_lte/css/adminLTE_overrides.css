@@ -3,6 +3,10 @@ body {
     padding: 0;
 }
 
+.navbar .navbar-header {
+    float: left;
+}
+
 .navbar-nav>.links-menu>.dropdown-menu>li .menu,  {
     margin: 0 10px;
 }
@@ -344,4 +348,10 @@ label.radio {
   font-weight: 400;
   cursor: pointer;
     display: table;
+}
+
+
+.form-control[disabled], fieldset[disabled] .form-control{
+    -webkit-text-fill-color: #555;
+    -webkit-appearance:none;
 }

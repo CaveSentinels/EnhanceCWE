@@ -40,16 +40,16 @@ class RestAPITestBase(TestCase):
     def set_up_users_and_tokens(self):
         self._user_1 = User(username='user_1', is_active=True)
         self._user_1.save()
-        self._user_1_token = str(Token.objects.get(user__id=self._user_1.id))
+        self._user_1_token = str(Token.objects.create(user=self._user_1))
 
         self._user_2 = User(username='user_2', is_active=True)
         self._user_2.save()
-        self._user_2_token = str(Token.objects.get(user__id=self._user_2.id))
+        self._user_2_token = str(Token.objects.create(user=self._user_2))
 
         self._user_3_inactive = User(username='user_3_inactive', is_active=False)
         self._user_3_inactive.save()
         self._user_3_inactive_id = self._user_3_inactive.id
-        self._user_3_inactive_token = Token.objects.get(user__id=self._user_3_inactive_id)
+        self._user_3_inactive_token = Token.objects.create(user=self._user_3_inactive)
 
     def set_up_test_data(self):
         # To be overridden by the subclass.
@@ -144,6 +144,16 @@ class TestCWETextRelated(RestAPITestBase):
         self.assertEqual(self._cwe_info_found(content=response.content, code=101), False)
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), True)
+
+    def test_positive_search_text_multiple_keywords_with_limit(self):
+        max_return = CWERelatedList.CWE_MAX_RETURN
+        CWERelatedList.CWE_MAX_RETURN = 1   # Only return one CWE.
+        text = "the user can bypass the file access check due to a stack overflow caused by ..."
+        response = self.http_get(self._get_base_url(), self._form_url_params(text))
+        self.assertEqual(self._cwe_info_found(content=response.content, code=101), False)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=103), False)
+        CWERelatedList.CWE_MAX_RETURN = max_return
 
     # Negative test cases
 
@@ -1256,6 +1266,19 @@ class TestSaveCustomMUO(RestAPITestBase):
         self.assertEqual(MUOContainer.objects.count(), 0)   # No MUO was created.
         self.assertEqual(MisuseCase.objects.count(), 0)     # No misuse cases was created.
         self.assertEqual(UseCase.objects.count(), 0)     # No use cases was created.
+
+    def test_negative_wrong_method(self):
+        base_url = self._form_base_url()
+        data = self._form_post_data(cwe_code_list=self.CWE_IDS,      # Multiple CWE ID
+                                    muc_desc=self.DESCRIPTION_MISUSE_CASE,   # Non-empty description
+                                    uc_desc=self.DESCRIPTION_USE_CASE,       # Non-empty description
+                                    osr_desc=self.DESCRIPTION_OSR        # Non-empty description
+                                    )
+        response = self.http_get(base_url, data)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        # Make sure we return an error message that tells what should be done.
+        self.assertEqual(response.content,
+                         str(json.dumps(SaveCustomMUO._form_err_msg_method_not_allowed())))
 
     def test_negative_data_in_wrong_format(self):
         wrong_format_cases = [
