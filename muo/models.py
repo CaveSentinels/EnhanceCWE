@@ -32,6 +32,7 @@ OSR_PATTERN_CHOICES = [('ubiquitous', 'Ubiquitous'),
                        ('state-driven', 'State-Driven')]
 
 
+# Tags are not used for now
 class Tag(BaseModel):
     name = models.CharField(max_length=32, unique=True)
 

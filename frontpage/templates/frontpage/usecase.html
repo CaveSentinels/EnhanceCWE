@@ -13,56 +13,79 @@
                 <div>
                     <label class="heading">Description</label>
                 </div>
-                <div class="text">{{ usecase.use_case_description }}</div>
+                <div class="text">{{ usecase.use_case_description|linebreaks }}</div>
             </div>
+
+            {% if usecase.use_case_primary_actor %}
             <div class="use-case-div">
                 <div>
                     <label class="heading">Primary Actor</label>
                 </div>
-                <div class="text">{{ usecase.use_case_primary_actor }}</div>
+                <div class="text">{{ usecase.use_case_primary_actor|linebreaks }}</div>
             </div>
+            {% endif %}
+
+            {% if usecase.use_case_secondary_actor %}
             <div class="use-case-div">
                 <div>
                     <label class="heading">Secondary Actor</label>
                 </div>
-                <div class="text">{{ usecase.use_case_secondary_actor }}</div>
+                <div class="text">{{ usecase.use_case_secondary_actor|linebreaks }}</div>
             </div>
+            {% endif %}
+
+            {% if usecase.use_case_precondition %}
             <div class="use-case-div">
                 <div>
                     <label class="heading">Pre-condition</label>
                 </div>
-                <div class="text">{{ usecase.use_case_precondition }}</div>
+                <div class="text">{{ usecase.use_case_precondition|linebreaks }}</div>
             </div>
+            {% endif %}
+
+            {% if usecase.use_case_flow_of_events %}
             <div class="use-case-div">
                 <div>
                     <label class="heading">Flow of Events</label>
                 </div>
-                <div class="text">{{ usecase.use_case_flow_of_events }}</div>
+                <div class="text">{{ usecase.use_case_flow_of_events|linebreaks }}</div>
             </div>
+            {% endif %}
+
+            {% if usecase.use_case_postcondition %}
             <div class="use-case-div">
                 <div>
                     <label class="heading">Post-condition</label>
                 </div>
-                <div class="text">{{ usecase.use_case_postcondition }}</div>
+                <div class="text">{{ usecase.use_case_postcondition|linebreaks }}</div>
             </div>
+            {% endif %}
+
+            {% if usecase.use_case_assumption %}
             <div class="use-case-div">
                 <div>
                     <label class="heading">Assumption</label>
                 </div>
-                <div class="text">{{ usecase.use_case_assumption }}</div>
+                <div class="text">{{ usecase.use_case_assumption|linebreaks }}</div>
             </div>
+            {% endif %}
+
+            {% if usecase.use_case_source %}
             <div class="use-case-div">
                 <div>
                     <label class="heading">Source</label>
                 </div>
-                <div class="text">{{ usecase.use_case_source }}</div>
+                <div class="text">{{ usecase.use_case_source|linebreaks }}</div>
             </div>
+            {% endif %}
+
             <div class="use-case-div">
                 <div>
                     <label class="osr-heading">Overlooked Security Requirement:</label>
                 </div>
-                <div class="text">{{ usecase.osr }}</div>
+                <div class="text">{{ usecase.osr|linebreaks }}</div>
             </div>
+
             <div class="usecase-footer">
                 <div class="pull-left">
 {#                    <a href="" class="btn btn-xs">#}
@@ -80,21 +103,26 @@
                     {% endif %}
 
                 </div>
+
                 <div class="pull-right">
+                    {% if user.is_authenticated %}
                     <a href="#muo-modal" class="btn btn-xs" data-toggle="modal"
-                       data-ajax-url="{% url 'admin:muo_issuereport_new_report' %}"
+                       data-ajax-url="{% url 'frontpage:create_issue_report' %}"
                        data-usecase-id="{{ usecase.pk }}"
                        title data-original-title="Report Issue">
                         <span class="fa fa-exclamation-triangle"></span>
                         Report Issue
                     </a>
+                    {% endif %}
                 </div>
             </div>
 
+            {% if user.is_authenticated %}
             <div class="comments-container" id="comments-block-{{ usecase.id }}">
                 {% render_comment_list for usecase %}
                 {% render_comment_form for usecase %}
             </div>
+            {% endif %}
 
         </div>
     {% endfor %}

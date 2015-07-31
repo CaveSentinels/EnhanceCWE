@@ -1,9 +1,57 @@
 jQuery(function() {
+    var cwe_select = $("#id_cwes");
+    var page_limit = cwe_select.data('page-limit');
 
-    window.onload=function() {
-        // Once the page is loaded, show all the misuse cases by default
-        load_misusecases([]);
-    };
+    // Make CWE selection a multiple ajax select2
+    cwe_select.select2({
+        placeholder: "Search CWEs",
+        ajax: {
+            url: $(this).data('ajax-url'),
+            dataType: 'json',
+            delay: 250,
+            data: function (params) {
+              return {
+                  q: params.term, // search term
+                  page: params.page
+              };
+            },
+
+            processResults: function (data, params) {
+              // parse the results into the format expected by Select2.
+              // since we are using custom formatting functions we do not need to
+              // alter the remote JSON data
+                params.page = params.page || 1;
+                return {
+                    results: data.items,
+                    pagination: {
+                        more: (params.page * page_limit) < data.total_count
+                    },
+                };
+            },
+            cache: true
+        },
+        minimumInputLength: 0,
+    });
+
+    $('#cwe-submit-button').on('click', function(event){
+        $('#marquee').slideUp();
+        $('.muo-search-container').show();
+
+        // Prevent the default django action on button click. Otherwise it'll reload the whole page
+        event.preventDefault();
+
+        // Get the selected CWE ids
+        var selected_cwes = $('#id_cwes').val();
+
+        // If none of the CWEs are selected, the value of the selected_cwes will be null. I such cases, we need to mimic
+        // the default behaviour. We will send an empty array in the ajax request and display all the misuse cases.
+        if (selected_cwes == null) {
+            selected_cwes = [];
+        }
+
+        // Load the misuse cases for the selected cwes
+        load_misusecases(selected_cwes)
+    });
 
 
     $("body").on('click', '.misuse-case-container', function(){
@@ -25,25 +73,6 @@ jQuery(function() {
             // Load usecases corresponding to the selected misuse
             load_usecases(misuse_case_id);
         }
-
-    });
-
-
-    $("body").on('click', '#refresh_button', function(){
-        // Prevent the default django action on button click. Otherwise it'll reload the whole page
-        event.preventDefault();
-
-        // Get the selected CWE ids
-        var selected_cwes = $('#id_cwes').val();
-
-        // If none of the CWEs are selected, the value of the selected_cwes will be null. I such cases, we need to mimic
-        // the default behaviour. We will send an empty array in the ajax request and display all the misuse cases.
-        if (selected_cwes == null) {
-            selected_cwes = [];
-        }
-
-        // Load the misuse cases for the selected cwes
-        load_misusecases(selected_cwes)
     });
 
 
@@ -67,12 +96,31 @@ jQuery(function() {
             }
         });
     });
+
+
+    $("body").on('click', '#muo_see_more', function(e){
+        // stop propagating the click event to misuse-case-container
+        e.stopPropagation();
+
+        var misuse_case_id = $(this).attr("data-value");
+        var hidden_attributes = $('#hidden_attributes' + misuse_case_id);
+
+        if (!hidden_attributes.is(':visible')){
+            hidden_attributes.slideDown();
+            $(this).text('See Less');
+        } else {
+            hidden_attributes.slideUp();
+            $(this).text('See More');
+        }
+    });
+
 });
+
 
 
 function load_usecases(misuse_case_id) {
     $.ajax({
-        url: 'usecases/',
+        url: 'get_usecases/',
         type: 'POST',
         data: {misuse_case_id: misuse_case_id}, // Send the selected misuse case id
 
@@ -91,7 +139,7 @@ function load_usecases(misuse_case_id) {
 
 function load_misusecases(cwe_ids) {
     $.ajax({
-        url: 'misusecases/',
+        url: 'get_misusecases/',
         type: 'POST',
         data: {cwe_ids: cwe_ids}, // Send the selected CWE ids
 
