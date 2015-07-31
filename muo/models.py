@@ -9,6 +9,7 @@ from django.db.models.signals import post_delete, pre_delete, pre_save, post_sav
 from django.dispatch import receiver
 from signals import *
 from django.utils import timezone
+from django.contrib.auth.models import  User
 
 STATUS = [('draft', 'Draft'),
           ('in_review', 'In Review'),
@@ -450,6 +451,14 @@ def post_delete_muo_container(sender, instance, using, **kwargs):
         if instance.misuse_case.muocontainer_set.count() == 0:
             instance.misuse_case.delete()
 
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def post_save_deactivate_user(sender, instance, created=False, **kwargs):
+    """
+    Registering for the post_save signal so that after the User gets deactivated, we can delete all the MUOs
+    which are in draft, rejected and in_review state from the database
+    """
+    if not instance.is_active:
+        MUOContainer.objects.filter(created_by=instance, status__in=['draft', 'rejected', 'in_review']).delete()
 
 class UseCase(BaseModel):
     name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
