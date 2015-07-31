@@ -21,6 +21,17 @@ class MUOTestBase(StaticLiveServerTestCase):
     # The URLs of the CWE-related pages.
     PAGE_URL_MUO_HOME = "/app/muo/muocontainer/"
 
+    # Button caption -> name mapping:
+    BUTTON_CAPTION_NAME_MAP = {
+        "Save": "_save",
+        "Save and continue editing": "_continue",
+        "Submit for Review": "_submit_for_review",
+        "Approve": "_approve",
+        "Reject": "_reject",
+        "Reopen": "_edit",
+        "Delete": None  # 'Delete' is a special button without a name.
+    }
+
     def setUp(self):
         # Call the setUp() of parent class.
         super(MUOTestBase, self).setUp()
@@ -160,12 +171,48 @@ class MUOTestBase(StaticLiveServerTestCase):
         web_element.send_keys(old_text)     # Resume to the previous text
         return old_text != new_text
 
+    def _is_element_present(self, by, value):
+        try:
+            expected_conditions.presence_of_element_located((by, value))(self.browser)
+            return True
+        except NoSuchElementException:
+            return False
+
     def _is_element_not_present(self, by, value):
         try:
-            expected_conditions.presence_of_element_located((by, value))
+            expected_conditions.presence_of_element_located((by, value))(self.browser)
             return False
         except NoSuchElementException:
             return True
+
+    def _verify_buttons_visibility(self, btn_visibility_map):
+        for caption, visible in btn_visibility_map.iteritems():
+            if caption == "Delete":
+                if visible:
+                    # Should be visible.
+                    self.assertTrue(
+                        self._is_element_present(By.LINK_TEXT, "Delete"),
+                        "The button 'Delete' is not present, which should be."
+                    )
+                else:
+                    # Should be hidden.
+                    self.assertTrue(
+                        self._is_element_not_present(By.LINK_TEXT, "Delete"),
+                        "The button 'Delete' is present, which shouldn't be."
+                    )
+            else:
+                if visible:
+                    # Should be visible.
+                    self.assertTrue(
+                        self._is_element_present(By.NAME, self.BUTTON_CAPTION_NAME_MAP[caption]),
+                        "The button '%s' is not present, which should be." % caption
+                    )
+                else:
+                    # Should be hidden.
+                    self.assertTrue(
+                        self._is_element_not_present(By.NAME, self.BUTTON_CAPTION_NAME_MAP[caption]),
+                        "The button '%s' is present, which shouldn't be." % caption
+                    )
 
     def _verify_muo_fields_info(self, expected_status):
         fields = self.browser.find_elements_by_xpath("//fieldset[@id='fieldset-1']/div/div/div/div/div/p")
@@ -357,11 +404,11 @@ class MUOReviewerTest(MUOTestBase):
 
             Permission.objects.get(content_type=ct_muo, codename="can_view_all"),
             Permission.objects.get(content_type=ct_muo, codename="can_reject"),
-            # Permission.objects.get(content_type=ct_muo, codename="delete_muocontainer"),
-            # Permission.objects.get(content_type=ct_muo, codename="can_edit_all"),
+            Permission.objects.get(content_type=ct_muo, codename="delete_muocontainer"),
+            Permission.objects.get(content_type=ct_muo, codename="can_edit_all"),
             Permission.objects.get(content_type=ct_muo, codename="change_muocontainer"),
             Permission.objects.get(content_type=ct_muo, codename="can_approve"),
-            # Permission.objects.get(content_type=ct_muo, codename="add_muocontainer"),
+            Permission.objects.get(content_type=ct_muo, codename="add_muocontainer"),
         ]
         user.user_permissions.add(*reviewer_permissions)
 
@@ -374,7 +421,6 @@ class MUOReviewerTest(MUOTestBase):
         self._create_in_review_muo(muc_type="existing")
         # Open Page: "MUO Containers"
         self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
-
         # Click Link: MUO
         self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
 
@@ -383,6 +429,19 @@ class MUOReviewerTest(MUOTestBase):
 
         # Verify: The information of the Use Cases is displayed correctly.
         self._verify_use_case_fields_info()
+
+        # Verify: The buttons' visibility is correct.
+        self._verify_buttons_visibility(
+            btn_visibility_map={
+                "Save": False,
+                "Save and continue editing": False,
+                "Submit for Review": False,
+                "Approve": True,
+                "Reject": True,
+                "Reopen": True,
+                "Delete": False
+            }
+        )
 
     def test_point_05_ui_in_review_after_rejection(self):
         """
@@ -408,8 +467,34 @@ class MUOReviewerTest(MUOTestBase):
         # Verify: The information of the Use Cases is displayed correctly.
         self._verify_use_case_fields_info()
 
+        # Verify: The buttons' visibility is correct.
+        self._verify_buttons_visibility(
+            btn_visibility_map={
+                "Save": False,
+                "Save and continue editing": False,
+                "Submit for Review": False,
+                "Approve": True,
+                "Reject": True,
+                "Reopen": True,
+                "Delete": False
+            }
+        )
+
     def test_point_06_ui_approved(self):
         self._test_point_06_ui_approved()
+
+        # Verify: The buttons' visibility is correct.
+        self._verify_buttons_visibility(
+            btn_visibility_map={
+                "Save": False,
+                "Save and continue editing": False,
+                "Submit for Review": False,
+                "Approve": False,
+                "Reject": True,
+                "Reopen": False,
+                "Delete": False
+            }
+        )
 
 
 class MUOContributorTest(MUOTestBase):
@@ -534,6 +619,19 @@ class MUOContributorTest(MUOTestBase):
         # Verify: The "Misuse case" auto-completion box for using existing misuse case is visible.
         self.assertTrue(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed())
 
+        # Verify: The buttons' visibility is correct.
+        self._verify_buttons_visibility(
+            btn_visibility_map={
+                "Save": True,
+                "Save and continue editing": True,
+                "Submit for Review": True,
+                "Approve": False,
+                "Reject": False,
+                "Reopen": False,
+                "Delete": True
+            }
+        )
+
     def test_point_03_ui_rejected(self):
         """
         Test Point: Verify that the MUO container page in 'Rejected' status works as expected.
@@ -554,6 +652,19 @@ class MUOContributorTest(MUOTestBase):
 
         # Verify: The information of the Use Cases is displayed correctly.
         self._verify_use_case_fields_info()
+
+        # Verify: The buttons' visibility is correct.
+        self._verify_buttons_visibility(
+            btn_visibility_map={
+                "Save": False,
+                "Save and continue editing": False,
+                "Submit for Review": False,
+                "Approve": False,
+                "Reject": False,
+                "Reopen": True,
+                "Delete": True
+            }
+        )
 
     def test_point_04_ui_draft_after_rejection(self):
         """
@@ -588,8 +699,8 @@ class MUOContributorTest(MUOTestBase):
         )
         self.assertEqual(elm_muc_type_new.get_attribute("selected"), None)
 
-        # Verify: The "Misuse case" auto-completion box for using existing misuse case is not visible.
-        self.assertEqual(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed(), False)
+        # Verify: The "Misuse case" auto-completion box for using existing misuse case is visible.
+        self.assertEqual(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed(), True)
 
         # Verify: Status shows "Draft".
         elm_status = self.browser.find_element_by_xpath(
@@ -600,15 +711,44 @@ class MUOContributorTest(MUOTestBase):
         # Verify: The use case fields are editable.
         self._verify_use_case_fields_are_editable()
 
-        # Now select the "Existing misuse case"
+        # Now select the "New misuse case"
         sel_muc_type = Select(self.browser.find_element_by_id("id_misuse_case_type"))
         sel_muc_type.select_by_visible_text("New")
+
+        # Verify: The "Misuse case" auto-completion box for using existing misuse case is not visible.
+        self.assertEqual(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed(), False)
 
         # Verify: The misuse case fields are now displayed and editable.
         self._verify_misuse_case_fields_are_editable()
 
+        # Verify: The buttons' visibility is correct.
+        self._verify_buttons_visibility(
+            btn_visibility_map={
+                "Save": True,
+                "Save and continue editing": True,
+                "Submit for Review": True,
+                "Approve": False,
+                "Reject": False,
+                "Reopen": False,
+                "Delete": True
+            }
+        )
+
     def test_point_06_ui_approved(self):
         self._test_point_06_ui_approved()
+
+        # Verify: The buttons' visibility is correct.
+        self._verify_buttons_visibility(
+            btn_visibility_map={
+                "Save": False,
+                "Save and continue editing": False,
+                "Submit for Review": False,
+                "Approve": False,
+                "Reject": False,
+                "Reopen": False,
+                "Delete": False
+            }
+        )
 
 
 class MUOContributorTestRegression(MUOContributorTest):
