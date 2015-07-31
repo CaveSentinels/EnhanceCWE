@@ -73,7 +73,7 @@ class IssueReportWorkflow(StaticLiveServerTestCase):
         # Delete the issue report.
         IssueReport.objects.all().delete()
 
-    def _create_issue_report(self, issue_report_status='Open'):
+    def _create_issue_report(self, issue_report_status='open'):
         cwe101 = CWE.objects.get(code=101)
 
         # Create the misuse case and establish the relationship with the CWEs
@@ -299,6 +299,15 @@ class IssueReportWorkflow(StaticLiveServerTestCase):
         self.assertEqual(elm_options[3].get_attribute("textContent"), "State-Driven")
         self.assertEqual(elm_options[0].get_attribute("selected"), "true")
 
+    from selenium.common.exceptions import NoSuchElementException
+    from selenium.webdriver.support import expected_conditions
+    def _is_element_not_present(self, by, value):
+        try:
+            expected_conditions.presence_of_element_located((by, value))
+            return False
+        except NoSuchElementException:
+            return True
+
     def test_point_01_ui_check_open_report(self):
         """
         Test Point: Verify that the Issue Report page in 'Open' status works as expected.
@@ -306,7 +315,7 @@ class IssueReportWorkflow(StaticLiveServerTestCase):
         self.PAGE_URL_MUO_HOME = "/app/muo/issuereport/1/"
 
         # Create test data
-        self._create_issue_report(issue_report_status='Open')
+        issue_report = self._create_issue_report(issue_report_status='open')
 
         # Open Page: "Issue Report"
         self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
@@ -335,10 +344,12 @@ class IssueReportWorkflow(StaticLiveServerTestCase):
         self.assertEqual(is_enabled, True)
 
         # Check if Investigate button is present
-        self.assertEqual(self.check_exists_by_xpath('//*[@id="issuereport_form"]/div[2]/div[2]/input'), True)
+        btn_investigate_present = self._is_element_not_present(By.XPATH, '//*[@id="issuereport_form"]/div[2]/div[2]/input')
+        self.assertEqual(btn_investigate_present, False)
 
         # Check if Delete button is present
-        self.assertEqual(self.check_exists_by_xpath('//*[@id="issuereport_form"]/div[2]/div[1]/a'), True)
+        btn_delete_present = self._is_element_not_present(By.XPATH, '//*[@id="issuereport_form"]/div[2]/div[1]/a')
+        self.assertEqual(btn_delete_present, False)
 
         # Reviewed at time should be None
         self.assertEqual(self.browser.find_element_by_xpath("//*[@id='fieldset-1']/div/div[6]/div/div[2]/div/p").text, '(None)')
