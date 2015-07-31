@@ -59,7 +59,7 @@ class MUOQuerySet(models.QuerySet):
         elif self.model == MisuseCase:
             return self.filter(Q(muocontainer__status='approved') | Q(muocontainer__is_published=True))
         elif self.model == UseCase:
-            return self.filter(Q(muocontainer__status='approved') | Q(muocontainer__is_published=True))
+            return self.filter(Q(muo_container__status='approved') | Q(muo_container__is_published=True))
 
 
     def rejected(self):
