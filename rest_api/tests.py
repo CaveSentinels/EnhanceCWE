@@ -4,6 +4,9 @@ from django.test import TestCase
 from django.test import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
+from django.conf import settings
+from allauth.account.models import EmailAddress
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from cwe.models import CWE
@@ -1347,3 +1350,81 @@ class TestSaveCustomMUO(RestAPITestBase):
             self.assertEqual(MUOContainer.objects.count(), 0)   # No MUO was created.
             self.assertEqual(MisuseCase.objects.count(), 0)     # No misuse cases was created.
             self.assertEqual(UseCase.objects.count(), 0)     # No use cases was created.
+
+
+class TokenCreationDeletion(TestCase):
+    """
+    Tests if the token is created for clients only.
+    """
+
+    ROLE_CLIENT = "client"
+    ROLE_CONTRIBUTOR = "contributor"
+
+    USER_NAME = "user"
+    USER_EMAIL = "user@example.com"
+
+    def tearDown(self):
+        Token.objects.all().delete()
+        EmailAddress.objects.all().delete()
+        get_user_model().objects.all().delete()
+
+    def _create_user(self, role):
+        user = get_user_model().objects.create(username=role,
+                                               email=role+"@example.com",
+                                               is_staff=True,
+                                               is_active=True
+                                               )
+        user.set_password("user_password")
+        user.save()
+
+        # Verify and approve the email
+        email_obj = EmailAddress.objects.create(user=user,
+                                                email=role+"@example.com",
+                                                primary=True,
+                                                verified=True,
+                                                requested_role=role
+                                                )
+        email_obj.action_approve()
+        email_obj.save()
+
+        return user, email_obj
+
+    def test_token_creation_for_contributor(self):
+        """
+        Test Point: If the user is registered as a contributor, there should be no token created for him/her.
+        """
+
+        # Create a user of role "contributor" and approve the email.
+        contributor_user, contributor_email = self._create_user(TokenCreationDeletion.ROLE_CONTRIBUTOR)
+
+        # Verify: Nothing happens to the token table.
+        tokens = Token.objects.filter(user_id=contributor_user.id)
+        self.assertEqual(tokens.count(), 0)
+
+        # Reject the email.
+        contributor_email.action_reject(reject_reason="For test purpose.")
+
+        # Verify: Nothing happens to the token table.
+        tokens = Token.objects.filter(user_id=contributor_user.id)
+        self.assertEqual(tokens.count(), 0)
+
+    def test_token_creation_rejection_for_client(self):
+        """
+        Test Point:
+            1). If the user is registered as a client, there should be a token created for him/her.
+            2). If the user of role "client" is rejected, the created token will be deleted.
+        """
+
+        # Create a user of role "client" and approve the email.
+        client_user, client_email = self._create_user(TokenCreationDeletion.ROLE_CLIENT)
+
+        # Verify: A token has been created for this user.
+        tokens = Token.objects.filter(user_id=client_user.id)
+        self.assertEqual(tokens.count(), 1)
+
+        # Reject the email.
+        client_email.action_reject(reject_reason="For test purpose.")
+
+        # Verify: The created token has been deleted.
+        tokens = Token.objects.filter(user_id=client_user.id)
+        self.assertEqual(tokens.count(), 0)
