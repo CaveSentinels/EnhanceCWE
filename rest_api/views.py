@@ -566,6 +566,15 @@ class SaveCustomMUO(APIView):
         return ("The following fields are missing from " + object_name + ": " +
                 ("".join(field+", " for field in fields_missing).rstrip(", ")))
 
+    @staticmethod
+    def _form_err_msg_method_not_allowed():
+        return "Use POST method for this REST API function."
+
+    def get(self, request):
+        # Because all the other REST API functions are implemented using GET,
+        # we return an error message that tells the developer to use the POST method.
+        return Response(data=self._form_err_msg_method_not_allowed(), status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
     def post(self, request):
         # Validation: Check if all the sections have the (string -> string) mapping.
         sections_wrong_mapping = self._check_all_sections_mapping(request.data)
