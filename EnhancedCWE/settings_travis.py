@@ -21,3 +21,7 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
+
+# The timeout of web element presence checking.
+# Unit: second
+SELENIUM_WEB_ELEMENT_PRESENCE_CHECK_TIMEOUT = 10
