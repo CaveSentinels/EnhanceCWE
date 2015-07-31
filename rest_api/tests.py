@@ -145,6 +145,16 @@ class TestCWETextRelated(RestAPITestBase):
         self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
         self.assertEqual(self._cwe_info_found(content=response.content, code=103), True)
 
+    def test_positive_search_text_multiple_keywords_with_limit(self):
+        max_return = CWERelatedList.CWE_MAX_RETURN
+        CWERelatedList.CWE_MAX_RETURN = 1   # Only return one CWE.
+        text = "the user can bypass the file access check due to a stack overflow caused by ..."
+        response = self.http_get(self._get_base_url(), self._form_url_params(text))
+        self.assertEqual(self._cwe_info_found(content=response.content, code=101), False)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=102), True)
+        self.assertEqual(self._cwe_info_found(content=response.content, code=103), False)
+        CWERelatedList.CWE_MAX_RETURN = max_return
+
     # Negative test cases
 
     def test_negative_search_text_no_match(self):

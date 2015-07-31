@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_api.serializers import CWESerializer
 from rest_api.serializers import MisuseCaseSerializer
 from rest_api.serializers import UseCaseSerializer
+from .settings import SUGGESTED_CWE_MAX_RETURN
 
 
 # Constants
@@ -262,6 +263,10 @@ class CWERelatedList(APIView):
 
     PARAM_TEXT = "text"
 
+    # This allows the unit test to modify the max return dynamically
+    # without having to modify the settings.py manually.
+    CWE_MAX_RETURN = SUGGESTED_CWE_MAX_RETURN
+
     def get(self, request):
         """
         @brief: Return the CWE objects that are suggested given the text.
@@ -271,9 +276,10 @@ class CWERelatedList(APIView):
 
         text = request.GET.get(self.PARAM_TEXT)
 
+        # Get the suggested CWEs.
         cwe_count_tuples = CWESearchLocator.get_instance().search_cwes(text)
+        cwe_list = [cwe_count_tuple[0] for cwe_count_tuple in cwe_count_tuples][0:self.CWE_MAX_RETURN]
 
-        cwe_list = [cwe_count_tuple[0] for cwe_count_tuple in cwe_count_tuples]
         serializer = CWESerializer(cwe_list, many=True)
 
         return Response(data=serializer.data)
