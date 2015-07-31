@@ -433,10 +433,9 @@ def post_save_muo_container(sender, instance, created, using, **kwargs):
 @receiver(pre_delete, sender=MUOContainer, dispatch_uid='muo_container_delete_signal')
 def pre_delete_muo_container(sender, instance, using, **kwargs):
     """
-    Registering for pre_delete signal, so that we can prevent deletion of MUOContainer if it is not in
-    'draft' or 'review' state.
+    Registering for pre_delete signal, so that we can prevent deletion of MUOContainer if it is approved.
     """
-    if instance.status not in ('draft', 'rejected'):
+    if instance.status not in ('draft', 'rejected', 'in_review'):
         raise ValidationError('The MUOContainer can only be deleted if in draft or rejected state')
 
 
