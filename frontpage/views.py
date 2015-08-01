@@ -54,6 +54,7 @@ def get_misusecases(request):
 
     #  Get the selected CWE ids from the request
     selected_cwe_ids = request.POST.getlist('cwe_ids', None)
+    search_term = request.POST.get('search_term', None)
 
     if len(selected_cwe_ids) == 0:
         # If list of CWE ids is empty return all the misuse cases
@@ -62,8 +63,12 @@ def get_misusecases(request):
         #  Get the use cases for the selected CWE ids
         misuse_cases = MisuseCase.objects.filter(cwes__in=selected_cwe_ids).approved()
 
+    if search_term:
+        misuse_cases = misuse_cases.filter(Q(name__icontains=search_term) | Q(misuse_case_description__icontains=search_term))
+
     #  Create a context with all the corresponding misuse cases
-    context = {'misuse_cases': misuse_cases}
+    context = {'misuse_cases': misuse_cases,
+               'search_term': search_term}
 
     return TemplateResponse(request, "frontpage/misusecase.html", context)
 
