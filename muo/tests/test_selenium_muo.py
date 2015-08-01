@@ -328,6 +328,18 @@ class MUOTestBase(StaticLiveServerTestCase):
         self.assertEqual(elm_options[3].get_attribute("textContent"), "State-Driven")
         self.assertEqual(elm_options[0].get_attribute("selected"), "true")
 
+    def _verify_rejection_reason_window(self):
+        self.browser.find_element_by_name("_reject").click()
+        # The "Rejection Reason" edit box is shown.
+        rejection_reason_box = self.browser.find_element_by_id("reject_reason_text")
+        # With a rejection reason < 15 chars, the "Reject" button is not enabled.
+        rejection_reason_box.send_keys("< 14 chars")
+        btn_reject = self.browser.find_element_by_id("reject_button")
+        self.assertEqual(btn_reject.is_enabled(), False)
+        # The "Reject" button is enabled when the reason has >= 15 chars.
+        rejection_reason_box.send_keys(" append more chars to make it longer than 15 chars")
+        self.assertEqual(btn_reject.is_enabled(), True)
+
     def _test_point_06_ui_approved(self):
         """
         Test Point: Verify that the MUO container page in 'Approved' status works as expected.
@@ -345,6 +357,9 @@ class MUOTestBase(StaticLiveServerTestCase):
 
         # Verify: The information of the Use Cases is displayed correctly.
         self._verify_use_case_fields_info()
+
+        # Verify: Clicking the "Reject" button can bring up the rejection reason window.
+        self._verify_rejection_reason_window()
 
 
 class MUOReviewerTest(MUOTestBase):
@@ -443,6 +458,9 @@ class MUOReviewerTest(MUOTestBase):
             }
         )
 
+        # Verify: Clicking the "Reject" button can bring up the rejection reason window.
+        self._verify_rejection_reason_window()
+
     def test_point_05_ui_in_review_after_rejection(self):
         """
         Test Point: Verify that the MUO container page in 'In Review' status but which was
@@ -479,6 +497,9 @@ class MUOReviewerTest(MUOTestBase):
                 "Delete": False
             }
         )
+
+        # Verify: Clicking the "Reject" button can bring up the rejection reason window.
+        self._verify_rejection_reason_window()
 
     def test_point_06_ui_approved(self):
         self._test_point_06_ui_approved()
