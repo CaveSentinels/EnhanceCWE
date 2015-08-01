@@ -1,19 +1,8 @@
-from django.conf import settings
-from django.core import mail
-from django.test import LiveServerTestCase
-from django.core.urlresolvers import reverse
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
-from django.test.utils import override_settings
-from allauth.account.models import EmailAddress, EmailConfirmation
-from selenium import webdriver
-import os
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.core.urlresolvers import reverse
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.support.select import Select
 from EnhancedCWE.settings_travis import SELENIUM_WEB_ELEMENT_PRESENCE_CHECK_TIMEOUT
 from register.tests import RegisterHelper
 from cwe.models import CWE
@@ -26,7 +15,7 @@ from selenium.common.exceptions import NoSuchElementException
 class IssueReportWorkflow(StaticLiveServerTestCase):
 
     # The URLs of the CWE-related pages.
-    PAGE_URL_MUO_HOME = "/app/muo/issuereport/3/"
+    PAGE_URL_MUO_HOME = "/app/muo/issuereport/1/"
 
     def setUp(self):
         # Create test data.
@@ -130,177 +119,6 @@ class IssueReportWorkflow(StaticLiveServerTestCase):
 
         return issue_report_01
 
-
-    def check_exists_by_xpath(self, xpath):
-        try:
-            webdriver.find_element_by_xpath(xpath)
-        except NoSuchElementException:
-            return False
-        return True
-
-    def _create_draft_muo_after_rejection(self, muc_type):
-        muo1 = self._create_draft_muo(muc_type=muc_type)
-        # Submit the MUO
-        muo1.action_submit()
-        # Reject the MUO
-        muo1.action_reject(reject_reason="For testing purpose.")
-        # Reopen the MUO
-        muo1.action_save_in_draft()
-
-    def _create_in_review_muo(self, muc_type):
-        muo1 = self._create_draft_muo(muc_type=muc_type)
-        # Submit the MUO
-        muo1.action_submit()
-
-    def _create_in_review_muo_after_rejection(self, muc_type):
-        muo1 = self._create_draft_muo(muc_type=muc_type)
-        # Submit the MUO
-        muo1.action_submit()
-        # Reject the MUO
-        muo1.action_reject(reject_reason="For testing purpose.")
-        # Reopen the MUO
-        muo1.action_save_in_draft()
-        # Submit the MUO again.
-        muo1.action_submit()
-
-    def _create_rejected_muo(self, muc_type):
-        muo1 = self._create_draft_muo(muc_type=muc_type)
-        # Submit the MUO
-        muo1.action_submit()
-        # Reject the MUO
-        muo1.action_reject(reject_reason="For testing purpose.")
-
-    def _create_approved_muo(self, muc_type):
-        muo1 = self._create_draft_muo(muc_type=muc_type)
-        # Submit the MUO
-        muo1.action_submit()
-        # Approve the MUO
-        muo1.action_approve()
-
-    def _is_editable(self, web_element):
-        old_text = web_element.get_attribute("value")
-        web_element.send_keys("test")
-        new_text = web_element.get_attribute("value")
-        web_element.clear()
-        web_element.send_keys(old_text)     # Resume to the previous text
-        return old_text != new_text
-
-    def _verify_muo_fields_info(self, expected_status):
-        fields = self.browser.find_elements_by_xpath("//fieldset[@id='fieldset-1']/div/div/div/div/div/p")
-        # Name
-        # self.assertEqual(fields[0].get_attribute("textContent"), "MUO/00001")
-        # Cwes
-        self.assertEqual(fields[1].get_attribute("textContent"), "CWE-101: 101")
-        # Misuse Case Type
-        self.assertEqual(fields[2].get_attribute("textContent"), "Existing")
-        # Misuse case
-        # The misuse case name is dependent on its ID. However, when we run the entire test suite
-        # or run the test method individually, the database IDs are different, which means the test
-        # case may fail when you use different ways to run it. Therefore, for now we do not test it.
-        # self.assertEqual(fields[3].get_attribute("textContent"), "MU/00001 - Misuse Case #1...")
-        # Brief Description
-        self.assertEqual(fields[4].get_attribute("textContent"), "Misuse case #1")
-        # Primary actor
-        self.assertEqual(fields[5].get_attribute("textContent"), "Primary actor #1")
-        # Secondary actor
-        self.assertEqual(fields[6].get_attribute("textContent"), "Secondary actor #1")
-        # Pre-condition
-        self.assertEqual(fields[7].get_attribute("textContent"), "Pre-condition #1")
-        # Flow of events
-        self.assertEqual(fields[8].get_attribute("textContent"), "Event flow #1")
-        # Post-condition
-        self.assertEqual(fields[9].get_attribute("textContent"), "Post-condition #1")
-        # Assumption
-        self.assertEqual(fields[10].get_attribute("textContent"), "Assumption #1")
-        # Source
-        self.assertEqual(fields[11].get_attribute("textContent"), "Source #1")
-        # Status
-        self.assertEqual(fields[12].get_attribute("textContent"), expected_status)
-
-    def _verify_use_case_fields_info(self):
-        fields = self.browser.find_elements_by_xpath("//fieldset[@id='fieldset-1-1']/div/div/div/div/div/p")
-        # Name
-        # self.assertEqual(fields[0].get_attribute("textContent"), "UC/00001")
-        # Brief description
-        self.assertEqual(fields[1].get_attribute("textContent"), "Use Case #1")
-        # Primary actor
-        self.assertEqual(fields[2].get_attribute("textContent"), "Primary actor #1")
-        # Secondary actor
-        self.assertEqual(fields[3].get_attribute("textContent"), "Secondary actor #1")
-        # Pre-condition
-        self.assertEqual(fields[4].get_attribute("textContent"), "Pre-condition #1")
-        # Flow of events
-        self.assertEqual(fields[5].get_attribute("textContent"), "Event flow #1")
-        # Post-condition
-        self.assertEqual(fields[6].get_attribute("textContent"), "Post-condition #1")
-        # Assumption
-        self.assertEqual(fields[7].get_attribute("textContent"), "Assumption #1")
-        # Source
-        self.assertEqual(fields[8].get_attribute("textContent"), "Source #1")
-        # Overlooked security requirements pattern type
-        self.assertEqual(fields[9].get_attribute("textContent"), "Ubiquitous")
-        # Overlooked security requirements
-        self.assertEqual(fields[10].get_attribute("textContent"), "Overlooked Security Requirement #1")
-
-    def _verify_misuse_case_fields_are_editable(self):
-        muc_field_id_list = [
-            "id_misuse_case_description",
-            "id_misuse_case_primary_actor",
-            "id_misuse_case_secondary_actor",
-            "id_misuse_case_precondition",
-            "id_misuse_case_flow_of_events",
-            "id_misuse_case_postcondition",
-            "id_misuse_case_assumption",
-            "id_misuse_case_source"
-        ]
-        for field_id in muc_field_id_list:
-            elm_field = self.browser.find_element_by_id(field_id)
-            self.assertTrue(self._is_editable(elm_field), "Field '" + field_id + "' is not editable.")
-        # Verify: The "Misuse case" auto-completion box for using existing misuse case is not visible.
-        self.assertEqual(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed(), False)
-
-    def _verify_misuse_case_fields_are_hidden(self):
-        muc_field_id_list = [
-            "id_misuse_case_description",
-            "id_misuse_case_primary_actor",
-            "id_misuse_case_secondary_actor",
-            "id_misuse_case_precondition",
-            "id_misuse_case_flow_of_events",
-            "id_misuse_case_postcondition",
-            "id_misuse_case_assumption",
-            "id_misuse_case_source"
-        ]
-        for field_id in muc_field_id_list:
-            elm_field = self.browser.find_element_by_id(field_id)
-            self.assertEqual(elm_field.is_displayed(), False, "Field '" + field_id + "' is visible.")
-        # Verify: The "Misuse case" auto-completion box for using existing misuse case is visible.
-        self.assertEqual(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed(), True)
-
-    def _verify_use_case_fields_are_editable(self):
-        uc_field_id_list = [
-            "id_usecase_set-0-use_case_description",
-            "id_usecase_set-0-use_case_primary_actor",
-            "id_usecase_set-0-use_case_secondary_actor",
-            "id_usecase_set-0-use_case_precondition",
-            "id_usecase_set-0-use_case_flow_of_events",
-            "id_usecase_set-0-use_case_postcondition",
-            "id_usecase_set-0-use_case_assumption",
-            "id_usecase_set-0-use_case_source",
-            "id_usecase_set-0-osr"
-        ]
-        for field_id in uc_field_id_list:
-            elm_field = self.browser.find_element_by_id(field_id)
-            self.assertTrue(self._is_editable(elm_field), "Field '" + field_id + "' is not editable.")
-        # Verify: Option box works correctly.
-        elm_options = self.browser.find_elements_by_xpath("//select[@id='id_usecase_set-0-osr_pattern_type']/option")
-        self.assertEqual(elm_options[0].get_attribute("textContent"), "Ubiquitous")
-        self.assertEqual(elm_options[1].get_attribute("textContent"), "Event-Driven")
-        self.assertEqual(elm_options[2].get_attribute("textContent"), "Unwanted Behavior")
-        self.assertEqual(elm_options[3].get_attribute("textContent"), "State-Driven")
-        self.assertEqual(elm_options[0].get_attribute("selected"), "true")
-
-    from selenium.common.exceptions import NoSuchElementException
-    from selenium.webdriver.support import expected_conditions
     def _is_element_not_present(self, by, value):
         try:
             expected_conditions.presence_of_element_located((by, value))
@@ -339,7 +157,7 @@ class IssueReportWorkflow(StaticLiveServerTestCase):
         is_enabled = self.browser.find_element_by_id("id_usecase-autocomplete").is_enabled()
         self.assertEqual(is_enabled, True)
 
-        # Check if Use Case is disabled
+        # Check if Description is disabled
         is_enabled = self.browser.find_element_by_id("id_description").is_enabled()
         self.assertEqual(is_enabled, True)
 
@@ -358,140 +176,180 @@ class IssueReportWorkflow(StaticLiveServerTestCase):
         self.assertEqual(self.browser.find_element_by_xpath("//*[@id='fieldset-1']/div/div[6]/div/div[1]/div/p").text, '(None)')
 
 
+        # Select an option in Type
+        self.browser.find_element_by_xpath("//select[@id='id_type']/option[@value='incorrect']").click()
 
 
-    def test_point_02_ui_in_review(self):
+        # Click on investigate
+        self.browser.find_element_by_xpath('//*[@id="issuereport_form"]/div[2]/div[2]/input').click()
+
+        # Check the message on the next screen
+        notification_message = self.browser.find_element_by_xpath('//*[@id="content"]/div/div/div').text
+        self.assertEqual(notification_message, u'The issue is now being investigated.')
+
+        # Reviewed by status changes.
+        reviewed_by = self.browser.find_element_by_xpath('//*[@id="fieldset-1"]/div/div[6]/div/div[1]/div/p').text
+        result = False
+        if reviewed_by:
+            result = True
+        self.assertEqual(result, True)
+
+        # Reviewed at status changes.
+        reviewed_at = self.browser.find_element_by_xpath('//*[@id="fieldset-1"]/div/div[6]/div/div[2]/div/p').text
+        result = False
+        if reviewed_at:
+            result = True
+        self.assertEqual(result, True)
+
+        # Status should be Investigating
+        status = self.browser.find_element_by_xpath("//*[@id='fieldset-1']/div/div[1]/div/div[2]/div/p").text
+        self.assertEqual(status, u'Investigating')
+
+        # Check the number of items in Select Box
+        type = self.browser.find_element_by_id("id_type")
+        options = [x for x in type.find_elements_by_tag_name("option")]
+
+        self.assertEqual(len(options), 4)
+
+        # Match the exact names of the items in select box
+        self.assertEqual(options[1].get_attribute("value"), 'incorrect')
+        self.assertEqual(options[2].get_attribute("value"), 'spam')
+        self.assertEqual(options[3].get_attribute("value"), 'duplicate')
+
+        # Check if Use Case is disabled
+        is_enabled = self.browser.find_element_by_id("id_usecase-autocomplete").is_enabled()
+        self.assertEqual(is_enabled, True)
+
+        # Check if Description is disabled
+        is_enabled = self.browser.find_element_by_id("id_description").is_enabled()
+        self.assertEqual(is_enabled, True)
+
+        # Check the presence of Resolve button
+        btn_resolve_present = self._is_element_not_present(By.XPATH, '//*[@id="issuereport_form"]/div[2]/div[2]/button')
+        self.assertEqual(btn_investigate_present, False)
+
+        # Check the presence of Open button
+        btn_resolve_present = self._is_element_not_present(By.XPATH, '//*[@id="issuereport_form"]/div[2]/div[2]/input')
+        self.assertEqual(btn_investigate_present, False)
+
+        # Check if Delete button is present
+        btn_delete_present = self._is_element_not_present(By.XPATH, '//*[@id="issuereport_form"]/div[2]/div[1]/a')
+        self.assertEqual(btn_delete_present, False)
+
+        # Click on Open
+        self.browser.find_element_by_xpath('//*[@id="issuereport_form"]/div[2]/div[2]/input').click()
+
+        # Check the message on the next screen
+        notification_message = self.browser.find_element_by_xpath('//*[@id="content"]/div/div/div').text
+        self.assertEqual(notification_message, u'The issue is now opened.')
+
+        # Status should be open
+        status = self.browser.find_element_by_xpath("//*[@id='fieldset-1']/div/div[1]/div/div[2]/div/p").text
+        self.assertEqual(status, u'Open')
+
+        # Check the type drop downs
+        # Check the number of items in Select Box
+        type = self.browser.find_element_by_id("id_type")
+        options = [x for x in type.find_elements_by_tag_name("option")]
+
+        self.assertEqual(len(options), 4)
+
+        # Match the exact names of the items in select box
+        self.assertEqual(options[1].get_attribute("value"), 'incorrect')
+        self.assertEqual(options[2].get_attribute("value"), 'spam')
+        self.assertEqual(options[3].get_attribute("value"), 'duplicate')
+
+        # Check if Use Case is disabled
+        is_enabled = self.browser.find_element_by_id("id_usecase-autocomplete").is_enabled()
+        self.assertEqual(is_enabled, True)
+
+        # Check if Description is disabled
+        is_enabled = self.browser.find_element_by_id("id_description").is_enabled()
+        self.assertEqual(is_enabled, True)
+
+        # Check if Investigate button is present
+        btn_investigate_present = self._is_element_not_present(By.XPATH, '//*[@id="issuereport_form"]/div[2]/div[2]/input')
+        self.assertEqual(btn_investigate_present, False)
+
+
+    def test_point_02_ui_check_resolve_issue(self):
         """
-        Test Point: Verify that the MUO container page in 'In Review' status works as expected.
+        Test Point: Verify the resolve issue workflow.
         """
+        self.PAGE_URL_MUO_HOME = "/app/muo/issuereport/2/"
 
         # Create test data
-        self._create_in_review_muo(muc_type="existing")
-        # Open Page: "MUO Containers"
+        issue_report = self._create_issue_report(issue_report_status='open')
+
+        # Open Page: "Issue Report"
         self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
-        # Click Link: MUO
-        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
 
-        # Verify: The information of the MUO is displayed correctly.
-        self._verify_muo_fields_info("In Review")
+        # Select an option in Type
+        self.browser.find_element_by_xpath("//select[@id='id_type']/option[@value='incorrect']").click()
 
-        # Verify: The information of the Use Cases is displayed correctly.
-        self._verify_use_case_fields_info()
+        # Click on investigate
+        self.browser.find_element_by_xpath('//*[@id="issuereport_form"]/div[2]/div[2]/input').click()
 
-    def test_point_03_ui_rejected(self):
-        """
-        Test Point: Verify that the MUO container page in 'Rejected' status works as expected.
-        """
+        # Click on resolve
+        self.browser.find_element_by_xpath('//*[@id="issuereport_form"]/div[2]/div[2]/button').click()
 
-        # Create test data
-        self._create_rejected_muo(muc_type="existing")
-        # Open Page: "MUO Containers"
-        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
-        # Click Link: MUO
-        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
+        # Check presence of close button on pop up
+        btn_close_present = self._is_element_not_present(By.XPATH, '//*[@id="resolve-model"]/div/div/div[3]/button')
+        self.assertEqual(btn_close_present, False)
 
-        # Verify: The "This MUO has been rejected" message is shown.
-        expected_conditions.presence_of_element_located((By.XPATH, "//div[@class='alert alert-error']"))(self.browser)
+        # Check presence of Resolve button on pop up
+        btn_resolve_present = self._is_element_not_present(By.XPATH, '//*[@id="resolve_button"]')
+        self.assertEqual(btn_close_present, False)
 
-        # Verify: The information of the MUO is displayed correctly.
-        self._verify_muo_fields_info("Rejected")
+        # Check if Resolve button is disabled because of blank description
+        is_enabled = self.browser.find_element_by_xpath('//*[@id="resolve_button"]').is_enabled()
+        self.assertEqual(is_enabled, False)
 
-        # Verify: The information of the Use Cases is displayed correctly.
-        self._verify_use_case_fields_info()
+        # Check presence of resolve reason text box
+        btn_close_present = self._is_element_not_present(By.XPATH, '//*[@id="resolve_reason_text"]')
+        self.assertEqual(btn_close_present, False)
 
-    def test_point_04_ui_draft_after_rejection(self):
-        """
-        Test Point: Verify that the MUO container page in 'Draft' status but which was
-            previously rejected works as expected.
-        """
+        # Put some description
+        description = 'This is the resolve description.'
+        self.browser.find_element_by_xpath('//*[@id="resolve_reason_text"]').send_keys(description)
 
-        # Create test data
-        self._create_draft_muo_after_rejection(muc_type="existing")
-        # Open Page: "MUO Containers"
-        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
-        # Click Link: MUO
-        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
+        # Check if Resolve button is enabled because of 15 letter description
+        is_enabled = self.browser.find_element_by_xpath('//*[@id="resolve_button"]').is_enabled()
+        self.assertEqual(is_enabled, True)
 
-        # Verify: The "This MUO used to be rejected" message is shown.
-        expected_conditions.presence_of_element_located(
-            (By.XPATH, "//div[@class='alert alert-warning']")
-        )(self.browser)
+        # Click on Resolve
+        self.browser.find_element_by_xpath('//*[@id="resolve_button"]').click()
 
-        # Verify: The UI elements are in the correct states.
-        # CWE auto-complete edit box is editable.
-        # FIXME: How to verify if an auto-completion edit box is editable or not??
-        # elm_cwe_auto_complete = self.browser.find_element_by_id("id_cwes-autocomplete")
-        # self.assertTrue(self._is_editable(elm_cwe_auto_complete))
-        # "New" option is checked
-        elm_muc_type_existing = self.browser.find_element_by_xpath(
-            "//select[@id='id_misuse_case_type']/option[position()=1]"
-        )
-        self.assertEqual(elm_muc_type_existing.get_attribute("selected"), "true")
-        elm_muc_type_new = self.browser.find_element_by_xpath(
-            "//select[@id='id_misuse_case_type']/option[position()=2]"
-        )
-        self.assertEqual(elm_muc_type_new.get_attribute("selected"), None)
+        # Check the message on the next screen
+        notification_message = self.browser.find_element_by_xpath('//*[@id="content"]/div/div/div').text
+        self.assertEqual(notification_message, u'The issue is now resolved because ' + description)
 
-        # Verify: The misuse case fields are hidden.
-        self._verify_misuse_case_fields_are_hidden()
+        # Check the type drop downs
+        # Check the number of items in Select Box
+        type = self.browser.find_element_by_id("id_type")
+        options = [x for x in type.find_elements_by_tag_name("option")]
 
-        # Verify: The "Misuse case" auto-completion box for using existing misuse case is not visible.
-        self.assertEqual(self.browser.find_element_by_id("id_misuse_case-wrapper").is_displayed(), False)
+        self.assertEqual(len(options), 4)
 
-        # Verify: Status shows "Draft".
-        elm_status = self.browser.find_element_by_xpath(
-            "//fieldset[@id='fieldset-1']/div/div[position()=13]/div/div/div/p"
-        )
-        self.assertEqual(elm_status.get_attribute("textContent"), "Draft")
+        # Match the exact names of the items in select box
+        self.assertEqual(options[1].get_attribute("value"), 'incorrect')
+        self.assertEqual(options[2].get_attribute("value"), 'spam')
+        self.assertEqual(options[3].get_attribute("value"), 'duplicate')
 
-        # Verify: The use case fields are editable.
-        self._verify_use_case_fields_are_editable()
+        # Check if Use Case is disabled
+        is_enabled = self.browser.find_element_by_id("id_usecase-autocomplete").is_enabled()
+        self.assertEqual(is_enabled, True)
 
-        # Now select the "Existing misuse case"
-        sel_muc_type = Select(self.browser.find_element_by_id("id_misuse_case_type"))
-        sel_muc_type.select_by_visible_text("New")
+        # Check if Description is disabled
+        is_enabled = self.browser.find_element_by_id("id_description").is_enabled()
+        self.assertEqual(is_enabled, True)
 
-        # Verify: The misuse case fields are now displayed and editable.
-        self._verify_misuse_case_fields_are_editable()
+        # Check presence of reopen button
+        btn_reopen_present = self._is_element_not_present(By.XPATH, '//*[@id="issuereport_form"]/div[2]/div[2]/input')
+        self.assertEqual(btn_close_present, False)
 
-    def test_point_05_ui_in_review_after_rejection(self):
-        """
-        Test Point: Verify that the MUO container page in 'In Review' status but which was
-            previously rejected works as expected.
-        """
 
-        # Create test data
-        self._create_in_review_muo_after_rejection(muc_type="existing")
-        # Open Page: "MUO Containers"
-        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
-        # Click Link: MUO
-        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
 
-        # Verify: The "This MUO used to be rejected" message is shown.
-        expected_conditions.presence_of_element_located(
-            (By.XPATH, "//div[@class='alert alert-warning']")
-        )(self.browser)
 
-        # Verify: The information of the MUO is displayed correctly.
-        self._verify_muo_fields_info("In Review")
 
-        # Verify: The information of the Use Cases is displayed correctly.
-        self._verify_use_case_fields_info()
 
-    def test_point_06_ui_approved(self):
-        """
-        Test Point: Verify that the MUO container page in 'Approved' status works as expected.
-        """
-
-        # Create test data
-        self._create_approved_muo(muc_type="existing")
-        # Open Page: "MUO Containers"
-        self.browser.get("%s%s" % (self.live_server_url, self.PAGE_URL_MUO_HOME))
-        # Click Link: MUO
-        self.browser.find_element_by_xpath("id('result_list')/tbody/tr/th/a").click()
-
-        # Verify: The information of the MUO is displayed correctly.
-        self._verify_muo_fields_info("Approved")
-
-        # Verify: The information of the Use Cases is displayed correctly.
-        self._verify_use_case_fields_info()
