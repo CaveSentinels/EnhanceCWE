@@ -640,3 +640,73 @@ class MisuseCaseManagement(StaticLiveServerTestCase):
 
         # Log out
         # TODO: Fix the test cases.
+
+    def test_report_issue(self):
+        """
+        Test Point:
+            1). "Report issue" can pop up the issue reporting dialog.
+            2). The "Use case duplicate" box can be displayed when "Duplicate" type is selected.
+            3). "Close" and "Report" buttons are shown.
+        """
+        # Create test data.
+        self._create_multiple_misuse_cases()
+        # Log in as contributor.
+        self._log_in_as_admin()
+        # Open the home page.
+        self.browser.get(self.live_server_url)
+        # Click the "Get MUOs" button.
+        self.browser.find_element_by_id("cwe-submit-button").click()
+
+        # Click "Report Issue" link.
+        self.browser.find_elements_by_xpath("//a[@href='#muo-modal']")[0].click()
+
+        # Verify: The "Type" selection box is enabled.
+        type_selection = self.browser.find_element_by_id("id_type")
+        self.assertTrue(type_selection.is_enabled())
+        options = type_selection.find_elements_by_xpath(".//option")
+        self.assertTrue(options[0].get_attribute("textContent"), "---------")
+        self.assertTrue(options[1].get_attribute("textContent"), "Incorrect Content")
+        self.assertTrue(options[2].get_attribute("textContent"), "Spam")
+        self.assertTrue(options[3].get_attribute("textContent"), "Duplicate")
+
+        # Verify: By default, the "----------" option is selected.
+        self.assertTrue(options[0].get_attribute("selected"), "true")
+        # Verify: The "Usecase duplicate" box is displayed.
+        self.assertFalse(self.browser.find_element_by_id("id_usecase_duplicate-autocomplete").is_displayed())
+        # Verify: The "Description" box is enabled.
+        self.assertTrue(self.browser.find_element_by_id("id_description").is_enabled())
+        # Verify: When "----------" option is selected, the "Report" button is disabled.
+        btn_report = self.browser.find_element_by_name("_report")
+        self.assertTrue(not btn_report.is_enabled())
+
+        # Select: "Incorrect Content"
+        Select(webelement=self.browser.find_element_by_id("id_type")).select_by_visible_text("Incorrect Content")
+        # Verify: The "Usecase duplicate" box is displayed.
+        self.assertFalse(self.browser.find_element_by_id("id_usecase_duplicate-autocomplete").is_displayed())
+        # Verify: The "Description" box is enabled.
+        self.assertTrue(self.browser.find_element_by_id("id_description").is_enabled())
+        # Verify: "Report" button is enabled.
+        self.assertTrue(btn_report.is_enabled())
+
+        # Select: "Spam"
+        Select(webelement=self.browser.find_element_by_id("id_type")).select_by_visible_text("Spam")
+        # Verify: The "Usecase duplicate" box is displayed.
+        self.assertFalse(self.browser.find_element_by_id("id_usecase_duplicate-autocomplete").is_displayed())
+        # Verify: The "Description" box is enabled.
+        self.assertTrue(self.browser.find_element_by_id("id_description").is_enabled())
+        # Verify: "Report" button is enabled.
+        self.assertTrue(btn_report.is_enabled())
+
+        # Select: "Duplicate"
+        Select(webelement=self.browser.find_element_by_id("id_type")).select_by_visible_text("Duplicate")
+        # Verify: The "Usecase duplicate" box is displayed.
+        self.assertTrue(self.browser.find_element_by_id("id_usecase_duplicate-autocomplete").is_displayed())
+        # Verify: The "Description" box is enabled.
+        self.assertTrue(self.browser.find_element_by_id("id_description").is_enabled())
+        # Verify: "Report" button is enabled.
+        self.assertTrue(not btn_report.is_enabled())
+
+        # Verify: Buttons to dismiss the window are enabled: "X" and "Close" buttons.
+        close_buttons = self.browser.find_elements_by_xpath("//button[@data-dismiss='modal']")
+        self.assertTrue(close_buttons[0].is_enabled())
+        self.assertTrue(close_buttons[1].is_enabled())
