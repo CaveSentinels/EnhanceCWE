@@ -148,7 +148,7 @@ class MisuseCase(BaseModel):
 def post_save_misusecase(sender, instance, created, using, **kwargs):
     """ Set the value of the field 'name' after creating the object """
     if created:
-        instance.name = "MU/{0:05d}".format(instance.id)
+        instance.name = "MU-{0:05d}".format(instance.id)
         instance.save()
 
 
@@ -426,7 +426,7 @@ def pre_save_muo_container(sender, instance, *args, **kwargs):
 def post_save_muo_container(sender, instance, created, using, **kwargs):
     """ Set the value of the field 'name' after creating the object """
     if created:
-        instance.name = "MUO/{0:05d}".format(instance.id)
+        instance.name = "MUO-{0:05d}".format(instance.id)
         instance.save()
 
 
@@ -492,16 +492,14 @@ class UseCase(BaseModel):
 
 
     def get_absolute_url(self, language=None):
-        content_type = ContentType.objects.get_for_model(MisuseCase)
-        url = urlresolvers.reverse("admin:%s_%s_changelist" % (content_type.app_label, content_type.model))
-        return "%s?mu=%s&uc=%s" % (url, self.misuse_case.id, self.id)
+        pass
 
 
 @receiver(post_save, sender=UseCase, dispatch_uid='usecase_post_save_signal')
 def post_save_usecase(sender, instance, created, using, **kwargs):
     """ Set the value of the field 'name' after creating the object """
     if created:
-        instance.name = "UC/{0:05d}".format(instance.id)
+        instance.name = "UC-{0:05d}".format(instance.id)
         instance.save()
 
 
@@ -584,6 +582,6 @@ class IssueReport(BaseModel):
 def post_save_issue_report(sender, instance, created, using, **kwargs):
     """ Set the value of the field 'name' after creating the object """
     if created:
-        instance.name = "Issue/{0:05d}".format(instance.id)
+        instance.name = "Issue-{0:05d}".format(instance.id)
         instance.save()
 
