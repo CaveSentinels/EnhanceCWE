@@ -114,6 +114,19 @@ jQuery(function() {
         }
     });
 
+
+    $(document).on('keypress', '#filter_misuse_case', function(e){
+        if(e.which == 13) {
+            var search_term = $(this).val();
+            var selected_cwes = $('#id_cwes').val();
+
+            if (selected_cwes == null) {
+                selected_cwes = [];
+            }
+            load_misusecases(selected_cwes, search_term)
+        }
+    });
+
 });
 
 
@@ -137,24 +150,35 @@ function load_usecases(misuse_case_id) {
 }
 
 
-function load_misusecases(cwe_ids) {
+function load_misusecases(cwe_ids, search_term) {
     $.ajax({
         url: 'get_misusecases/',
         type: 'POST',
-        data: {cwe_ids: cwe_ids}, // Send the selected CWE ids
+        data: {cwe_ids: cwe_ids, search_term: search_term},
 
         success: function(result) {
             // If ajax call is successful, reload the slim-scroll-div which contains the misuse cases
             $('.slim-scroll-div').replaceWith(result);
 
-            // Select the first misuse case by default
-            first_misuse_case_div = $($('.misuse-case-container').get(0));
+            // If misuse cases found in the system
+            if ($('.misuse-case-container').length)
+            {
+                // Select the first misuse case by default
+                first_misuse_case_div = $($('.misuse-case-container').get(0));
 
-            first_misuse_case_div.addClass('selected');
+                first_misuse_case_div.addClass('selected');
 
-            // Get the misuse case id of the first misuse case
-            misuse_case_id = first_misuse_case_div.attr("data-value");
-            load_usecases(misuse_case_id);
+                // Get the misuse case id of the first misuse case
+                misuse_case_id = first_misuse_case_div.attr("data-value");
+
+                load_usecases(misuse_case_id);
+
+            } else {
+                $('.use-case-container').hide();
+            }
+
+            var misuse_case_filter = $('#filter_misuse_case');
+            misuse_case_filter.focus().val(misuse_case_filter.val());
         },
 
         error: function(xhr,errmsg,err) {

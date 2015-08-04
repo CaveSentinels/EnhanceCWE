@@ -2,7 +2,7 @@ from django.apps import AppConfig
 
 class CWEConfig(AppConfig):
     name = 'cwe'
-    verbose_name = "CWE"
+    verbose_name = "CWE (Common Weakness Enumeration)"
 
     def ready(self):
         # Importing autocomplete_registry only after models are ready and app is fully loaded

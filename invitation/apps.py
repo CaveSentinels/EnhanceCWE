@@ -6,7 +6,7 @@ class InvitationConfig(AppConfig):
     The reason we are explicitly loading the views is because we are doing monkey patching in views.py
     """
     name = 'invitation'
-    verbose_name = "User Invitation"
+    verbose_name = "Accounts Invitation"
 
     def ready(self):
         from .views import *

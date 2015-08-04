@@ -86,6 +86,7 @@ ACCOUNT_FORMS = {'signup': 'register_clients.forms.CustomSignupFormClient',
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
 # END
 
 # START: register settings
@@ -203,3 +204,4 @@ SITE_ID = 1
 COMMENTS_APP = 'fluent_comments'
 FLUENT_COMMENTS_EXCLUDE_FIELDS = ('name', 'email', 'url')
 FLUENT_COMMENTS_USE_EMAIL_NOTIFICATION = False
+FLUENT_COMMENTS_REPLACE_ADMIN = False
