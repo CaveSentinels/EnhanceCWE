@@ -1398,14 +1398,14 @@ class TokenCreationDeletion(TestCase):
         contributor_user, contributor_email = self._create_user(TokenCreationDeletion.ROLE_CONTRIBUTOR)
 
         # Verify: Nothing happens to the token table.
-        tokens = Token.objects.filter(user_id=contributor_user.id)
+        tokens = Token.objects.filter(user=contributor_user)
         self.assertEqual(tokens.count(), 0)
 
         # Reject the email.
         contributor_email.action_reject(reject_reason="For test purpose.")
 
         # Verify: Nothing happens to the token table.
-        tokens = Token.objects.filter(user_id=contributor_user.id)
+        tokens = Token.objects.filter(user=contributor_user)
         self.assertEqual(tokens.count(), 0)
 
     def test_token_creation_rejection_for_client(self):
@@ -1419,12 +1419,12 @@ class TokenCreationDeletion(TestCase):
         client_user, client_email = self._create_user(TokenCreationDeletion.ROLE_CLIENT)
 
         # Verify: A token has been created for this user.
-        tokens = Token.objects.filter(user_id=client_user.id)
+        tokens = Token.objects.filter(user=client_user)
         self.assertEqual(tokens.count(), 1)
 
         # Reject the email.
         client_email.action_reject(reject_reason="For test purpose.")
 
         # Verify: The created token has been deleted.
-        tokens = Token.objects.filter(user_id=client_user.id)
+        tokens = Token.objects.filter(user=client_user)
         self.assertEqual(tokens.count(), 0)
