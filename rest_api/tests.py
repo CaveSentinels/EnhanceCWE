@@ -799,7 +799,7 @@ class TestMisuseCaseSuggestion(RestAPITestBase):
         return {MisuseCaseRelated.PARAM_CWES: cwes_str}
 
     def _misuse_case_info_found(self, json_content, mu_index):
-        mu_name = "MU/0000" + str(mu_index)
+        mu_name = "MU-0000" + str(mu_index)
         mu_description = "Misuse Case " + str(mu_index)
         found = False
         for json_mu in json_content:
@@ -911,7 +911,6 @@ class TestUseCaseSuggestion(RestAPITestBase):
     DESCRIPTION_BASE_MISUSE_CASE = "Misuse Case "     # Don't forget the trailing blank space.
     DESCRIPTION_BASE_USE_CASE = "Use Case "     # Don't forget the trailing blank space.
     DESCRIPTION_BASE_OSR = "Overlooked Security Requirement "   # Don't forget the trailing blank space.
-    NAME_BASE_USE_CASE = "UC/"  # No trailing blank space. Must be changed according to UseCase's model.
 
     def _create_muo_and_misuse_case(self, cwes, muc_desc, custom, creator):
         # Create the misuse case and establish the relationship with the CWEs
@@ -1020,7 +1019,7 @@ class TestUseCaseSuggestion(RestAPITestBase):
         return {UseCaseRelated.PARAM_MISUSE_CASES: misuse_cases_str}
 
     def _use_case_info_found(self, json_content, uc_index):
-        uc_name = "UC/{0:05d}".format(uc_index)
+        uc_name = "UC-{0:05d}".format(uc_index)
         uc_description = self.DESCRIPTION_BASE_USE_CASE + str(uc_index)
         osr = self.DESCRIPTION_BASE_OSR + str(uc_index)
         found = False
