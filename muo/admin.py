@@ -109,6 +109,11 @@ class UseCaseAdminInLine(admin.StackedInline):
                 return 0
 
 
+# This class is to implement an ENUM for PUBLISH and UNPUBLISH. Used in response_change method.
+class PublishUnpublishValues:
+    UNPUBLISH, PUBLISH = range(2)
+
+
 @admin.register(MUOContainer)
 class MUOContainerAdmin(BaseAdmin):
     form = autocomplete_light.modelform_factory(MUOContainer, fields="__all__")
@@ -120,6 +125,7 @@ class MUOContainerAdmin(BaseAdmin):
     readonly_fields = ['name', 'status']
     search_fields = ['name', 'status']
     date_hierarchy = 'created_at'
+    list_filter = ['status', 'is_published', ('created_by', admin.RelatedOnlyFieldListFilter)]
     inlines = [UseCaseAdminInLine]
 
     def get_actions(self, request):
@@ -228,6 +234,14 @@ class MUOContainerAdmin(BaseAdmin):
             elif "_promote" in request.POST:
                 obj.action_promote(request.user)
                 msg = "This MUO has been promoted and now everyone will have access to it."
+
+            elif "_unpublish" in request.POST:
+                obj.action_set_publish(PublishUnpublishValues.UNPUBLISH)
+                msg = "This MUO has been unpublished."
+
+            elif "_publish" in request.POST:
+                obj.action_set_publish(PublishUnpublishValues.PUBLISH)
+                msg = "This MUO has been published."
 
             else:
                 # Let super class 'ModelAdmin' handle rest of the button clicks i.e. 'save' 'save and continue' etc.

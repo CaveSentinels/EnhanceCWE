@@ -9,6 +9,7 @@ from django.db.models.signals import post_delete, pre_delete, pre_save, post_sav
 from django.dispatch import receiver
 from signals import *
 from django.utils import timezone
+from django.db.models import Q
 from django.contrib.auth.models import  User
 
 STATUS = [('draft', 'Draft'),
@@ -51,14 +52,16 @@ class MUOQuerySet(models.QuerySet):
     Define custom methods for the MUO QuerySet
     """
 
+
     def approved(self):
         # Returns the queryset for all the approved MUO Containers
         if self.model == MUOContainer:
-            return self.filter(status='approved')
+            return self.filter(status='approved', is_published=True)
         elif self.model == MisuseCase:
-            return self.filter(muocontainer__status='approved')
+            return self.filter(muocontainer__status='approved', muocontainer__is_published=True)
         elif self.model == UseCase:
-            return self.filter(muo_container__status='approved')
+            return self.filter(muo_container__status='approved', muo_container__is_published=True)
+
 
     def rejected(self):
         # Returns the queryset for all the rejected MUO Containers
@@ -96,6 +99,23 @@ class MUOQuerySet(models.QuerySet):
         elif self.model == UseCase:
             return self.filter(muo_container__is_custom=True)
 
+    def published(self):
+        # Returns the queryset for all the published MUO Containers
+        if self.model == MUOContainer:
+            return self.filter(is_published=True)
+        elif self.model == MisuseCase:
+            return self.filter(muocontainer__is_published=True)
+        elif self.model == UseCase:
+            return self.filter(muo_container__is_published=True)
+
+    def unpublished(self):
+        # Returns the queryset for all the unpublished MUO Containers
+        if self.model == MUOContainer:
+            return self.filter(is_published=False)
+        elif self.model == MisuseCase:
+            return self.filter(muocontainer__is_published=False)
+        elif self.model == UseCase:
+            return self.filter(muo_container__is_published=False)
 
 class MUOManager(models.Manager):
     """
@@ -179,6 +199,7 @@ class MUOContainer(BaseModel):
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
     status = models.CharField(choices=STATUS, max_length=64, default='draft')
     is_custom = models.BooleanField(default=False, db_index=True)
+    is_published = models.BooleanField(default=False, db_index=True)
 
     objects = MUOManager()  # Replace the default manager with the MUOManager
 
@@ -251,6 +272,7 @@ class MUOContainer(BaseModel):
             # Create the MUO container for the misuse case and establish the relationship between the
             # MUO Container and CWEs
             muo_container = MUOContainer(is_custom=True,
+                                         is_published=False,
                                          status='draft',
                                          misuse_case=misuse_case,
                                          created_by=created_by,
@@ -329,6 +351,7 @@ class MUOContainer(BaseModel):
                 usecase.save()
 
             self.status = 'approved'
+            self.is_published = True
             self.reviewed_by = reviewer
             self.save()
             # Send email
@@ -355,6 +378,7 @@ class MUOContainer(BaseModel):
                 usecase.save()
 
             self.status = 'rejected'
+            self.is_published = False
             self.reject_reason = reject_reason
             self.reviewed_by = reviewer
             self.save()
@@ -405,6 +429,23 @@ class MUOContainer(BaseModel):
             self.save()
         else:
             raise ValueError("MUO can only be promoted if it is in draft state and custom.")
+
+
+    def action_set_publish(self, should_publish):
+        '''
+        This method changes the published status of the MUO as per the passed boolean variable.
+        If the report is already in the passed state, value error should be raised.
+        :param should_publish: The publish status to be set to the report
+        :return: Null
+        '''
+        if self.status == 'approved':
+            if self.is_published != should_publish:
+                self.is_published = should_publish
+                self.save()
+        else:
+            raise ValueError("MUO can only be published/unpublished if it is in approved state.")
+
+
 
 @receiver(pre_save, sender=MUOContainer, dispatch_uid='muo_container_pre_save_signal')
 def pre_save_muo_container(sender, instance, *args, **kwargs):
