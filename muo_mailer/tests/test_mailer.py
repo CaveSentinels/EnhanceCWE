@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
-from muo.models import MUOContainer, MisuseCase, UseCase
+from muo.models import MUOContainer, MisuseCase, UseCase, IssueReport
 from django.contrib.auth.models import User
 from django.core import mail
 from muo_mailer import constants
@@ -40,7 +40,6 @@ class TestMUOMailer(TestCase):
         use_case = UseCase(muo_container=muo_container)  # Usecase cannot be created without MUOContainer
         use_case.save()  # save in the database
 
-
     def get_muo_container(self, status):
         """
         This method sets the status of the MUOContainer object with the one
@@ -51,6 +50,7 @@ class TestMUOMailer(TestCase):
         muo_container.status = status
         muo_container.created_by = self.user
         muo_container.misuse_case.misuse_case_type = 'new'
+
         muo_container.save()
         return muo_container
 
@@ -65,7 +65,6 @@ class TestMUOMailer(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         # Verify that the subject of the first message is correct.
         self.assertEqual(mail.outbox[0].subject, constants.MUO_ACCEPTED_SUBJECT)
-        self.assertEqual(mail.outbox[0].from_email, 'EnhancedCWE')
 
 
     def test_action_reject_with_status_in_review(self):
@@ -74,15 +73,10 @@ class TestMUOMailer(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         # Verify that the subject of the first message is correct.
         self.assertEqual(mail.outbox[0].subject, constants.MUO_REJECTED_SUBJECT)
-        self.assertEqual(mail.outbox[0].from_email, 'EnhancedCWE')
-
 
     def test_action_submit_for_review(self):
         muo_container = self.get_muo_container('draft')
         muo_container.action_submit()
+
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].subject, constants.MUO_SUBMITTED_FOR_REVIEW_SUBJECT)
-        self.assertEqual(mail.outbox[0].from_email, 'EnhancedCWE')
-
-
-
