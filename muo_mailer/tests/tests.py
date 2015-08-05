@@ -1,7 +1,7 @@
 from django.core import mail
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from .models import MailerProfile
+from muo_mailer.models import MailerProfile
 
 class MailerProfileTest(TestCase):
 
