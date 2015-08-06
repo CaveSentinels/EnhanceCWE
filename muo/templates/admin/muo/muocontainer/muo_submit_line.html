@@ -16,6 +16,9 @@
 {% if show_save_and_add_another %}<input type="submit" value="{% trans 'Save and add another' %}" class="btn btn-default" name="_addanother" {{ onclick_attrib }} />{% endif %}
 {% if show_save_and_continue %}<input type="submit" value="{% trans 'Save and continue editing' %}" class="btn btn-default" name="_continue" {{ onclick_attrib }}/>{% endif %}
 {% if show_save %}<input type="submit" value="{% trans 'Save' %}" class="btn btn-primary default" name="_save" {{ onclick_attrib }}/>{% endif %}
+{% if show_publish %}<input type="submit" value="{% trans 'Publish' %}" class="btn btn-default" name="_publish" />{% endif %}
+{% if show_unpublish %}<input type="submit" value="{% trans 'Unpublish' %}" class="btn btn-default" name="_unpublish" />{% endif %}
+
 </div>
 <div class="spacer"></div>
 

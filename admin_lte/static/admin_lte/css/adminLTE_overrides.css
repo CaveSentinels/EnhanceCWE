@@ -3,6 +3,10 @@ body {
     padding: 0;
 }
 
+.navbar .navbar-header {
+    float: left;
+}
+
 .navbar-nav>.links-menu>.dropdown-menu>li .menu,  {
     margin: 0 10px;
 }

@@ -3,7 +3,8 @@ jQuery(function() {
     //Submit the form on pressing enter (key 13), but not while holding space
     $("body").on('keypress', 'textarea[id=id_comment]', function() {
         if ((event.which == 13) && !event.shiftKey) {
-            $('form.comments-form').submit();
+            var form = $(this).parents('form:first');
+            form.submit();
             return false;
         }
     });

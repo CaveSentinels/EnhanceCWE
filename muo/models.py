@@ -9,6 +9,8 @@ from django.db.models.signals import post_delete, pre_delete, pre_save, post_sav
 from django.dispatch import receiver
 from signals import *
 from django.utils import timezone
+from django.db.models import Q
+from django.contrib.auth.models import  User
 
 STATUS = [('draft', 'Draft'),
           ('in_review', 'In Review'),
@@ -32,6 +34,7 @@ OSR_PATTERN_CHOICES = [('ubiquitous', 'Ubiquitous'),
                        ('state-driven', 'State-Driven')]
 
 
+# Tags are not used for now
 class Tag(BaseModel):
     name = models.CharField(max_length=32, unique=True)
 
@@ -49,14 +52,16 @@ class MUOQuerySet(models.QuerySet):
     Define custom methods for the MUO QuerySet
     """
 
+
     def approved(self):
         # Returns the queryset for all the approved MUO Containers
         if self.model == MUOContainer:
-            return self.filter(status='approved')
+            return self.filter(status='approved', is_published=True)
         elif self.model == MisuseCase:
-            return self.filter(muocontainer__status='approved')
+            return self.filter(muocontainer__status='approved', muocontainer__is_published=True)
         elif self.model == UseCase:
-            return self.filter(muo_container__status='approved')
+            return self.filter(muo_container__status='approved', muo_container__is_published=True)
+
 
     def rejected(self):
         # Returns the queryset for all the rejected MUO Containers
@@ -94,6 +99,23 @@ class MUOQuerySet(models.QuerySet):
         elif self.model == UseCase:
             return self.filter(muo_container__is_custom=True)
 
+    def published(self):
+        # Returns the queryset for all the published MUO Containers
+        if self.model == MUOContainer:
+            return self.filter(is_published=True)
+        elif self.model == MisuseCase:
+            return self.filter(muocontainer__is_published=True)
+        elif self.model == UseCase:
+            return self.filter(muo_container__is_published=True)
+
+    def unpublished(self):
+        # Returns the queryset for all the unpublished MUO Containers
+        if self.model == MUOContainer:
+            return self.filter(is_published=False)
+        elif self.model == MisuseCase:
+            return self.filter(muocontainer__is_published=False)
+        elif self.model == UseCase:
+            return self.filter(muo_container__is_published=False)
 
 class MUOManager(models.Manager):
     """
@@ -146,7 +168,7 @@ class MisuseCase(BaseModel):
 def post_save_misusecase(sender, instance, created, using, **kwargs):
     """ Set the value of the field 'name' after creating the object """
     if created:
-        instance.name = "MU/{0:05d}".format(instance.id)
+        instance.name = "MU-{0:05d}".format(instance.id)
         instance.save()
 
 
@@ -177,6 +199,7 @@ class MUOContainer(BaseModel):
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
     status = models.CharField(choices=STATUS, max_length=64, default='draft')
     is_custom = models.BooleanField(default=False, db_index=True)
+    is_published = models.BooleanField(default=False, db_index=True)
 
     objects = MUOManager()  # Replace the default manager with the MUOManager
 
@@ -249,6 +272,7 @@ class MUOContainer(BaseModel):
             # Create the MUO container for the misuse case and establish the relationship between the
             # MUO Container and CWEs
             muo_container = MUOContainer(is_custom=True,
+                                         is_published=False,
                                          status='draft',
                                          misuse_case=misuse_case,
                                          created_by=created_by,
@@ -327,6 +351,7 @@ class MUOContainer(BaseModel):
                 usecase.save()
 
             self.status = 'approved'
+            self.is_published = True
             self.reviewed_by = reviewer
             self.save()
             # Send email
@@ -353,6 +378,7 @@ class MUOContainer(BaseModel):
                 usecase.save()
 
             self.status = 'rejected'
+            self.is_published = False
             self.reject_reason = reject_reason
             self.reviewed_by = reviewer
             self.save()
@@ -404,6 +430,23 @@ class MUOContainer(BaseModel):
         else:
             raise ValueError("MUO can only be promoted if it is in draft state and custom.")
 
+
+    def action_set_publish(self, should_publish):
+        '''
+        This method changes the published status of the MUO as per the passed boolean variable.
+        If the report is already in the passed state, value error should be raised.
+        :param should_publish: The publish status to be set to the report
+        :return: Null
+        '''
+        if self.status == 'approved':
+            if self.is_published != should_publish:
+                self.is_published = should_publish
+                self.save()
+        else:
+            raise ValueError("MUO can only be published/unpublished if it is in approved state.")
+
+
+
 @receiver(pre_save, sender=MUOContainer, dispatch_uid='muo_container_pre_save_signal')
 def pre_save_muo_container(sender, instance, *args, **kwargs):
     if instance.misuse_case_type == 'existing' and instance.misuse_case is not None:
@@ -424,17 +467,16 @@ def pre_save_muo_container(sender, instance, *args, **kwargs):
 def post_save_muo_container(sender, instance, created, using, **kwargs):
     """ Set the value of the field 'name' after creating the object """
     if created:
-        instance.name = "MUO/{0:05d}".format(instance.id)
+        instance.name = "MUO-{0:05d}".format(instance.id)
         instance.save()
 
 
 @receiver(pre_delete, sender=MUOContainer, dispatch_uid='muo_container_delete_signal')
 def pre_delete_muo_container(sender, instance, using, **kwargs):
     """
-    Registering for pre_delete signal, so that we can prevent deletion of MUOContainer if it is not in
-    'draft' or 'review' state.
+    Registering for pre_delete signal, so that we can prevent deletion of MUOContainer if it is approved.
     """
-    if instance.status not in ('draft', 'rejected'):
+    if instance.status not in ('draft', 'rejected', 'in_review'):
         raise ValidationError('The MUOContainer can only be deleted if in draft or rejected state')
 
 
@@ -449,6 +491,14 @@ def post_delete_muo_container(sender, instance, using, **kwargs):
         if instance.misuse_case.muocontainer_set.count() == 0:
             instance.misuse_case.delete()
 
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def post_save_deactivate_user(sender, instance, created=False, **kwargs):
+    """
+    Registering for the post_save signal so that after the User gets deactivated, we can delete all the MUOs
+    which are in draft, rejected and in_review state from the database
+    """
+    if not instance.is_active:
+        MUOContainer.objects.filter(created_by=instance, status__in=['draft', 'rejected', 'in_review']).delete()
 
 class UseCase(BaseModel):
     name = models.CharField(max_length=16, null=True, blank=True, db_index=True, default="/")
@@ -483,16 +533,14 @@ class UseCase(BaseModel):
 
 
     def get_absolute_url(self, language=None):
-        content_type = ContentType.objects.get_for_model(MisuseCase)
-        url = urlresolvers.reverse("admin:%s_%s_changelist" % (content_type.app_label, content_type.model))
-        return "%s?mu=%s&uc=%s" % (url, self.misuse_case.id, self.id)
+        pass
 
 
 @receiver(post_save, sender=UseCase, dispatch_uid='usecase_post_save_signal')
 def post_save_usecase(sender, instance, created, using, **kwargs):
     """ Set the value of the field 'name' after creating the object """
     if created:
-        instance.name = "UC/{0:05d}".format(instance.id)
+        instance.name = "UC-{0:05d}".format(instance.id)
         instance.save()
 
 
@@ -575,6 +623,6 @@ class IssueReport(BaseModel):
 def post_save_issue_report(sender, instance, created, using, **kwargs):
     """ Set the value of the field 'name' after creating the object """
     if created:
-        instance.name = "Issue/{0:05d}".format(instance.id)
+        instance.name = "Issue-{0:05d}".format(instance.id)
         instance.save()
 

@@ -78,9 +78,12 @@ class TestMUODeletion(TestCase):
 
     def test_muo_deletion_with_in_review_status(self):
         """
-        This method tests the deletion of the muo container that is in in_review state. On deleting the
-        muo container in in_review state, validation error is raised.
+        This method test the deletion of a muo container that is in in_review state and not sharing the misuse case
+        with any other container. After delete, the muo container should get deleted and also the corresponding
+        misuse case should get deleted
         """
         self.muo_container_3.status = 'in_review'
 
-        self.assertRaises(ValidationError, self.muo_container_3.delete)
+        self.muo_container_3.delete()
+
+        self.assertRaises(MUOContainer.DoesNotExist, MUOContainer.objects.get, pk=self.muo_container_3_id)

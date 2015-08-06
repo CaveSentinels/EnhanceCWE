@@ -1,3 +1,4 @@
+import threading
 from django.core.mail import send_mail
 from django.template.loader import get_template
 from django.template import Context
@@ -115,10 +116,16 @@ def on_custom_muo_promoted_generic(sender,instance,**kwargs):
     action = constants.PROMOTED
     notify_reviewers(instance, subject, action, emails)
 
-"""
-This method is called when we have to send the email after fixing all the parameters
-"""
+
+
 def notify_owner(instance, subject, action):
+    thread = threading.Thread(target=_notify_owner, args=(instance, subject, action))
+    thread.start()
+
+def _notify_owner(instance, subject, action):
+    """
+    This method is called when we have to send the email after fixing all the parameters
+    """
     user = instance.created_by
     muo_name = instance.name
     send_mail(subject, get_template('mailer/muo_action.html').render(
@@ -129,10 +136,16 @@ def notify_owner(instance, subject, action):
         })
     ), SENDER_EMAIL, [user.email], fail_silently=True)
 
-"""
-This method is called when we have to send bulk email to many recipients
-"""
+
+
 def notify_reviewers(instance, subject, action, emails):
+    thread = threading.Thread(target=_notify_reviewers, args=(instance, subject, action, emails))
+    thread.start()
+
+def _notify_reviewers(instance, subject, action, emails):
+    """
+    This method is called when we have to send bulk email to many recipients
+    """
     if emails:
         send_mail(subject, get_template('mailer/muo_action_bulk.html').render(
             Context({

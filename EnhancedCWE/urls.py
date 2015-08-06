@@ -21,7 +21,7 @@ from user_profile.views import ProfileView
 # Wire up our API using automatic URL routing.
 # Additionally, we include login URLs for the browsable API.
 urlpatterns = [
-    url(r'^$', include('frontpage.urls', namespace='frontpage')),
+    url(r'^', include('frontpage.urls', namespace='frontpage')),
     url(r'^profile/$', ProfileView.as_view(), name='user_profile'),
     url(r'^robots\.txt/$', TemplateView.as_view(template_name='robots.txt', content_type='text/plain')),
     url(r'^accounts/', include('register.urls')),
