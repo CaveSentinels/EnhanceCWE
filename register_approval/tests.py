@@ -12,7 +12,6 @@ import os
 from register.tests import RegisterHelper
 
 @override_settings(
-    LOGIN_REDIRECT_URL='/app/',
     ACCOUNT_EMAIL_VERIFICATION='mandatory',
     ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION='True',
     SET_STAFF_ON_REGISTRATION=True)

@@ -1,5 +1,5 @@
 from django.contrib.admin.templatetags.admin_modify import *
-from base.templatetags.admin_modify import submit_row as original_submit_row
+from django.contrib.admin.templatetags.admin_modify import submit_row as original_submit_row
 from django import template
 
 

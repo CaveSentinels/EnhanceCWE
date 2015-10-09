@@ -1,8 +1,11 @@
 from django.conf import settings
 from django.http.response import HttpResponseBase
-from django.utils import importlib
 import six
 from allauth.account.utils import perform_login as allauth_perform_login
+try:
+    import importlib
+except:
+    from django.utils import importlib
 
 # Keep reference of original perform login before it gets monkey patched
 original_perform_login = allauth_perform_login

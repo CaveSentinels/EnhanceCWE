@@ -103,17 +103,21 @@
 
 <div id="content-main">
     <div class="module{% if cl.has_filters %} filtered{% endif %}" id="_changelist">
-        {% block date_hierarchy %}
-            {% date_hierarchy cl %}
-        {% endblock %}
+        <div class="box box-solid">
+            <div class="box-body no-padding">
+            {% block date_hierarchy %}
+                {% date_hierarchy cl %}
+            {% endblock %}
 
-        {% if cl.formset %}
-            <div>{{ cl.formset.management_form }}</div>
-        {% endif %}
+            {% if cl.formset %}
+                <div>{{ cl.formset.management_form }}</div>
+            {% endif %}
 
-        {% block result_list %}
-            {% result_list cl %}
-        {% endblock %}
+            {% block result_list %}
+                {% result_list cl %}
+            {% endblock %}
+            </div>
+        </div>
     </div>
 </div>
 

@@ -7,10 +7,9 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.utils.encoding import force_text
 from django.utils.translation import ugettext as _
-from base.admin import BaseAdmin
 
 
-class EmailAddressAdmin(BaseAdmin):
+class EmailAddressAdmin(admin.ModelAdmin):
     list_display = ('email', 'user', 'primary', 'verified', 'admin_approval')
     list_filter = ('primary', 'verified', 'admin_approval')
     search_fields = ['']

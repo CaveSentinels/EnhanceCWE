@@ -15,7 +15,6 @@ import os
 import dj_database_url
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.8/howto/deployment/checklist/
 
@@ -33,8 +32,8 @@ ALLOWED_HOSTS = ['*']
 
 # Application definition
 
-SITE_TITLE = 'EnhancedCWE'
-SENDER_EMAIL = 'EnhancedCWE'
+SITE_TITLE = 'SERF'
+SENDER_EMAIL = 'SERF'
 
 INSTALLED_APPS = (
     'base',
@@ -68,14 +67,15 @@ INSTALLED_APPS = (
     'user_profile',
     'muo_mailer',
     'widget_tweaks',
+    'mailer',
 )
 
 # Email settings
 EMAIL_USE_TLS = True
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_HOST_USER = 'enhancedcwe'
+EMAIL_HOST_USER = 'serf.noreply'
 EMAIL_PORT = 587
-EMAIL_HOST_PASSWORD = 'enhancedcwe_masre'
+EMAIL_HOST_PASSWORD = 'serf_masre'
 
 
 # START: allauth settings
@@ -95,8 +95,8 @@ ACCOUNT_EXTRA_PRE_LOGIN_STEPS = ['invitation.utils.verify_email_if_invited',
 # END
 
 # START: Capcha settings
-RECAPTCHA_PUBLIC_KEY = '6LeuwggTAAAAAGXDRJ0uFgVGPJZLhZdBRdUK1O87'
-RECAPTCHA_PRIVATE_KEY = '6LeuwggTAAAAAFssdSpwuDFw-V3-W64Pn9OM-mXs'
+RECAPTCHA_PUBLIC_KEY = '6LcDAg4TAAAAAAyKuVzKReWYligCYbtgkSaMy-jC'
+RECAPTCHA_PRIVATE_KEY = '6LcDAg4TAAAAAOPMjRxH6nv3WcXPk00CEx3JU8Ks'
 NOCAPTCHA=False
 RECAPTCHA_USE_SSL = True
 # END

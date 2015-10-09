@@ -10,10 +10,11 @@ from django.utils import timezone
 from django.dispatch import receiver
 from django.utils.translation import ugettext_lazy as _
 from allauth.account.models import EmailAddress
-from base.models import BaseModel
+from mailer.util import send_email
 from .signals import register_approved, register_rejected
 
 SENDER_EMAIL = getattr(settings, 'SENDER_EMAIL', '')
+SITE_TITLE = getattr(settings, 'SITE_TITLE', '')
 
 
 """ Adding additional fields to EmailAddress """
@@ -72,27 +73,28 @@ def email_on_approve(sender, instance, **kwargs):
 
     site_url = _current_site_url()
     login_url = site_url + reverse('account_login')
+    message = "Your request to register at %s has been approved.\n\n" \
+              "You can now log in to your account through %s" % (SITE_TITLE, login_url)
 
-    send_mail(_('Registration Request Approved'), get_template('register/email/email_registration_approved.txt').render(
-        Context({
-            'user': instance.user,
-            'current_site': kwargs["site"] if "site" in kwargs else Site.objects.get_current(),
-            'login_url': login_url,
-        })
-    ), SENDER_EMAIL, [instance.email], fail_silently=True)
+    send_email(subject=_('Registration Request Accepted'), users=[instance.user], message=message, context=Context({
+        'username': instance.user.get_full_name() or instance.user.username,
+        'body': message,
+        'login_url': login_url,
+    }))
+
+
 
 
 @receiver(register_rejected)
 def email_on_reject(sender, instance, **kwargs):
     """ This method will send an email when registration gets rejected """
+    message = "Unfortunately, Your request to register at %s has been rejected because:\n%s" % ( SITE_TITLE, instance.reject_reason)
+    send_email(subject=_('Registration Request Rejected'), users=[instance.user], message=message, context=Context({
+        'username': instance.user.get_full_name() or instance.user.username,
+        'body': message,
+    }))
 
-    send_mail(_('Registration Request Rejected'), get_template('register/email/email_registration_rejected.txt').render(
-        Context({
-            'user': instance.user,
-            'current_site': kwargs["site"] if "site" in kwargs else Site.objects.get_current(),
-            'reject_reason': instance.reject_reason,
-        })
-    ), SENDER_EMAIL, [instance.email], fail_silently=True)
+
 
 
 

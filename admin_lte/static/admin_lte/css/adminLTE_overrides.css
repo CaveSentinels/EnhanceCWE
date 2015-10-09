@@ -133,24 +133,12 @@ hr.breadcrumbs-separator{
     margin-bottom: 7px;
 }
 
-.content table {
+.content #content-main table{
     background-color: #fff;
 }
 
-.content .table-bordered {
-  border: 1px solid #ddd;
-}
-.content .table-bordered > thead > tr > th,
-.content .table-bordered > tbody > tr > th,
-.content .table-bordered > tfoot > tr > th,
-.content .table-bordered > thead > tr > td,
-.content .table-bordered > tbody > tr > td,
-.content .table-bordered > tfoot > tr > td {
-  border: 1px solid #ddd;
-}
-.content .table-bordered > thead > tr > th,
-.content .table-bordered > thead > tr > td {
-  border-bottom-width: 2px;
+#changelist-form #result_list{
+    margin-bottom: 0px;
 }
 
 
@@ -223,6 +211,11 @@ hr.breadcrumbs-separator{
 .form-horizontal textarea {
   height: auto;
     max-width: 100%;
+}
+
+.form-horizontal table textarea {
+    width: 100%;
+    resize:vertical;
 }
 
 .form-horizontal .inline {
@@ -354,4 +347,44 @@ label.radio {
 .form-control[disabled], fieldset[disabled] .form-control{
     -webkit-text-fill-color: #555;
     -webkit-appearance:none;
+}
+
+
+ul.errorlist {
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #fff;
+    background: #d73925;
+}
+
+ul.errorlist li {
+    display: block;
+    padding: 5px 5px 4px 7px;
+    margin: 3px 0 0 0;
+}
+
+ul.errorlist li:first-child {
+    margin-top: 0;
+}
+
+ul.errorlist li a {
+    color: #fff;
+    text-decoration: underline;
+}
+
+td ul.errorlist {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+td ul.errorlist li {
+    margin: 0 !important;
+}
+
+._inline-group .tabular table {
+    margin-bottom: 0px;
+}
+
+._inline-group .tabular .module {
+    padding: 7px;
 }
