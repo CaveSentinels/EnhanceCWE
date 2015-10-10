@@ -31,6 +31,7 @@ class EmailAddressAdmin(admin.ModelAdmin):
 
         # Get the metadata about self (it tells you app and current model)
         opts = self.model._meta
+        msg = None
 
         # Get the primary key of the model object i.e. Issue Report
         pk_value = obj._get_pk_val()
@@ -62,7 +63,8 @@ class EmailAddressAdmin(admin.ModelAdmin):
             msg = e.message
             self.message_user(request, msg, messages.ERROR)
 
-        self.message_user(request, msg, messages.SUCCESS)
+        if msg:
+            self.message_user(request, msg, messages.SUCCESS)
         return HttpResponseRedirect(redirect_url)
 
 
