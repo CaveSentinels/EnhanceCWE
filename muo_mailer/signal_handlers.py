@@ -51,7 +51,7 @@ def on_muo_inappropriate(sender, instance, created=False, **kwargs):
         # The user might have the permission either as a user or in a group of which he is a part, so check both
         users = User.objects.filter(mailer_profile__notify_muo_inappropriate=True) \
             .filter(Q(groups__permissions__in=perm) | Q(user_permissions__in=perm)).distinct()
-        message = "%s has been marked as inappropriate" % instance.name
+        message = "%s has been marked as inappropriate" % instance.usecase.muo_container
         notify_reviewers(instance.usecase.muo_container, message, users)
 
 
