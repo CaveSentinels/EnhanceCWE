@@ -1,5 +1,6 @@
 from crispy_forms.bootstrap import InlineRadios
 from django import forms
+from django.contrib.auth.models import Group
 from crispy_forms.layout import Div
 from django.utils.translation import ugettext_lazy as _
 from allauth.account.models import EmailAddress
@@ -29,11 +30,26 @@ class CustomSignupFormClient(CustomSignupForm):
         """
         We are overriding this method to save the extra information related to the user.
         In this case, this extra information is the role requested.
+
+        This method adds users after saving them to default groups as defined by 'is_auto_assign_contributor' and
+        'is_auto_assign_client'
         """
         user = super(CustomSignupFormClient, self).save(request)
-        email = EmailAddress.objects.filter(user=user)[0]
+
         role = request.POST.get('role')
         if role:
+            email = EmailAddress.objects.filter(user=user)[0]
             email.requested_role = role
             email.save()
+
+            # Filter all those groups with assignable attribute set to True
+            if role == 'client':
+                groups = list(Group.objects.filter(is_auto_assign_client=True))
+                user.groups.add(*groups)
+
+            # Filter all those groups with assignable attribute set to True
+            if role == 'contributor':
+                groups = list(Group.objects.filter(is_auto_assign_contributors=True))
+                user.groups.add(*groups)
+
         return user
